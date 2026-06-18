@@ -17,8 +17,6 @@ import com.ispf.server.persistence.entity.ObjectNodeEntity;
 import com.ispf.server.persistence.entity.ObjectVariableEntity;
 import com.ispf.server.plugin.model.ModelApplicationRunner;
 import com.ispf.server.plugin.model.ModelBootstrap;
-import com.ispf.server.plugin.oilterminal.OilTerminalApplicationRunner;
-import com.ispf.server.plugin.oilterminal.OilTerminalModelBootstrap;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEventPublisher;
@@ -46,8 +44,6 @@ public class ObjectManager {
     private final PlatformBootstrap platformBootstrap;
     private final ObjectProvider<ModelBootstrap> modelBootstrap;
     private final ObjectProvider<ModelApplicationRunner> modelApplicationRunner;
-    private final ObjectProvider<OilTerminalModelBootstrap> oilTerminalModelBootstrap;
-    private final ObjectProvider<OilTerminalApplicationRunner> oilTerminalApplicationRunner;
     private final ApplicationEventPublisher eventPublisher;
     private final BindingEvaluator bindingEvaluator;
     private volatile boolean initialized;
@@ -59,8 +55,6 @@ public class ObjectManager {
             PlatformBootstrap platformBootstrap,
             ObjectProvider<ModelBootstrap> modelBootstrap,
             ObjectProvider<ModelApplicationRunner> modelApplicationRunner,
-            ObjectProvider<OilTerminalModelBootstrap> oilTerminalModelBootstrap,
-            ObjectProvider<OilTerminalApplicationRunner> oilTerminalApplicationRunner,
             ApplicationEventPublisher eventPublisher,
             BindingEvaluator bindingEvaluator
     ) {
@@ -70,8 +64,6 @@ public class ObjectManager {
         this.platformBootstrap = platformBootstrap;
         this.modelBootstrap = modelBootstrap;
         this.modelApplicationRunner = modelApplicationRunner;
-        this.oilTerminalModelBootstrap = oilTerminalModelBootstrap;
-        this.oilTerminalApplicationRunner = oilTerminalApplicationRunner;
         this.eventPublisher = eventPublisher;
         this.bindingEvaluator = bindingEvaluator;
     }
@@ -89,10 +81,8 @@ public class ObjectManager {
             seedPlatformStructure();
         }
         modelBootstrap.getObject().ensureBuiltInModels();
-        oilTerminalModelBootstrap.getObject().ensureModels();
         modelApplicationRunner.getObject().applyDemoModels();
         modelApplicationRunner.getObject().ensureSnmpLocalhostDevice();
-        oilTerminalApplicationRunner.getObject().ensureReferenceStand();
         initialized = true;
     }
 

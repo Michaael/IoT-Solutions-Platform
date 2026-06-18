@@ -13,7 +13,6 @@ dependencies {
     implementation(project(":packages:ispf-driver-virtual"))
     implementation(project(":packages:ispf-plugin-model"))
     implementation(project(":packages:ispf-plugin-workflow"))
-    implementation(project(":packages:ispf-plugin-oil-terminal"))
 
     implementation("io.nats:jnats:2.20.5")
 
