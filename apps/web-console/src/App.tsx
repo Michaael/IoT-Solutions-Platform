@@ -119,7 +119,8 @@ export default function App() {
   };
 
   if (appMode === "operator") {
-    return <OperatorView onSwitchAdmin={() => setAppMode("admin")} />;
+    const operatorAppId = new URLSearchParams(window.location.search).get("app");
+    return <OperatorView appId={operatorAppId} onSwitchAdmin={() => setAppMode("admin")} />;
   }
 
   return (

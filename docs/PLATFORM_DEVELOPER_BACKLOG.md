@@ -255,7 +255,7 @@ POST /api/v1/bff/invoke
 { "wireProfile": "anima-operator-v1", ... }
 ```
 
-**Acceptance:** Web Console operator SCR без `/api/v1/bff/terminal/*`.
+**Acceptance:** Web Console operator без `/api/v1/bff/terminal/*`; в `main` — manifest shell + generic invoke.
 
 ---
 
@@ -388,6 +388,7 @@ Web Console (framework `apps/web-console`) после закрытия PF-06:
 - **Только** `POST /api/v1/bff/invoke` + `wireProfile: anima-operator-v1`.
 - **Удалить** маршруты `/api/v1/bff/terminal/**` (если вернутся в reference-ветке).
 - SCR-00…07: список invoke mapping — в bundle michaael `deploy/terminal/bff-map.json` (app), generic gateway (platform).
+- В `main`: manifest shell (`?mode=operator&app=<appId>`), без отраслевых SCR-компонентов.
 
 Platform **не** знает про SCR-01/02 — только wire + invoke.
 
@@ -428,7 +429,7 @@ Sprint B (P1) — e2e P-301
   PF-06a wire profile
   PF-03 objects/dashboards/workflows in bundle
   PF-10a cancel_workflows script
-  Web Console → generic bff
+  Web Console → generic bff ✅ (manifest shell)
 
 Sprint C (P2) — demo parity
   PF-08 SQL bindings

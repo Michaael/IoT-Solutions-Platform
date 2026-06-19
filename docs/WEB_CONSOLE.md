@@ -33,12 +33,25 @@ URL: `http://localhost:5173?mode=operator`
 - Sidebar: Work Queue + Event Journal
 - Без редактирования layout и объектов
 
+### Operator app (manifest + BFF)
+
+URL: `http://localhost:5173?mode=operator&app=demo`
+
+Generic operator shell без отраслевого кода в `main`:
+
+- Manifest: `public/operator-apps/<appId>.manifest.json` (копируется из deploy bundle приложения)
+- Все вызовы: `POST /api/v1/bff/invoke` + `wireProfile: anima-operator-v1` (`src/api/bff.ts`)
+- Экраны: `screens[]` с `actions` и опциональной `table` (список из `result[]`)
+
+Полный SCR terminal (SCR-00…07) — ветка `feature/oil-terminal-reference`, см. [PLUGINS.md](PLUGINS.md).
+
 ## Навигация
 
 Клиентский роутер не используется. Состояние в `App.tsx`:
 
 - `mode`: `admin` | `operator`
-- `activeTab`: explorer | automation
+- `app`: operator manifest id (опционально)
+- `screen`: id экрана в manifest
 - `selectedPath`, `editorPath`
 
 ## Роли
@@ -55,12 +68,14 @@ URL: `http://localhost:5173?mode=operator`
 ```
 src/
 ├── App.tsx                 # Shell, tabs, role selector
-├── api.ts                  # REST client (все endpoints)
-├── types/                  # dashboard, workflow, event, operator
+├── api.ts                  # REST client
+├── api/bff.ts              # POST /bff/invoke (anima-operator-v1)
+├── types/                  # dashboard, workflow, bff, operatorManifest
 ├── hooks/
 │   ├── useObjectWebSocket.ts
 │   ├── useBoundVariable.ts
-│   └── useTrendSeries.ts
+│   ├── useTrendSeries.ts
+│   └── useOperatorManifest.ts
 ├── bpmn/
 │   ├── ispf-moddle.json    # ISPF BPMN extensions
 │   ├── constants.ts        # EMPTY_BPMN (с минимальным bpmndi)
@@ -72,8 +87,10 @@ src/
     ├── dashboard/          # Builder + 14 widgets
     ├── workflow/           # BPMN editor/viewer
     ├── automation/         # Alert/correlator CRUD
-    └── operator/           # OperatorView, sidebar panels
+    └── operator/           # OperatorView, manifest shell, sidebar panels
 ```
+
+`public/operator-apps/` — JSON manifest для `?app=`.
 
 ## Dashboard Builder
 

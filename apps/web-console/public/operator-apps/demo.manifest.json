@@ -1,0 +1,13 @@
+{
+  "appId": "demo",
+  "title": "ISPF Operator (manifest)",
+  "wireProfile": "anima-operator-v1",
+  "defaultScreen": "overview",
+  "screens": [
+    {
+      "id": "overview",
+      "title": "Manifest shell",
+      "description": "Generic operator UI: POST /api/v1/bff/invoke + wireProfile anima-operator-v1. Скопируйте manifest из deploy bundle приложения в public/operator-apps/<appId>.manifest.json и откройте ?mode=operator&app=<appId>."
+    }
+  ]
+}
