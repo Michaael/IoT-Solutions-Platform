@@ -248,6 +248,7 @@ Content-Type: application/json
 | Endpoint | Роль |
 |----------|------|
 | `/applications/**`, `/schedules/**` | `admin` |
+| `/applications/*/operator-manifest` | `operator`, `admin` |
 | `/bff/invoke`, `/workflows/instances/*/cancel` | `operator`, `admin` |
 
 Пример полного app bundle (oil-terminal) — ветка **`feature/oil-terminal-reference`**, не в `main`. См. [PLUGINS.md](PLUGINS.md).
@@ -290,6 +291,24 @@ POST /api/v1/applications/{appId}/functions/rollback
 
 Rollback поднимает `deployed_at` выбранной версии — `findLatest` снова её использует.
 
+## Bundle deploy history & rollback (PF-03b)
+
+Каждый `POST .../deploy` сохраняет snapshot manifest в `application_bundle_deployments`.
+
+```http
+GET  /api/v1/applications/{appId}/deploy/history
+POST /api/v1/applications/{appId}/deploy/rollback
+{ "version": "1.0.0" }
+```
+
+Rollback повторно применяет сохранённый manifest (migrations skip, functions re-apply).
+
+## Operator manifest (из bundle)
+
+Поле `operatorManifest` в deploy bundle → `GET /api/v1/applications/{appId}/operator-manifest`.
+
+Web Console: API first, fallback `public/operator-apps/<appId>.manifest.json`.
+
 ## Связанная документация
 
 - [API.md](API.md) — таблица endpoints
@@ -301,6 +320,6 @@ Rollback поднимает `deployed_at` выбранной версии — `f
 
 ## Следующие шаги (backlog)
 
-- Bundle rollback на предыдущую версию (Sprint D / PF-03b)
 - BPMN signal catch (PF-10b)
-- Terminal app deploy + smoke P-301 e2e (michaael bundle)
+- Terminal app full bundle + smoke P-301 e2e (michaael)
+- Расширить `TerminalAppParityTest` (weighbridge, incident, P-301 workflow)

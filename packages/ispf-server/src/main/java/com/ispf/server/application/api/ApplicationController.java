@@ -54,6 +54,32 @@ public class ApplicationController {
         return bundleDeployService.deploy(appId, manifest);
     }
 
+    @GetMapping("/{appId}/deploy/history")
+    public List<Map<String, Object>> deployHistory(@PathVariable String appId) {
+        return bundleDeployService.deployHistory(appId);
+    }
+
+    @PostMapping("/{appId}/deploy/rollback")
+    public Map<String, Object> rollbackBundle(
+            @PathVariable String appId,
+            @RequestBody RollbackBundleRequest request
+    ) throws Exception {
+        try {
+            return bundleDeployService.rollback(appId, request.version());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+        }
+    }
+
+    @GetMapping("/{appId}/operator-manifest")
+    public Map<String, Object> operatorManifest(@PathVariable String appId) throws Exception {
+        try {
+            return bundleDeployService.operatorManifest(appId);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage(), ex);
+        }
+    }
+
     @PostMapping
     public Map<String, Object> register(@RequestBody RegisterApplicationRequest request) {
         return dataService.register(
@@ -255,5 +281,8 @@ public class ApplicationController {
     }
 
     public record RefreshBindingRequest(String objectPath, String variable) {
+    }
+
+    public record RollbackBundleRequest(String version) {
     }
 }

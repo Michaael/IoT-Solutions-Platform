@@ -437,7 +437,8 @@ Sprint C (P2) — demo parity
   PF-11 function rollback ✅
 
 Sprint D (P2) — polish
-  PF-03b bundle rollback
+  PF-03b bundle rollback ✅
+  TerminalAppParityTest @Tag("terminal-parity") ✅
   PF-10b BPMN signals
 ```
 

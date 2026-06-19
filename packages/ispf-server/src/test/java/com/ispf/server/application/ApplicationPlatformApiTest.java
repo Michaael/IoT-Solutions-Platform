@@ -730,4 +730,107 @@ class ApplicationPlatformApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.value.rows[0].value").value(2));
     }
+
+    @Test
+    void bundleRollbackRedeploysPreviousSnapshot() throws Exception {
+        mockMvc.perform(post("/api/v1/applications/%s/deploy".formatted(APP_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "version": "4.0.0",
+                                  "functions": [
+                                    {
+                                      "objectPath": "%s",
+                                      "functionName": "terminal_bundle_marker",
+                                      "version": "1",
+                                      "descriptor": {
+                                        "inputSchema": { "name": "in", "fields": [] },
+                                        "outputSchema": {
+                                          "name": "out",
+                                          "fields": [
+                                            {"name": "error_code", "type": "STRING"},
+                                            {"name": "error_message", "type": "STRING"},
+                                            {"name": "marker", "type": "STRING"}
+                                          ]
+                                        }
+                                      },
+                                      "source": {
+                                        "type": "script",
+                                        "body": "{\\"steps\\":[{\\"type\\":\\"return\\",\\"fields\\":{\\"error_code\\":\\"OK\\",\\"error_message\\":\\"\\",\\"marker\\":\\"bundle-v1\\"}}]}"
+                                      }
+                                    }
+                                  ]
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.snapshot").value("recorded"));
+
+        mockMvc.perform(post("/api/v1/applications/%s/deploy".formatted(APP_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "version": "4.0.1",
+                                  "functions": [
+                                    {
+                                      "objectPath": "%s",
+                                      "functionName": "terminal_bundle_marker",
+                                      "version": "1",
+                                      "descriptor": {
+                                        "inputSchema": { "name": "in", "fields": [] },
+                                        "outputSchema": {
+                                          "name": "out",
+                                          "fields": [
+                                            {"name": "error_code", "type": "STRING"},
+                                            {"name": "error_message", "type": "STRING"},
+                                            {"name": "marker", "type": "STRING"}
+                                          ]
+                                        }
+                                      },
+                                      "source": {
+                                        "type": "script",
+                                        "body": "{\\"steps\\":[{\\"type\\":\\"return\\",\\"fields\\":{\\"error_code\\":\\"OK\\",\\"error_message\\":\\"\\",\\"marker\\":\\"bundle-v2\\"}}]}"
+                                      }
+                                    }
+                                  ]
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/applications/%s/deploy/history".formatted(APP_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].version", hasItem("4.0.0")))
+                .andExpect(jsonPath("$[*].version", hasItem("4.0.1")));
+
+        mockMvc.perform(post("/api/v1/bff/invoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "objectPath": "%s",
+                                  "functionName": "terminal_bundle_marker",
+                                  "input": { "schema": { "name": "in", "fields": [] }, "rows": [{}] }
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.marker").value("bundle-v2"));
+
+        mockMvc.perform(post("/api/v1/applications/%s/deploy/rollback".formatted(APP_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "version": "4.0.0" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rolledBackTo").value("4.0.0"));
+
+        mockMvc.perform(post("/api/v1/bff/invoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "objectPath": "%s",
+                                  "functionName": "terminal_bundle_marker",
+                                  "input": { "schema": { "name": "in", "fields": [] }, "rows": [{}] }
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.marker").value("bundle-v1"));
+    }
 }

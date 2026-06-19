@@ -39,7 +39,7 @@ URL: `http://localhost:5173?mode=operator&app=demo`
 
 Generic operator shell без отраслевого кода в `main`:
 
-- Manifest: `public/operator-apps/<appId>.manifest.json` (копируется из deploy bundle приложения)
+- Manifest: сначала `GET /api/v1/applications/{appId}/operator-manifest` (из deploy bundle), fallback `public/operator-apps/<appId>.manifest.json`.
 - Все вызовы: `POST /api/v1/bff/invoke` + `wireProfile: anima-operator-v1` (`src/api/bff.ts`)
 - Экраны: `screens[]` с `actions` и опциональной `table` (список из `result[]`)
 

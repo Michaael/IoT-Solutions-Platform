@@ -1,5 +1,6 @@
 package com.ispf.server.application.bundle;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ispf.core.model.DataSchema;
 import com.ispf.server.application.api.ApplicationController;
@@ -24,6 +25,7 @@ public class ApplicationBundleDeployService {
     private final ApplicationBundleMetadataService metadataService;
     private final PlatformSchedulerService schedulerService;
     private final ApplicationSqlBindingService sqlBindingService;
+    private final ApplicationBundleSnapshotStore snapshotStore;
     private final ObjectMapper objectMapper;
 
     public ApplicationBundleDeployService(
@@ -32,6 +34,7 @@ public class ApplicationBundleDeployService {
             ApplicationBundleMetadataService metadataService,
             PlatformSchedulerService schedulerService,
             ApplicationSqlBindingService sqlBindingService,
+            ApplicationBundleSnapshotStore snapshotStore,
             ObjectMapper objectMapper
     ) {
         this.dataService = dataService;
@@ -39,6 +42,7 @@ public class ApplicationBundleDeployService {
         this.metadataService = metadataService;
         this.schedulerService = schedulerService;
         this.sqlBindingService = sqlBindingService;
+        this.snapshotStore = snapshotStore;
         this.objectMapper = objectMapper;
     }
 
@@ -168,7 +172,45 @@ public class ApplicationBundleDeployService {
         response.put("applied", applied);
         response.put("skipped", skipped);
         response.put("errors", errors);
+
+        try {
+            String manifestJson = objectMapper.writeValueAsString(manifest);
+            String operatorManifestJson = manifest.operatorManifest() != null
+                    ? objectMapper.writeValueAsString(manifest.operatorManifest())
+                    : null;
+            snapshotStore.recordDeployment(appId, manifest.version(), manifestJson, operatorManifestJson);
+            response.put("snapshot", "recorded");
+        } catch (Exception ex) {
+            errors.add("snapshot: " + ex.getMessage());
+            response.put("status", "PARTIAL");
+            response.put("errors", errors);
+        }
+
         return response;
+    }
+
+    public Map<String, Object> rollback(String appId, String bundleVersion) throws Exception {
+        ApplicationBundleSnapshotStore.BundleSnapshot snapshot = snapshotStore.findByVersion(appId, bundleVersion)
+                .orElseThrow(() -> new IllegalArgumentException("Bundle version not found: " + bundleVersion));
+
+        BundleManifest manifest = objectMapper.readValue(snapshot.manifestJson(), BundleManifest.class);
+        Map<String, Object> result = deploy(appId, manifest);
+        result.put("rolledBackTo", bundleVersion);
+        return result;
+    }
+
+    public List<Map<String, Object>> deployHistory(String appId) {
+        return snapshotStore.listHistory(appId);
+    }
+
+    public Map<String, Object> operatorManifest(String appId) throws Exception {
+        ApplicationBundleSnapshotStore.BundleSnapshot snapshot = snapshotStore.findActive(appId)
+                .orElseThrow(() -> new IllegalArgumentException("No active bundle deployment for app: " + appId));
+        if (snapshot.operatorManifestJson() == null || snapshot.operatorManifestJson().isBlank()) {
+            throw new IllegalArgumentException("Operator manifest not defined in active bundle");
+        }
+        return objectMapper.readValue(snapshot.operatorManifestJson(), new TypeReference<>() {
+        });
     }
 
     private void deployFunction(String appId, BundleFunction function) throws Exception {
@@ -201,7 +243,8 @@ public class ApplicationBundleDeployService {
             List<BundleMigration> migrations,
             List<BundleFunction> functions,
             List<BundleSqlBinding> bindings,
-            List<BundleSchedule> schedules
+            List<BundleSchedule> schedules,
+            Map<String, Object> operatorManifest
     ) {
     }
 
