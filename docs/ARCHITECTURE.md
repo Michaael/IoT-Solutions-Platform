@@ -135,7 +135,7 @@ Event fire → event_history
 6. **NATS subjects** — messageTask в BPMN ([WORKFLOWS.md](WORKFLOWS.md))
 7. **Application bundle** — deploy функций и миграций **вне** ядра ([APPLICATIONS.md](APPLICATIONS.md), [PLUGINS.md](PLUGINS.md))
 
-Коммерческие и отраслевые расширения **не** входят в MIT-дерево `main`.
+Коммерческие и отраслевые расширения **не** входят в Apache 2.0-дерево `main`.
 
 ## Reference Stands
 

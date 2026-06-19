@@ -38,4 +38,6 @@ dependencies {
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveBaseName.set("ispf-server")
+    from(rootProject.file("LICENSE")) { into("META-INF") }
+    from(rootProject.file("NOTICE")) { into("META-INF") }
 }
