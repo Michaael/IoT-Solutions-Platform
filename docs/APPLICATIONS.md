@@ -1,6 +1,8 @@
 # Приложения на платформе (REQ-PF)
 
-Платформенный слой для развёртывания прикладных решений (например, **terminal / michaael**) **без Java-кода в `ispf-server`**. Соответствует ADR-0008 и требованиям `REQ-PF-01` … `REQ-PF-10`.
+Платформенный слой для развёртывания прикладных решений (например, **terminal / michaael**) **без Java-кода в `ispf-server`**. Соответствует ADR-0008 и требованиям REQ-PF.
+
+**Полный backlog и gap-анализ:** [PLATFORM_DEVELOPER_BACKLOG.md](PLATFORM_DEVELOPER_BACKLOG.md).
 
 ## Обзор
 
@@ -189,6 +191,7 @@ Content-Type: application/json
 - [API.md](API.md) — таблица endpoints
 - [WORKFLOWS.md](WORKFLOWS.md) — BPMN `invoke_function`, отмена экземпляров
 - [WEB_CONSOLE.md](WEB_CONSOLE.md) — BPMN editor и auto-layout
+- [PLATFORM_DEVELOPER_BACKLOG.md](PLATFORM_DEVELOPER_BACKLOG.md) — статус REQ-PF, sprint roadmap
 - [PLUGINS.md](PLUGINS.md) — границы ядра и коммерческих плагинов
 - [SECURITY.md](SECURITY.md) — матрица RBAC
 
