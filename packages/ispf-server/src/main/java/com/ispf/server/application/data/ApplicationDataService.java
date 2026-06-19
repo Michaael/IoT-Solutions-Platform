@@ -1,6 +1,5 @@
 package com.ispf.server.application.data;
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,25 +11,30 @@ import java.util.Map;
 public class ApplicationDataService {
 
     private final ApplicationDataStore store;
-    private final JdbcTemplate jdbcTemplate;
+    private final ApplicationSchemaSession schemaSession;
 
-    public ApplicationDataService(ApplicationDataStore store, JdbcTemplate jdbcTemplate) {
+    public ApplicationDataService(ApplicationDataStore store, ApplicationSchemaSession schemaSession) {
         this.store = store;
-        this.jdbcTemplate = jdbcTemplate;
+        this.schemaSession = schemaSession;
     }
 
-    public Map<String, Object> register(String appId, String displayName, String tablePrefix) {
-        store.registerApp(appId, displayName, tablePrefix);
+    public Map<String, Object> register(String appId, String displayName, String tablePrefix, String schemaName) {
+        store.registerApp(appId, displayName, tablePrefix, schemaName);
+        Map<String, Object> app = store.findApp(appId).orElseThrow();
         return Map.of(
                 "appId", appId,
                 "displayName", displayName,
-                "tablePrefix", tablePrefix != null ? tablePrefix : ""
+                "tablePrefix", app.get("table_prefix") != null ? app.get("table_prefix") : "",
+                "schemaName", app.get("schema_name")
         );
     }
 
     @Transactional
     public Map<String, Object> migrate(String appId, String version, List<MigrationScript> scripts) {
-        ensureApp(appId);
+        Map<String, Object> app = ensureApp(appId);
+        String schemaName = String.valueOf(app.get("schema_name"));
+        String tablePrefix = app.get("table_prefix") != null ? String.valueOf(app.get("table_prefix")) : "";
+
         List<String> applied = new ArrayList<>();
         List<String> skipped = new ArrayList<>();
 
@@ -39,11 +43,14 @@ public class ApplicationDataService {
                 skipped.add(script.id());
                 continue;
             }
-            for (String statement : splitStatements(script.sql())) {
-                if (!statement.isBlank()) {
-                    jdbcTemplate.execute(statement);
+            ApplicationSchemaSupport.validateMigrationSql(script.sql(), tablePrefix);
+            schemaSession.runInSchema(schemaName, () -> {
+                for (String statement : splitStatements(script.sql())) {
+                    if (!statement.isBlank()) {
+                        store.executeSql(statement);
+                    }
                 }
-            }
+            });
             store.recordMigration(appId, version, script.id(), script.sql());
             applied.add(script.id());
         }
@@ -56,21 +63,55 @@ public class ApplicationDataService {
         );
     }
 
+    @Transactional
+    public Map<String, Object> seed(String appId, String profile) {
+        Map<String, Object> app = ensureApp(appId);
+        String schemaName = String.valueOf(app.get("schema_name"));
+
+        List<SeedScript> seeds = ApplicationSeedProfiles.scripts(profile);
+        List<String> applied = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
+
+        for (SeedScript seed : seeds) {
+            if (store.isSeedApplied(appId, profile, seed.id())) {
+                skipped.add(seed.id());
+                continue;
+            }
+            schemaSession.runInSchema(schemaName, () -> {
+                for (String statement : splitStatements(seed.sql())) {
+                    if (!statement.isBlank()) {
+                        store.executeSql(statement);
+                    }
+                }
+            });
+            store.recordSeed(appId, profile, seed.id());
+            applied.add(seed.id());
+        }
+
+        return Map.of(
+                "appId", appId,
+                "profile", profile,
+                "applied", applied,
+                "skipped", skipped
+        );
+    }
+
     public Map<String, Object> status(String appId) {
-        ensureApp(appId);
+        Map<String, Object> app = ensureApp(appId);
         List<Map<String, Object>> migrations = store.listMigrations(appId);
         String currentVersion = migrations.isEmpty()
                 ? ""
                 : String.valueOf(migrations.get(migrations.size() - 1).get("version"));
         return Map.of(
                 "appId", appId,
+                "schemaName", app.get("schema_name"),
                 "currentVersion", currentVersion,
                 "applied", migrations
         );
     }
 
-    private void ensureApp(String appId) {
-        store.findApp(appId).orElseThrow(() -> new IllegalArgumentException("Unknown application: " + appId));
+    private Map<String, Object> ensureApp(String appId) {
+        return store.findApp(appId).orElseThrow(() -> new IllegalArgumentException("Unknown application: " + appId));
     }
 
     private static List<String> splitStatements(String sql) {
@@ -93,5 +134,8 @@ public class ApplicationDataService {
     }
 
     public record MigrationScript(String id, String sql) {
+    }
+
+    public record SeedScript(String id, String sql) {
     }
 }

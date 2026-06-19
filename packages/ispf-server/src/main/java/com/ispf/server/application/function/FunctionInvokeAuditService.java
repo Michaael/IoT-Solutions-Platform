@@ -1,5 +1,6 @@
 package com.ispf.server.application.function;
 
+import com.ispf.server.application.data.PlatformSqlCatalog;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -11,17 +12,19 @@ import java.util.UUID;
 public class FunctionInvokeAuditService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final String auditTable;
 
-    public FunctionInvokeAuditService(JdbcTemplate jdbcTemplate) {
+    public FunctionInvokeAuditService(JdbcTemplate jdbcTemplate, PlatformSqlCatalog platformSqlCatalog) {
         this.jdbcTemplate = jdbcTemplate;
+        this.auditTable = platformSqlCatalog.table("function_invoke_audit");
     }
 
     public void record(String appId, String objectPath, String functionName, boolean success, String errorMessage) {
         jdbcTemplate.update("""
-                INSERT INTO function_invoke_audit (
+                INSERT INTO %s (
                     id, correlation_id, object_path, function_name, app_id, success, error_message, invoked_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                """.formatted(auditTable),
                 UUID.randomUUID(),
                 UUID.randomUUID().toString(),
                 objectPath,

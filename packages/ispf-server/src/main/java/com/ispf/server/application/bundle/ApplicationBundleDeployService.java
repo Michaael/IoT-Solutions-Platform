@@ -42,7 +42,12 @@ public class ApplicationBundleDeployService {
 
         try {
             if (manifest.displayName() != null) {
-                dataService.register(appId, manifest.displayName(), manifest.tablePrefix());
+                dataService.register(
+                        appId,
+                        manifest.displayName(),
+                        manifest.tablePrefix(),
+                        manifest.schemaName()
+                );
                 applied.add("register");
             }
         } catch (Exception ex) {
@@ -125,6 +130,7 @@ public class ApplicationBundleDeployService {
             String version,
             String displayName,
             String tablePrefix,
+            String schemaName,
             List<BundleMigration> migrations,
             List<BundleFunction> functions,
             List<BundleSchedule> schedules

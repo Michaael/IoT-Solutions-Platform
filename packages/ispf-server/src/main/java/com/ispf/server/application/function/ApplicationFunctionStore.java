@@ -1,5 +1,7 @@
 package com.ispf.server.application.function;
 
+import com.ispf.server.application.data.PlatformSqlCatalog;
+import com.ispf.server.application.script.FunctionScriptValidator;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -13,16 +15,27 @@ import java.util.UUID;
 public class ApplicationFunctionStore {
 
     private final JdbcTemplate jdbcTemplate;
+    private final FunctionScriptValidator scriptValidator;
+    private final String functionsTable;
 
-    public ApplicationFunctionStore(JdbcTemplate jdbcTemplate) {
+    public ApplicationFunctionStore(
+            JdbcTemplate jdbcTemplate,
+            FunctionScriptValidator scriptValidator,
+            PlatformSqlCatalog platformSqlCatalog
+    ) {
         this.jdbcTemplate = jdbcTemplate;
+        this.scriptValidator = scriptValidator;
+        this.functionsTable = platformSqlCatalog.table("application_functions");
     }
 
     public void deploy(ApplicationFunctionHandler.DeployedFunction function) {
+        if ("script".equals(function.sourceType())) {
+            scriptValidator.validate(function.sourceBody());
+        }
         Integer count = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*) FROM application_functions
+                SELECT COUNT(*) FROM %s
                 WHERE app_id = ? AND object_path = ? AND function_name = ? AND version = ?
-                """,
+                """.formatted(functionsTable),
                 Integer.class,
                 function.appId(),
                 function.objectPath(),
@@ -31,11 +44,11 @@ public class ApplicationFunctionStore {
         );
         if (count != null && count > 0) {
             jdbcTemplate.update("""
-                    UPDATE application_functions
+                    UPDATE %s
                     SET source_type = ?, source_body = ?, input_schema_json = ?,
                         output_schema_json = ?, deployed_at = ?
                     WHERE app_id = ? AND object_path = ? AND function_name = ? AND version = ?
-                    """,
+                    """.formatted(functionsTable),
                     function.sourceType(),
                     function.sourceBody(),
                     function.inputSchemaJson(),
@@ -49,11 +62,11 @@ public class ApplicationFunctionStore {
             return;
         }
         jdbcTemplate.update("""
-                INSERT INTO application_functions (
+                INSERT INTO %s (
                     id, app_id, object_path, function_name, version,
                     source_type, source_body, input_schema_json, output_schema_json, deployed_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                """.formatted(functionsTable),
                 function.id(),
                 function.appId(),
                 function.objectPath(),
@@ -71,11 +84,11 @@ public class ApplicationFunctionStore {
         List<ApplicationFunctionHandler.DeployedFunction> rows = jdbcTemplate.query("""
                 SELECT id, app_id, object_path, function_name, version,
                        source_type, source_body, input_schema_json, output_schema_json
-                FROM application_functions
+                FROM %s
                 WHERE object_path = ? AND function_name = ?
                 ORDER BY deployed_at DESC
                 LIMIT 1
-                """,
+                """.formatted(functionsTable),
                 (rs, rowNum) -> new ApplicationFunctionHandler.DeployedFunction(
                         UUID.fromString(rs.getString("id")),
                         rs.getString("app_id"),

@@ -28,13 +28,14 @@ Content-Type: application/json
 {
   "appId": "terminal",
   "displayName": "Oil Terminal",
-  "tablePrefix": "terminal_"
+  "tablePrefix": "terminal_",
+  "schemaName": "terminal"
 }
 ```
 
 ## Миграции данных (REQ-PF-02)
 
-SQL-скрипты приложения **не** попадают в Flyway платформы. Деплой через API:
+SQL-скрипты приложения **не** попадают в Flyway платформы. Деплой через API в **изолированной schema** (`schemaName`, по умолчанию `app_{appId}`):
 
 ```http
 POST /api/v1/applications/terminal/data/migrate
@@ -50,13 +51,43 @@ Content-Type: application/json
 
 Повторный вызов с тем же `version` + `id` — **идемпотентен** (скрипт пропускается).
 
+**Guard:** DDL не может создавать platform-таблицы (`applications`, `workflow_*`, …). При непустом `tablePrefix` имена таблиц должны начинаться с префикса.
+
+```http
+GET /api/v1/applications/terminal/data/status
+```
+
+### Seed (smoke)
+
+```http
+POST /api/v1/applications/terminal/data/seed
+Content-Type: application/json
+
+{ "profile": "smoke-p301" }
+```
+
+Встроенный профиль `smoke-p301` — идемпотентные INSERT для смены, нарядов `DO-2026-*`, tanks. Повторный вызов пропускает уже применённые seed-блоки.
+
 ```http
 GET /api/v1/applications/terminal/data/status
 ```
 
 ## Деплой функций (REQ-PF-01)
 
-Функции — JSON **script** с шагами: `selectOne`, `exec`, `failIfNull`, `failIfNotEquals`, `return`.
+Функции — JSON **script** с шагами:
+
+| Шаг | Назначение |
+|-----|------------|
+| `selectOne` | Одна строка SQL → var (`Map`) |
+| `selectMany` | Список строк SQL → var (`List<Map>`) |
+| `exec` | DML/DDL с `params` |
+| `setVar` | Присвоение литерала или `${path}` |
+| `invoke_function` | Вызов другой deploy-функции; propagate `error_code` |
+| `failIfNull` | Выход с `error_code` / `error_message` |
+| `failIfNotEquals` | Проверка значения var |
+| `return` | Сборка output (`fields`); массивы через `${var}` |
+
+Один invoke = одна JDBC-транзакция (rollback при необработанном exception). Вложенные `invoke_function` — до 8 уровней. Невалидный script → **400** на deploy.
 
 ```http
 POST /api/v1/applications/terminal/functions/deploy
