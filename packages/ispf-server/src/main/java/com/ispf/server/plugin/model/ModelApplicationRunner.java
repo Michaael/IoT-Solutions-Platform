@@ -64,6 +64,34 @@ public class ModelApplicationRunner {
             objectManager.persistNodeTree(path);
         });
 
+        modelRegistry.findByName("dashboard-v1").ifPresent(model -> {
+            String path = "root.platform.dashboards.snmp-host-monitoring";
+            modelEngine.applyModel(model.id(), path);
+            PlatformObject dashboard = objectManager.require(path);
+            dashboard.setVariableValue(
+                    "title",
+                    DataRecord.single(
+                            DataSchema.builder("title").field("value", FieldType.STRING).build(),
+                            Map.of("value", "SNMP Host Monitoring")
+                    )
+            );
+            dashboard.setVariableValue(
+                    "refreshIntervalMs",
+                    DataRecord.single(
+                            DataSchema.builder("refreshIntervalMs").field("value", FieldType.INTEGER).build(),
+                            Map.of("value", 10000)
+                    )
+            );
+            dashboard.setVariableValue(
+                    "layout",
+                    DataRecord.single(
+                            DataSchema.builder("layout").field("value", FieldType.STRING).build(),
+                            Map.of("value", DashboardLayouts.SNMP_HOST_MONITORING_DASHBOARD.trim())
+                    )
+            );
+            objectManager.persistNodeTree(path);
+        });
+
         modelRegistry.findByName("workflow-v1").ifPresent(model -> {
             String path = "root.platform.workflows.demo-alarm-handler";
             modelEngine.applyModel(model.id(), path);
@@ -105,6 +133,7 @@ public class ModelApplicationRunner {
         ensureNode("root.platform.devices.demo-sensor-01", ObjectType.DEVICE, "Demo Sensor 01", "Simulated MQTT temperature sensor", "mqtt-sensor-v1");
         ensureNode("root.platform.dashboards", ObjectType.CUSTOM, "Dashboards", "HMI dashboards");
         ensureNode("root.platform.dashboards.demo-sensor", ObjectType.DASHBOARD, "Demo Sensor Dashboard", "Live HMI for demo MQTT temperature sensor", "dashboard-v1");
+        ensureNode("root.platform.dashboards.snmp-host-monitoring", ObjectType.DASHBOARD, "SNMP Host Monitoring", "System monitoring dashboard for SNMP agents (Windows/Linux)", "dashboard-v1");
         ensureNode("root.platform.workflows", ObjectType.CUSTOM, "Workflows", "BPMN automation workflows");
         ensureNode("root.platform.workflows.demo-alarm-handler", ObjectType.WORKFLOW, "Demo Alarm Handler", "Triggers when demo sensor alarm becomes active", "workflow-v1");
     }

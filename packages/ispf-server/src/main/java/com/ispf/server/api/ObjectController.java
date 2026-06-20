@@ -11,6 +11,7 @@ import com.ispf.server.api.dto.VariableDto;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectUiIconService;
 import com.ispf.server.dashboard.DashboardService;
+import com.ispf.server.driver.DeviceProvisioningService;
 import com.ispf.server.security.PlatformUserService;
 import com.ispf.server.workflow.WorkflowService;
 import jakarta.validation.Valid;
@@ -38,19 +39,22 @@ public class ObjectController {
     private final WorkflowService workflowService;
     private final PlatformUserService platformUserService;
     private final ObjectUiIconService objectUiIconService;
+    private final DeviceProvisioningService deviceProvisioningService;
 
     public ObjectController(
             ObjectManager objectManager,
             DashboardService dashboardService,
             WorkflowService workflowService,
             PlatformUserService platformUserService,
-            ObjectUiIconService objectUiIconService
+            ObjectUiIconService objectUiIconService,
+            DeviceProvisioningService deviceProvisioningService
     ) {
         this.objectManager = objectManager;
         this.dashboardService = dashboardService;
         this.workflowService = workflowService;
         this.platformUserService = platformUserService;
         this.objectUiIconService = objectUiIconService;
+        this.deviceProvisioningService = deviceProvisioningService;
     }
 
     private ObjectDto toDto(PlatformObject node) {
@@ -95,6 +99,15 @@ public class ObjectController {
         }
         if (request.type() == ObjectType.WORKFLOW) {
             workflowService.ensureWorkflowStructure(node.path());
+        }
+        if (request.type() == ObjectType.DEVICE && request.driverId() != null && !request.driverId().isBlank()) {
+            deviceProvisioningService.provisionDriver(
+                    node.path(),
+                    request.driverId(),
+                    request.driverPollIntervalMs(),
+                    Boolean.TRUE.equals(request.autoStartDriver())
+            );
+            objectManager.persistNodeTree(node.path());
         }
         return toDto(objectManager.require(node.path()));
     }
@@ -164,7 +177,10 @@ public class ObjectController {
             ObjectType type,
             String displayName,
             String description,
-            String templateId
+            String templateId,
+            String driverId,
+            Integer driverPollIntervalMs,
+            Boolean autoStartDriver
     ) {
     }
 

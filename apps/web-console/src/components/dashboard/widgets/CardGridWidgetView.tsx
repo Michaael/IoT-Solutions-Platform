@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchObjects, fetchVariables } from "../../../api";
 import type { CardGridWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface CardGridWidgetViewProps {
   widget: CardGridWidget;
@@ -16,6 +17,7 @@ export default function CardGridWidgetView({
   refreshIntervalMs,
   editable,
 }: CardGridWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const variables = useMemo(() => {
     try {
       return widget.variablesJson ? (JSON.parse(widget.variablesJson) as string[]) : [];
@@ -32,13 +34,16 @@ export default function CardGridWidgetView({
   });
 
   return (
-    <div className="dash-widget dash-widget-card-grid">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget dash-widget-card-grid"
+      editable={editable}
+    >
       {!widget.parentPath ? (
         <p className="hint">Укажите parentPath</p>
       ) : (
-        <div className="dash-card-grid">
+        <div className="dash-card-grid" style={styles.body}>
           {(children.data ?? []).map((obj) => (
             <ObjectCard
               key={obj.path}
@@ -50,7 +55,7 @@ export default function CardGridWidgetView({
           ))}
         </div>
       )}
-    </div>
+    </DashWidgetShell>
   );
 }
 

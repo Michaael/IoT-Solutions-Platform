@@ -29,6 +29,12 @@ export interface DashboardWidgetBase {
   valueField?: string;
   /** When set, objectPath is taken from dashboard selection (e.g. selected order). */
   selectionKey?: string;
+  /**
+   * Per-element inline styles (JSON object).
+   * Keys: card, title, body, value, unit, meta, label, badge, dot, table, chart.
+   * Values: camelCase CSS properties, e.g. {"value":{"fontSize":"0.88rem"}}.
+   */
+  stylesJson?: string;
 }
 
 export interface ValueWidget extends DashboardWidgetBase {

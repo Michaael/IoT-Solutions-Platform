@@ -64,6 +64,7 @@ public class ModelBootstrap {
             "{\"baseTemperature\":\"22.0\",\"amplitude\":\"15.0\",\"periodSec\":\"60\"}";
 
     public static final String SNMP_AGENT_MODEL = "snmp-agent-v1";
+    public static final String DEVICE_DRIVER_MODEL = "device-driver-v1";
     public static final String SNMP_LOCALHOST_PATH = "root.platform.devices.snmp-localhost";
 
     private static final String SNMP_DRIVER_CONFIG =
@@ -71,7 +72,12 @@ public class ModelBootstrap {
 
     private static final String SNMP_POINT_MAPPINGS =
             "{\"sysName\":\"1.3.6.1.2.1.1.5.0:STRING\",\"sysDescr\":\"1.3.6.1.2.1.1.1.0:STRING\","
-                    + "\"sysUpTime\":\"1.3.6.1.2.1.1.3.0\",\"sysLocation\":\"1.3.6.1.2.1.1.6.0:STRING\"}";
+                    + "\"sysUpTime\":\"1.3.6.1.2.1.1.3.0\",\"sysLocation\":\"1.3.6.1.2.1.1.6.0:STRING\","
+                    + "\"sysContact\":\"1.3.6.1.2.1.1.4.0:STRING\","
+                    + "\"hrMemorySize\":\"1.3.6.1.2.1.25.2.2.0:INTEGER\","
+                    + "\"hrSystemProcesses\":\"1.3.6.1.2.1.25.1.6.0:INTEGER\","
+                    + "\"hrSystemNumUsers\":\"1.3.6.1.2.1.25.1.5.0:INTEGER\","
+                    + "\"ifNumber\":\"1.3.6.1.2.1.2.1.0:INTEGER\"}";
 
     private static final DataSchema SNMP_NUMERIC_SCHEMA = DataSchema.builder("snmpNumeric")
             .field("value", FieldType.DOUBLE)
@@ -98,6 +104,14 @@ public class ModelBootstrap {
      */
     public void ensureBuiltInModels() {
         seedModels();
+        ensureDeviceDriverModel();
+    }
+
+    private void ensureDeviceDriverModel() {
+        if (!modelRegistry.findByName(DEVICE_DRIVER_MODEL).isEmpty()) {
+            return;
+        }
+        modelEngine.createModel(buildDeviceDriverModel());
     }
 
     /** @deprecated use {@link #ensureBuiltInModels()} */
@@ -243,6 +257,8 @@ public class ModelBootstrap {
 
         modelEngine.createModel(buildSnmpAgentModel());
 
+        modelEngine.createModel(buildDeviceDriverModel());
+
         ModelDefinition dashboard = new ModelDefinition(
                 UUID.randomUUID().toString(),
                 "dashboard-v1",
@@ -382,6 +398,85 @@ public class ModelBootstrap {
         modelEngine.createModel(workflow);
     }
 
+    static ModelDefinition buildDeviceDriverModel() {
+        return new ModelDefinition(
+                UUID.randomUUID().toString(),
+                DEVICE_DRIVER_MODEL,
+                "Generic device with driver binding (driverId, config, mappings)",
+                ModelType.RELATIVE,
+                ObjectType.DEVICE,
+                "",
+                List.of(
+                        new ModelVariableDefinition(
+                                "status",
+                                "Device connectivity status",
+                                "status",
+                                STATUS_SCHEMA,
+                                true,
+                                false,
+                                null,
+                                DataRecord.single(STATUS_SCHEMA, Map.of("online", false, "lastSeen", ""))
+                        ),
+                        new ModelVariableDefinition(
+                                "driverId",
+                                "Attached driver plugin id",
+                                "driver",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "virtual"))
+                        ),
+                        new ModelVariableDefinition(
+                                "driverStatus",
+                                "Driver runtime status",
+                                "driver",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                false,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "STOPPED"))
+                        ),
+                        new ModelVariableDefinition(
+                                "driverPollIntervalMs",
+                                "Driver polling interval",
+                                "driver",
+                                INTEGER_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(INTEGER_VALUE_SCHEMA, Map.of("value", 5000))
+                        ),
+                        new ModelVariableDefinition(
+                                "driverConfigJson",
+                                "Driver configuration JSON",
+                                "driver",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "{}"))
+                        ),
+                        new ModelVariableDefinition(
+                                "driverPointMappingsJson",
+                                "Driver point mappings JSON",
+                                "driver",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "{}"))
+                        )
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                Map.of(),
+                Instant.now(),
+                Instant.now()
+        );
+    }
+
     static ModelDefinition buildSnmpAgentModel() {
         return new ModelDefinition(
                 UUID.randomUUID().toString(),
@@ -440,6 +535,56 @@ public class ModelBootstrap {
                                 true,
                                 null,
                                 DataRecord.single(SNMP_STRING_SCHEMA, Map.of("value", "", "raw", "", "type", ""))
+                        ),
+                        new ModelVariableDefinition(
+                                "sysContact",
+                                "SNMP sysContact (1.3.6.1.2.1.1.4.0)",
+                                "telemetry",
+                                SNMP_STRING_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(SNMP_STRING_SCHEMA, Map.of("value", "", "raw", "", "type", ""))
+                        ),
+                        new ModelVariableDefinition(
+                                "hrMemorySize",
+                                "Physical memory size in KB (HOST-RESOURCES-MIB 1.3.6.1.2.1.25.2.2.0)",
+                                "telemetry",
+                                SNMP_NUMERIC_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(SNMP_NUMERIC_SCHEMA, Map.of("value", 0.0, "raw", "", "type", ""))
+                        ),
+                        new ModelVariableDefinition(
+                                "hrSystemProcesses",
+                                "Running processes (HOST-RESOURCES-MIB 1.3.6.1.2.1.25.1.6.0)",
+                                "telemetry",
+                                SNMP_NUMERIC_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(SNMP_NUMERIC_SCHEMA, Map.of("value", 0.0, "raw", "", "type", ""))
+                        ),
+                        new ModelVariableDefinition(
+                                "hrSystemNumUsers",
+                                "Logged-in users (HOST-RESOURCES-MIB 1.3.6.1.2.1.25.1.5.0)",
+                                "telemetry",
+                                SNMP_NUMERIC_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(SNMP_NUMERIC_SCHEMA, Map.of("value", 0.0, "raw", "", "type", ""))
+                        ),
+                        new ModelVariableDefinition(
+                                "ifNumber",
+                                "Network interfaces count (IF-MIB 1.3.6.1.2.1.2.1.0)",
+                                "telemetry",
+                                SNMP_NUMERIC_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(SNMP_NUMERIC_SCHEMA, Map.of("value", 0.0, "raw", "", "type", ""))
                         ),
                         new ModelVariableDefinition(
                                 "driverId",

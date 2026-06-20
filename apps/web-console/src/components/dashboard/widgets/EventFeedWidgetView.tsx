@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchEvents } from "../../../api";
 import type { EventFeedWidget } from "../../../types/dashboard";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface EventFeedWidgetViewProps {
   widget: EventFeedWidget;
@@ -15,6 +16,7 @@ export default function EventFeedWidgetView({
   refreshIntervalMs,
   editable,
 }: EventFeedWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const eventNames = useMemo(() => {
     try {
       return widget.eventNamesJson ? (JSON.parse(widget.eventNamesJson) as string[]) : [];
@@ -40,14 +42,17 @@ export default function EventFeedWidgetView({
   });
 
   return (
-    <div className="dash-widget dash-widget-event-feed">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget dash-widget-event-feed"
+      editable={editable}
+    >
       {events.isLoading && <p className="hint">Загрузка…</p>}
       {filtered.length === 0 && !events.isLoading && (
         <p className="hint">Нет событий</p>
       )}
-      <ul className="dash-event-feed-list">
+      <ul className="dash-event-feed-list" style={styles.body}>
         {filtered.map((event) => {
           const payload = event.payload?.rows?.[0];
           const detail = payload
@@ -69,6 +74,6 @@ export default function EventFeedWidgetView({
           );
         })}
       </ul>
-    </div>
+    </DashWidgetShell>
   );
 }

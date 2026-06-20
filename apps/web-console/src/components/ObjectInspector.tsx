@@ -226,7 +226,8 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
             <p className="hint">Нет переменных</p>
           )}
           {variablesQuery.data && variablesQuery.data.length > 0 && (
-            <table className="data-table">
+            <div className="table-scroll">
+            <table className="data-table variables-table">
               <thead>
                 <tr>
                   <th>Имя</th>
@@ -260,6 +261,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </section>
       )}

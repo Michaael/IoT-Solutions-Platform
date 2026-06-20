@@ -359,12 +359,21 @@ code,
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.explorer-view,
+.inspector {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.85rem;
+  min-width: 0;
 }
 
 .form-grid label {
@@ -373,10 +382,14 @@ code,
   gap: 0.35rem;
   font-size: 0.8rem;
   color: var(--text-muted);
+  min-width: 0;
 }
 
-.form-grid label.full {
+.form-grid label.full,
+.form-grid > .full {
   grid-column: 1 / -1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .form-grid input,
@@ -388,6 +401,33 @@ code,
   background: var(--bg);
   color: var(--text);
   font-size: 0.9rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.form-grid select {
+  text-overflow: ellipsis;
+}
+
+.form-grid textarea {
+  resize: vertical;
+  overflow-x: auto;
+  field-sizing: fixed;
+}
+
+.form-grid textarea.mono {
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  resize: none;
+}
+
+.form-grid .hint.full {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .form-grid input.readonly {
@@ -446,6 +486,12 @@ code,
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  table-layout: fixed;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .data-table th,
@@ -454,6 +500,42 @@ code,
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.data-table.variables-table th:nth-child(1),
+.data-table.variables-table td:nth-child(1) {
+  width: 16%;
+}
+
+.data-table.variables-table th:nth-child(2),
+.data-table.variables-table td:nth-child(2) {
+  width: 38%;
+}
+
+.data-table.variables-table th:nth-child(3),
+.data-table.variables-table td:nth-child(3) {
+  width: 8%;
+}
+
+.data-table.variables-table th:nth-child(4),
+.data-table.variables-table td:nth-child(4) {
+  width: 26%;
+}
+
+.data-table.variables-table th:last-child,
+.data-table.variables-table td:last-child {
+  width: 7rem;
+  white-space: nowrap;
+  text-align: right;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.data-table td.mono {
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .data-table th {
@@ -505,11 +587,15 @@ code,
 
 .modal {
   width: min(560px, 100%);
+  max-height: min(90vh, 100%);
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1rem;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
 }
 
 .modal header {
@@ -521,6 +607,29 @@ code,
 
 .modal header h3 {
   margin: 0;
+}
+
+.modal-create-object {
+  width: min(540px, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-create-object .modal-body {
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.modal-create-object .form-grid {
+  width: 100%;
+}
+
+.modal-create-object .hint,
+.modal-create-object code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .modal footer {
@@ -954,6 +1063,7 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   position: absolute;
   min-width: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .dashboard-grid-item.selected > .dash-widget {
@@ -989,6 +1099,7 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
 .dash-widget {
   position: relative;
   height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -996,6 +1107,7 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   border-radius: 10px;
   border: 1px solid var(--border);
   background: linear-gradient(180deg, #1a2030 0%, #12161f 100%);
+  overflow: hidden;
 }
 
 .dashboard-edit-hint {
@@ -1006,8 +1118,17 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
 }
 
 .dash-widget-title {
+  flex-shrink: 0;
   font-size: 0.85rem;
   color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 1.25rem;
+}
+
+.dash-widget-value {
+  min-height: 0;
 }
 
 .dash-widget-value-body {
@@ -1015,29 +1136,79 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   align-items: baseline;
   gap: 0.35rem;
   flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.dash-widget-value-body.is-text {
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .dash-widget-metric {
-  font-size: 2rem;
+  font-size: clamp(1.15rem, 2.8vw, 1.85rem);
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-widget-text {
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-widget-text-multiline {
+  flex: 1;
+  align-self: stretch;
+  white-space: normal;
+  overflow-x: hidden;
+  overflow-y: auto;
+  word-break: break-word;
+  text-overflow: unset;
+  scrollbar-width: thin;
 }
 
 .dash-widget-unit {
+  flex-shrink: 0;
+  font-size: 0.82rem;
   color: var(--text-muted);
 }
 
 .dash-widget-meta {
-  font-size: 0.72rem;
+  flex-shrink: 0;
+  font-size: 0.68rem;
   color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dash-widget-indicator-body {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dash-widget-indicator-body > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dash-indicator-dot {
@@ -1775,13 +1946,17 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
 
 .dash-status-badge {
   display: inline-flex;
-  padding: 0.35rem 0.85rem;
+  max-width: 100%;
+  padding: 0.3rem 0.65rem;
   border-radius: 999px;
   border: 2px solid currentColor;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: clamp(0.72rem, 2vw, 0.9rem);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dash-widget-gauge {

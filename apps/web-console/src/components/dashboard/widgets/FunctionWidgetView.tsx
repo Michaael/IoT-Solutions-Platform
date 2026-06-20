@@ -4,7 +4,8 @@ import { invokeFunction } from "../../../api";
 import type { FunctionWidget } from "../../../types/dashboard";
 import { resolveWidgetPath } from "../dashboardUtils";
 import { useDashboardContext } from "../DashboardContext";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface FunctionWidgetViewProps {
   widget: FunctionWidget;
@@ -12,6 +13,7 @@ interface FunctionWidgetViewProps {
 }
 
 export default function FunctionWidgetView({ widget, editable }: FunctionWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const queryClient = useQueryClient();
   const objectPath = resolveWidgetPath(widget.objectPath, widget.selectionKey, selection);
@@ -57,12 +59,16 @@ export default function FunctionWidgetView({ widget, editable }: FunctionWidgetV
   };
 
   return (
-    <div className="dash-widget function-widget">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget function-widget"
+      editable={editable}
+    >
       <button
         type="button"
         className="btn primary function-widget-btn"
+        style={styles.value}
         disabled={editable || mutation.isPending || !objectPath || !widget.functionName}
         onClick={handleClick}
       >
@@ -70,6 +76,6 @@ export default function FunctionWidgetView({ widget, editable }: FunctionWidgetV
       </button>
       {message && <p className="function-widget-msg ok">{message}</p>}
       {error && <p className="function-widget-msg error">{error}</p>}
-    </div>
+    </DashWidgetShell>
   );
 }

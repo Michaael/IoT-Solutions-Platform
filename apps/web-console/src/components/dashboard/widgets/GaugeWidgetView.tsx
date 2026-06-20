@@ -2,7 +2,8 @@ import type { GaugeWidget } from "../../../types/dashboard";
 import { resolveWidgetPath } from "../dashboardUtils";
 import { useDashboardContext } from "../DashboardContext";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface GaugeWidgetViewProps {
   widget: GaugeWidget;
@@ -15,6 +16,7 @@ export default function GaugeWidgetView({
   refreshIntervalMs,
   editable,
 }: GaugeWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const objectPath = resolveWidgetPath(widget.objectPath, widget.selectionKey, selection);
 
@@ -44,14 +46,17 @@ export default function GaugeWidgetView({
   const decimals = widget.decimals ?? 1;
 
   return (
-    <div className="dash-widget dash-widget-gauge">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget dash-widget-gauge"
+      editable={editable}
+    >
       {!objectPath ? (
         <p className="hint">Укажите объект</p>
       ) : (
-        <>
-          <div className="dash-gauge-value">
+        <div style={styles.body}>
+          <div className="dash-gauge-value" style={styles.value}>
             {current.toFixed(decimals)}
             {widget.unit ? ` ${widget.unit}` : ""}
           </div>
@@ -59,12 +64,12 @@ export default function GaugeWidgetView({
             <div className="dash-gauge-fill" style={{ width: `${ratio}%` }} />
             <div className="dash-gauge-marker" style={{ left: `${ratio}%` }} />
           </div>
-          <div className="dash-gauge-range hint">
+          <div className="dash-gauge-range hint" style={styles.meta}>
             <span>{min.toFixed(decimals)}</span>
             <span>{max.toFixed(decimals)}</span>
           </div>
-        </>
+        </div>
       )}
-    </div>
+    </DashWidgetShell>
   );
 }

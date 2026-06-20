@@ -31,6 +31,18 @@ class DashboardApiTest {
     }
 
     @Test
+    void snmpHostDashboardHasDeviceSelectionLayout() throws Exception {
+        mockMvc.perform(get("/api/v1/dashboards/by-path")
+                        .param("path", "root.platform.dashboards.snmp-host-monitoring"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("SNMP Host Monitoring"))
+                .andExpect(jsonPath("$.refreshIntervalMs").value(10000))
+                .andExpect(jsonPath("$.layout.widgets[?(@.id=='device-table')]").exists())
+                .andExpect(jsonPath("$.layout.widgets[?(@.id=='device-table')].selectionKey").value("device"))
+                .andExpect(jsonPath("$.layout.widgets[?(@.id=='uptime-chart')].type").value("chart"));
+    }
+
+    @Test
     void listsDashboardModel() throws Exception {
         mockMvc.perform(get("/api/v1/models"))
                 .andExpect(status().isOk())

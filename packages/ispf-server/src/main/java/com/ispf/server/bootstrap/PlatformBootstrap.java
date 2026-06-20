@@ -74,6 +74,16 @@ public class PlatformBootstrap {
         );
         tree.register(demoDashboard);
 
+        PlatformObject snmpDashboard = new PlatformObject(
+                UUID.randomUUID().toString(),
+                "root.platform.dashboards.snmp-host-monitoring",
+                ObjectType.DASHBOARD,
+                "SNMP Host Monitoring",
+                "System monitoring dashboard for SNMP agents (Windows/Linux)",
+                "dashboard-v1"
+        );
+        tree.register(snmpDashboard);
+
         PlatformObject workflows = new PlatformObject(
                 UUID.randomUUID().toString(),
                 "root.platform.workflows",

@@ -11,6 +11,8 @@ import {
 } from "recharts";
 import type { ChartWidget } from "../../../types/dashboard";
 import { useTrendSeries } from "../../../hooks/useTrendSeries";
+import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
+import { useWidgetStyles } from "../widgetStyles";
 import WidgetDragHandle from "../WidgetDragHandle";
 
 interface ChartWidgetViewProps {
@@ -28,9 +30,11 @@ export default function ChartWidgetView({
   const color = widget.color ?? "#2f81f7";
   const chartStyle = widget.chartStyle ?? "area";
   const decimals = widget.decimals ?? 1;
+  const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
+  const styles = useWidgetStyles(widget.stylesJson);
 
   const { points, stats, isLoading, isError, variable } = useTrendSeries(
-    widget.objectPath ?? "",
+    objectPath,
     widget.variableName ?? "",
     widget.valueField,
     refreshIntervalMs,
@@ -43,13 +47,15 @@ export default function ChartWidgetView({
     (widget.unitField && unitRow ? String(unitRow[widget.unitField] ?? "") : "");
 
   return (
-    <div className="dash-widget dash-widget-chart">
+    <div className="dash-widget dash-widget-chart" style={styles.card}>
       <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-chart-head">
-        <div className="dash-widget-title">{widget.title}</div>
+      <div className="dash-widget-chart-head" style={styles.body}>
+        <div className="dash-widget-title" style={styles.title}>
+          {widget.title}
+        </div>
         <div className="dash-chart-stats">
           {stats.latest != null ? (
-            <span className="dash-chart-latest">
+            <span className="dash-chart-latest" style={styles.value}>
               {stats.latest.toFixed(decimals)}
               {unit ? ` ${unit}` : ""}
             </span>
@@ -63,8 +69,10 @@ export default function ChartWidgetView({
           )}
         </div>
       </div>
-      <div className="dash-chart-body">
-        {isLoading && points.length === 0 ? (
+      <div className="dash-chart-body" style={styles.chart}>
+        {!objectPath && widget.selectionKey ? (
+          <div className="dash-chart-placeholder">Выберите устройство</div>
+        ) : isLoading && points.length === 0 ? (
           <div className="dash-chart-placeholder">Сбор данных…</div>
         ) : isError ? (
           <div className="dash-chart-placeholder error">Ошибка привязки</div>

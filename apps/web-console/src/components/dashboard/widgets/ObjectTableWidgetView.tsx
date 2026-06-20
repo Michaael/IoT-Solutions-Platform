@@ -4,7 +4,8 @@ import { fetchObjects, fetchVariables } from "../../../api";
 import type { ObjectTableColumn, ObjectTableWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
 import { useDashboardContext } from "../DashboardContext";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface ObjectTableWidgetViewProps {
   widget: ObjectTableWidget;
@@ -17,6 +18,7 @@ export default function ObjectTableWidgetView({
   refreshIntervalMs,
   editable,
 }: ObjectTableWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const { selection, setSelection } = useDashboardContext();
   const parsedColumns = useMemo(() => {
     try {
@@ -44,16 +46,19 @@ export default function ObjectTableWidgetView({
   }, [children.data, editable, selectedPath, setSelection, widget.selectionKey]);
 
   return (
-    <div className="dash-widget dash-widget-table">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget dash-widget-table"
+      editable={editable}
+    >
       {!widget.parentPath ? (
         <p className="hint">Укажите parentPath</p>
       ) : children.isLoading ? (
         <p className="hint">Загрузка…</p>
       ) : (
-        <div className="dash-table-wrap">
-          <table className="dash-object-table">
+        <div className="dash-table-wrap" style={styles.body}>
+          <table className="dash-object-table" style={styles.table}>
             <thead>
               <tr>
                 <th>Объект</th>
@@ -82,7 +87,7 @@ export default function ObjectTableWidgetView({
           </table>
         </div>
       )}
-    </div>
+    </DashWidgetShell>
   );
 }
 

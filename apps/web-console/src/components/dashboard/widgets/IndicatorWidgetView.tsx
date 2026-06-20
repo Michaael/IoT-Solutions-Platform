@@ -2,8 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { setVariable } from "../../../api";
 import type { IndicatorWidget } from "../../../types/dashboard";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
+import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
 import { cloneRecord, setFieldValue } from "../../../utils/record";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface IndicatorWidgetViewProps {
   widget: IndicatorWidget;
@@ -16,8 +18,10 @@ export default function IndicatorWidgetView({
   refreshIntervalMs,
   editable = false,
 }: IndicatorWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
+  const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const { rawValue, isLoading, isError } = useBoundVariable(
-    widget.objectPath ?? "",
+    objectPath,
     widget.variableName ?? "",
     widget.valueField,
     refreshIntervalMs
@@ -29,21 +33,31 @@ export default function IndicatorWidgetView({
     : (widget.falseLabel ?? "Норма");
 
   return (
-    <div
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
       className={`dash-widget dash-widget-indicator ${active ? "active" : "inactive"}`}
-      style={{
+      editable={editable}
+      rootStyle={{
         borderColor: active
           ? (widget.trueColor ?? "var(--danger)")
           : (widget.falseColor ?? "var(--success)"),
       }}
     >
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
-      <div className="dash-widget-indicator-body">
-        <span className={`dash-indicator-dot ${active ? "on" : "off"}`} />
-        <span>{isLoading ? "…" : isError ? "Ошибка" : label}</span>
-      </div>
-    </div>
+      {!objectPath && widget.selectionKey ? (
+        <p className="hint">Выберите устройство</p>
+      ) : (
+        <div className="dash-widget-indicator-body" style={styles.body}>
+          <span
+            className={`dash-indicator-dot ${active ? "on" : "off"}`}
+            style={styles.dot}
+          />
+          <span style={styles.label}>
+            {isLoading ? "…" : isError ? "Ошибка" : label}
+          </span>
+        </div>
+      )}
+    </DashWidgetShell>
   );
 }
 
@@ -57,6 +71,7 @@ export function ToggleWidgetView({
   refreshIntervalMs,
   editable = false,
 }: ToggleWidgetViewProps & { editable?: boolean }) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const queryClient = useQueryClient();
   const objectPath = widget.objectPath ?? "";
   const { rawValue, variable, writable, isLoading } = useBoundVariable(
@@ -83,18 +98,22 @@ export function ToggleWidgetView({
   });
 
   return (
-    <div className="dash-widget dash-widget-toggle">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget dash-widget-toggle"
+      editable={editable}
+      footer={!writable ? "только чтение" : undefined}
+    >
       <button
         type="button"
         className={`dash-toggle-btn ${active ? "on" : "off"}`}
+        style={styles.value}
         disabled={editable || !writable || isLoading || mutation.isPending}
         onClick={() => mutation.mutate(!active)}
       >
         {active ? (widget.trueLabel ?? "Вкл") : (widget.falseLabel ?? "Выкл")}
       </button>
-      {!writable && <div className="dash-widget-meta">только чтение</div>}
-    </div>
+    </DashWidgetShell>
   );
 }

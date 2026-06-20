@@ -4,7 +4,8 @@ import { fetchObjectEditor, fetchObjects, invokeFunction } from "../../../api";
 import type { FunctionFormField, FunctionFormWidget } from "../../../types/dashboard";
 import { buildFunctionInput, resolveWidgetPath } from "../dashboardUtils";
 import { useDashboardContext } from "../DashboardContext";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface FunctionFormWidgetViewProps {
   widget: FunctionFormWidget;
@@ -12,6 +13,7 @@ interface FunctionFormWidgetViewProps {
 }
 
 export default function FunctionFormWidgetView({ widget, editable }: FunctionFormWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const queryClient = useQueryClient();
   const objectPath = resolveWidgetPath(widget.objectPath, widget.selectionKey, selection);
@@ -70,11 +72,14 @@ export default function FunctionFormWidgetView({ widget, editable }: FunctionFor
   };
 
   return (
-    <div className="dash-widget function-form-widget">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget function-form-widget"
+      editable={editable}
+    >
       {!objectPath && <p className="hint">Выберите объект в таблице</p>}
-      <form className="function-form-fields" onSubmit={handleSubmit}>
+      <form className="function-form-fields" style={styles.body} onSubmit={handleSubmit}>
         {parsedFields.map((field) => (
           <FunctionFormFieldInput
             key={field.name}
@@ -94,7 +99,7 @@ export default function FunctionFormWidgetView({ widget, editable }: FunctionFor
       </form>
       {message && <p className="function-widget-msg ok">{message}</p>}
       {error && <p className="function-widget-msg error">{error}</p>}
-    </div>
+    </DashWidgetShell>
   );
 }
 

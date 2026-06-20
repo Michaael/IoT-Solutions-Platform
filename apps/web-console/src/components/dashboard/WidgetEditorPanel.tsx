@@ -1,5 +1,6 @@
 import type { DashboardWidget, WidgetType } from "../../types/dashboard";
 import { WIDGET_TYPES } from "../../types/dashboard";
+import { WIDGET_STYLE_KEYS_HINT } from "./widgetStyles";
 
 interface WidgetEditorPanelProps {
   widget: DashboardWidget | null;
@@ -366,6 +367,19 @@ export default function WidgetEditorPanel({
             </label>
           </>
         )}
+        <label className="full">
+          Стили элементов (stylesJson)
+          <textarea
+            rows={6}
+            value={widget.stylesJson ?? ""}
+            onChange={(e) => update({ stylesJson: e.target.value || undefined })}
+            placeholder={'{"value":{"fontSize":"0.88rem"},"meta":{"display":"none"}}'}
+          />
+        </label>
+        <p className="hint full">
+          Ключи элементов: {WIDGET_STYLE_KEYS_HINT}. Значения — CSS в camelCase
+          (fontSize, color, whiteSpace, overflowY…). Пусто — стили по умолчанию.
+        </p>
       </div>
     </aside>
   );

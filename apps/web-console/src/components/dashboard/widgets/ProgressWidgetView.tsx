@@ -2,7 +2,8 @@ import type { ProgressWidget } from "../../../types/dashboard";
 import { resolveWidgetPath } from "../dashboardUtils";
 import { useDashboardContext } from "../DashboardContext";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface ProgressWidgetViewProps {
   widget: ProgressWidget;
@@ -15,6 +16,7 @@ export default function ProgressWidgetView({
   refreshIntervalMs,
   editable,
 }: ProgressWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const objectPath = resolveWidgetPath(widget.objectPath, widget.selectionKey, selection);
 
@@ -32,19 +34,23 @@ export default function ProgressWidgetView({
   const decimals = widget.decimals ?? 0;
 
   return (
-    <div className="dash-widget dash-widget-progress">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget dash-widget-progress"
+      editable={editable}
+      footer={objectPath ? `${ratio.toFixed(0)}%` : undefined}
+    >
       {!objectPath ? (
         <p className="hint">Выберите наряд</p>
       ) : (
-        <>
+        <div style={styles.body}>
           <div className="dash-progress-head">
-            <span className="dash-progress-value">
+            <span className="dash-progress-value" style={styles.value}>
               {currentNum.toFixed(decimals)}
               {widget.unit ? ` ${widget.unit}` : ""}
             </span>
-            <span className="hint">
+            <span className="hint" style={styles.unit}>
               / {maxNum.toFixed(decimals)}
               {widget.unit ? ` ${widget.unit}` : ""}
             </span>
@@ -52,9 +58,8 @@ export default function ProgressWidgetView({
           <div className="dash-progress-track">
             <div className="dash-progress-fill" style={{ width: `${ratio}%` }} />
           </div>
-          <span className="dash-widget-meta">{ratio.toFixed(0)}%</span>
-        </>
+        </div>
       )}
-    </div>
+    </DashWidgetShell>
   );
 }

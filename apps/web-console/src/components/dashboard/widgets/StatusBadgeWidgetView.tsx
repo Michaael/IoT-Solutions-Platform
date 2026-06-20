@@ -6,7 +6,8 @@ import {
 } from "../dashboardUtils";
 import { useDashboardContext } from "../DashboardContext";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface StatusBadgeWidgetViewProps {
   widget: StatusBadgeWidget;
@@ -19,6 +20,7 @@ export default function StatusBadgeWidgetView({
   refreshIntervalMs,
   editable,
 }: StatusBadgeWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const objectPath = resolveWidgetPath(widget.objectPath, widget.selectionKey, selection);
   const bound = useBoundVariable(
@@ -32,16 +34,22 @@ export default function StatusBadgeWidgetView({
   const color = DISPATCH_STATUS_COLORS[status] ?? "#8b949e";
 
   return (
-    <div className="dash-widget dash-widget-status-badge">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">{widget.title}</div>
+    <DashWidgetShell
+      title={widget.title}
+      stylesJson={widget.stylesJson}
+      className="dash-widget dash-widget-status-badge"
+      editable={editable}
+    >
       {!objectPath ? (
         <p className="hint">Выберите наряд</p>
       ) : (
-        <span className="dash-status-badge" style={{ borderColor: color, color }}>
+        <span
+          className="dash-status-badge"
+          style={{ borderColor: color, color, ...styles.badge }}
+        >
           {formatDispatchStatus(status)}
         </span>
       )}
-    </div>
+    </DashWidgetShell>
   );
 }

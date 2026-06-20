@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { claimWorkTask, completeWorkTask, fetchWorkQueue } from "../../../api";
 import type { WorkQueueWidget } from "../../../types/dashboard";
 import type { WorkQueueItem } from "../../../types/operator";
-import WidgetDragHandle from "../WidgetDragHandle";
+import DashWidgetShell from "../DashWidgetShell";
+import { useWidgetStyles } from "../widgetStyles";
 
 interface WorkQueueWidgetViewProps {
   widget: WorkQueueWidget;
@@ -10,6 +11,7 @@ interface WorkQueueWidgetViewProps {
 }
 
 export default function WorkQueueWidgetView({ widget, editable }: WorkQueueWidgetViewProps) {
+  const styles = useWidgetStyles(widget.stylesJson);
   const operatorId = widget.operatorId ?? "operator";
   const queryClient = useQueryClient();
 
@@ -37,17 +39,22 @@ export default function WorkQueueWidgetView({ widget, editable }: WorkQueueWidge
   const busy = claimMutation.isPending || completeMutation.isPending;
 
   return (
-    <div className="dash-widget dash-widget-work-queue">
-      <WidgetDragHandle visible={editable} />
-      <div className="dash-widget-title">
-        {widget.title}
-        <span className="badge">{tasks.length}</span>
-      </div>
+    <DashWidgetShell
+      title={
+        <>
+          {widget.title}
+          <span className="badge">{tasks.length}</span>
+        </>
+      }
+      stylesJson={widget.stylesJson}
+      className="dash-widget dash-widget-work-queue"
+      editable={editable}
+    >
       {queue.isLoading && <p className="hint">Загрузка…</p>}
       {tasks.length === 0 && !queue.isLoading && (
         <p className="hint">Нет открытых задач</p>
       )}
-      <ul className="dash-work-queue-list">
+      <ul className="dash-work-queue-list" style={styles.body}>
         {tasks.map((task) => (
           <WorkQueueRow
             key={task.id}
@@ -59,7 +66,7 @@ export default function WorkQueueWidgetView({ widget, editable }: WorkQueueWidge
           />
         ))}
       </ul>
-    </div>
+    </DashWidgetShell>
   );
 }
 

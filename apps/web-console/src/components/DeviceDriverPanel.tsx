@@ -8,6 +8,7 @@ import {
   startDriver,
   stopDriver,
 } from "../api/drivers";
+import { formatDriverConfigJson } from "../utils/driverDefaults";
 import type { VariableDto } from "../types";
 
 interface DeviceDriverPanelProps {
@@ -264,7 +265,15 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
             <div className="form-grid">
               <label>
                 Драйвер
-                <select value={driverId} onChange={(e) => setDriverId(e.target.value)}>
+                <select
+                  value={driverId}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    setDriverId(nextId);
+                    const driver = driversQuery.data?.find((item) => item.id === nextId);
+                    setConfigJson(formatDriverConfigJson(driver));
+                  }}
+                >
                   {(driversQuery.data ?? []).map((driver) => (
                     <option key={driver.id} value={driver.id}>
                       {driver.id} — {driver.name}

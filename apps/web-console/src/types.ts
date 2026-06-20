@@ -98,6 +98,9 @@ export interface CreateObjectPayload {
   displayName?: string;
   description?: string;
   templateId?: string;
+  driverId?: string;
+  driverPollIntervalMs?: number;
+  autoStartDriver?: boolean;
 }
 
 export interface UpdateObjectPayload {
