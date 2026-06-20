@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchObjects, fetchPlatformInfo } from "./api";
 import { logout } from "./auth/login";
 import { getPrimaryRole, getStoredSession, isAdminSession, type AuthSession } from "./auth/session";
 import type { EditorTab } from "./types";
 import { buildObjectTree } from "./utils/tree";
+import { readSelectedPath, writeSelectedPath } from "./utils/treeExpanded";
 import { useObjectWebSocket } from "./hooks/useObjectWebSocket";
 import ObjectPropertiesEditor from "./components/ObjectPropertiesEditor";
 import ObjectTree from "./components/ObjectTree";
@@ -50,7 +51,13 @@ export default function App() {
   const [workspaceTab, setWorkspaceTab] = useState<"explorer" | "automation" | string>("explorer");
   const [editorTabs, setEditorTabs] = useState<EditorTab[]>([]);
   const [propertiesTabPath, setPropertiesTabPath] = useState<string | null>(null);
-  const [selectedPath, setSelectedPath] = useState<string | null>("root");
+  const [selectedPath, setSelectedPath] = useState<string | null>(() => readSelectedPath());
+
+  useEffect(() => {
+    if (selectedPath) {
+      writeSelectedPath(selectedPath);
+    }
+  }, [selectedPath]);
   const [showCreate, setShowCreate] = useState(false);
   const [treeFilter, setTreeFilter] = useState("");
 
@@ -231,42 +238,43 @@ export default function App() {
       </nav>
 
       <div className="workspace">
-        {workspaceTab === "explorer" && (
-          <>
-            <aside className="sidebar">
-              <div className="sidebar-head">
-                <h3>Дерево объектов</h3>
-                <input
-                  type="search"
-                  placeholder="Поиск…"
-                  value={treeFilter}
-                  onChange={(e) => setTreeFilter(e.target.value)}
-                />
-              </div>
-              {objects.isLoading && <p className="sidebar-msg">Загрузка…</p>}
-              {objects.error && (
-                <p className="sidebar-msg error">
-                  Ошибка API. Запустите сервер с профилем <code>local</code>.
-                </p>
-              )}
-              {tree.length > 0 && (
-                <ObjectTree
-                  nodes={tree}
-                  selectedPath={selectedPath}
-                  onSelect={setSelectedPath}
-                  onOpenEditor={openEditor}
-                />
-              )}
-            </aside>
-            <main className="main">
-              <ExplorerView
-                selectedPath={selectedPath}
-                onOpenEditor={openEditor}
-                onDeleted={() => setSelectedPath("root")}
-                isAdmin={isAdmin}
+        {workspaceTab !== "automation" && (
+          <aside className="sidebar">
+            <div className="sidebar-head">
+              <h3>Дерево объектов</h3>
+              <input
+                type="search"
+                placeholder="Поиск…"
+                value={treeFilter}
+                onChange={(e) => setTreeFilter(e.target.value)}
               />
-            </main>
-          </>
+            </div>
+            {objects.isLoading && <p className="sidebar-msg">Загрузка…</p>}
+            {objects.error && (
+              <p className="sidebar-msg error">
+                Ошибка API. Запустите сервер с профилем <code>local</code>.
+              </p>
+            )}
+            {tree.length > 0 && (
+              <ObjectTree
+                nodes={tree}
+                selectedPath={selectedPath}
+                onSelect={setSelectedPath}
+                onOpenEditor={openEditor}
+              />
+            )}
+          </aside>
+        )}
+
+        {workspaceTab === "explorer" && (
+          <main className="main">
+            <ExplorerView
+              selectedPath={selectedPath}
+              onOpenEditor={openEditor}
+              onDeleted={() => setSelectedPath("root")}
+              isAdmin={isAdmin}
+            />
+          </main>
         )}
 
         {workspaceTab === "automation" && <AutomationView readOnly={!isAdmin} />}
