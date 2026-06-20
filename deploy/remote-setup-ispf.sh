@@ -28,6 +28,10 @@ echo "=== Deploying ISPF to /opt/ispf ==="
 mkdir -p /opt/ispf/data /opt/ispf/web-console
 mv -f /tmp/ispf-server.jar /opt/ispf/ispf-server.jar
 rm -rf /opt/ispf/web-console/*
+if [ -d /tmp/ispf-web-console-dist/dist ]; then
+  mv /tmp/ispf-web-console-dist/dist/* /tmp/ispf-web-console-dist/
+  rmdir /tmp/ispf-web-console-dist/dist
+fi
 mv /tmp/ispf-web-console-dist/* /opt/ispf/web-console/
 chmod -R a+rX /opt/ispf/web-console
 find /opt/ispf/web-console -type d -exec chmod 755 {} +
