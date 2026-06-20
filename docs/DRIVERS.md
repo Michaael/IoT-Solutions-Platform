@@ -185,43 +185,85 @@ Point mapping: путь `/sensor/temp` или полный `coap://host:5683/...
 }
 ```
 
-## Каталог зарегистрированных драйверов (31)
+## Каталог зарегистрированных драйверов (58)
+
+Полный список `driverId` в `DriverCatalog`:
 
 | `driverId` | Модуль | Назначение |
 |------------|--------|------------|
-| `virtual` | `ispf-driver-virtual` | Симулятор (профили demo/meter/…) |
+| `virtual` | `ispf-driver-virtual` | Симулятор |
 | `mqtt` | `ispf-driver-mqtt` | MQTT subscribe |
-| `modbus-tcp` | `ispf-driver-modbus` | Modbus TCP (j2mod) |
+| `modbus-tcp` | `ispf-driver-modbus` | Modbus TCP |
+| `modbus-rtu` | `ispf-driver-modbus-rtu` | Modbus RTU serial |
+| `modbus-udp` | `ispf-driver-modbus-udp` | Modbus UDP |
 | `snmp` | `ispf-driver-snmp` | SNMP v1/v2c/v3 |
 | `http` | `ispf-driver-http` | HTTP/HTTPS client |
-| `icmp` | `ispf-driver-icmp` | Ping / reachability |
-| `ssh` | `ispf-driver-ssh` | SSH remote command |
+| `http-server` | `ispf-driver-http-server` | Встроенный HTTP server |
+| `icmp` | `ispf-driver-icmp` | Ping |
+| `ssh` | `ispf-driver-ssh` | SSH command |
 | `coap` | `ispf-driver-coap` | CoAP GET |
-| `opcua` | `ispf-driver-opcua` | OPC UA client (Eclipse Milo) |
-| `s7` | `ispf-driver-s7` | Siemens S7 (s7connector) |
-| `iec104` | `ispf-driver-iec104` | IEC 60870-5-104 client (j60870) |
-| `bacnet` | `ispf-driver-bacnet` | BACnet/IP (bacnet4j) |
-| `dnp3` | `ispf-driver-dnp3` | DNP3 TCP (connectivity; полный стек — native) |
-| `jmx` | `ispf-driver-jmx` | JMX MBean attributes |
-| `jdbc` | `ispf-driver-jdbc` | SQL query scalar |
-| `file` | `ispf-driver-file` | Чтение/метаданные файла |
-| `folder` | `ispf-driver-folder` | Содержимое каталога |
-| `application` | `ispf-driver-application` | Запуск shell/script |
-| `message-stream` | `ispf-driver-message-stream` | TCP/UDP поток сообщений |
-| `nmea` | `ispf-driver-nmea` | NMEA 0183 (serial/TCP) |
-| `telnet` | `ispf-driver-telnet` | Telnet command |
-| `soap` | `ispf-driver-soap` | SOAP HTTP call |
-| `ip-host` | `ispf-driver-ip-host` | IT checks: PING, HTTP, TCP, DNS, SMTP, FTP |
-| `kafka` | `ispf-driver-kafka` | Kafka consume/produce |
-| `gps-tracker` | `ispf-driver-gps-tracker` | TCP server — входящие M2M/GPS |
-| `flexible` | `ispf-driver-flexible` | Настраиваемый TCP/UDP request/response |
-| `mbus` | `ispf-driver-mbus` | M-Bus (jmbus) |
-| `omron-fins` | `ispf-driver-omron-fins` | Omron FINS/TCP |
+| `opcua` | `ispf-driver-opcua` | OPC UA client (Milo) |
+| `opcua-server` | `ispf-driver-opcua-server` | OPC UA server (Milo) |
+| `opc-da` | `ispf-driver-opc-da` | OPC DA stub (DCOM/native) |
+| `opc-bridge` | `ispf-driver-opc-bridge` | OPC/LON bridge TCP stub |
+| `s7` | `ispf-driver-s7` | Siemens S7 |
+| `iec104` | `ispf-driver-iec104` | IEC 104 client |
+| `iec104-server` | `ispf-driver-iec104-server` | IEC 104 server/slave |
+| `bacnet` | `ispf-driver-bacnet` | BACnet/IP |
+| `dnp3` | `ispf-driver-dnp3` | DNP3 TCP (connectivity) |
+| `ethernet-ip` | `ispf-driver-ethernet-ip` | EtherNet/IP session stub |
+| `dlms` | `ispf-driver-dlms` | DLMS/COSEM (Gurux) |
+| `jmx` | `ispf-driver-jmx` | JMX local/remote |
+| `jdbc` | `ispf-driver-jdbc` | SQL JDBC |
+| `odbc` | `ispf-driver-odbc` | ODBC via JDBC bridge JAR |
+| `file` | `ispf-driver-file` | File metadata/content |
+| `folder` | `ispf-driver-folder` | Directory listing |
+| `application` | `ispf-driver-application` | Shell/script |
+| `message-stream` | `ispf-driver-message-stream` | TCP/UDP stream |
+| `nmea` | `ispf-driver-nmea` | NMEA 0183 |
+| `telnet` | `ispf-driver-telnet` | Telnet |
+| `soap` | `ispf-driver-soap` | SOAP |
+| `ip-host` | `ispf-driver-ip-host` | PING, HTTP, TCP, DNS, SMTP, FTP |
+| `ldap` | `ispf-driver-ldap` | LDAP search |
+| `dhcp` | `ispf-driver-dhcp` | DHCP discover |
+| `imap` | `ispf-driver-imap` | IMAP mailbox |
+| `pop3` | `ispf-driver-pop3` | POP3 mailbox |
+| `radius` | `ispf-driver-radius` | RADIUS auth check |
+| `ipmi` | `ispf-driver-ipmi` | IPMI LAN |
+| `wmi` | `ispf-driver-wmi` | WMI (PowerShell, Windows) |
+| `kafka` | `ispf-driver-kafka` | Kafka |
+| `jms` | `ispf-driver-jms` | JMS (ActiveMQ) |
+| `cwmp` | `ispf-driver-cwmp` | TR-069 Inform client |
+| `web-transaction` | `ispf-driver-web-transaction` | Multi-step HTTP |
+| `graph-db` | `ispf-driver-graph-db` | Neo4j / Gremlin |
+| `vmware` | `ispf-driver-vmware` | vSphere SOAP stub |
+| `smi-s` | `ispf-driver-smis` | SMI-S CIM-XML stub |
+| `gps-tracker` | `ispf-driver-gps-tracker` | GPS/M2M TCP server |
+| `flexible` | `ispf-driver-flexible` | Flexible TCP/UDP |
+| `mbus` | `ispf-driver-mbus` | M-Bus |
+| `modem-at` | `ispf-driver-modem-at` | GSM AT commands |
+| `omron-fins` | `ispf-driver-omron-fins` | Omron FINS |
 | `asterisk` | `ispf-driver-asterisk` | Asterisk AMI |
-| `smpp` | `ispf-driver-smpp` | SMPP bind/send |
-| `smb` | `ispf-driver-smb` | SMB share file check (smbj) |
+| `sip` | `ispf-driver-sip` | SIP OPTIONS/REGISTER |
+| `xmpp` | `ispf-driver-xmpp` | XMPP (Smack) |
+| `smpp` | `ispf-driver-smpp` | SMPP |
+| `smb` | `ispf-driver-smb` | SMB/CIFS |
+| `corba` | `ispf-driver-corba` | CORBA IIOP TCP stub |
 
-### opcua (`ispf-driver-opcua`)
+Подробные конфиги для базовых драйверов — в секциях ниже. Остальные следуют тому же паттерну: `driverConfigJson` + `driverPointMappingsJson`, см. `DriverMetadata` в модуле.
+
+### Ограничения v0.1 (нужен native / полный стек)
+
+| `driverId` | Что есть сейчас | Для production |
+|------------|-----------------|----------------|
+| `dnp3` | TCP connectivity | `io.stepfunc:dnp3` native |
+| `ethernet-ip` | Register Session | CIP tag read/write library |
+| `dlms` | TCP + OBIS parse | Gurux association + auth |
+| `opc-da` | status / proxy TCP | Windows DCOM bridge |
+| `corba` | IIOP TCP | JDK CORBA removed; use bridge |
+| `wmi` | PowerShell | Только Windows |
+
+### Примеры (кратко)
 
 OPC UA client. Конфиг: `endpointUrl`, `securityPolicy` (optional), credentials.
 
@@ -351,10 +393,6 @@ Point mapping: `bind` (статус) или `destination:message` (submit).
 SMB/CIFS (smbj). Конфиг: `host`, `share`, `username`, `password`, `domain`.
 
 Point mapping: путь к файлу в share → `exists`, `size`.
-
-### Отложено (roadmap §10)
-
-CORBA, CWMP, DLMS/COSEM, Ethernet/IP, Graph DB, HTTP Server, IEC 104 Server, OPC DA/bridge, OPC UA Server, SIP, SMI-S, VMware, XMPP, JMS/MQ, Web Transaction, WMI, IPMI, Local Agent, Modem AT, Modbus RTU/UDP, LDAP/DHCP/IMAP/POP3/RADIUS в отдельных драйверах — см. [PLATFORM_DEVELOPER_BACKLOG.md §10](PLATFORM_DEVELOPER_BACKLOG.md#10-каталог-драйверов-устройств-roadmap).
 
 ## Добавление своего драйвера
 

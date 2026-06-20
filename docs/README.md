@@ -15,7 +15,7 @@
 | [Backlog разработчика platform](PLATFORM_DEVELOPER_BACKLOG.md) | Статус REQ-PF, gap, sprint roadmap, каталог драйверов (§10) |
 | [WebSocket](API.md#websocket) | Live-обновления объектов |
 | [Модели (Models)](MODELS.md) | Шаблоны объектов, типы, встроенные модели |
-| [Драйверы](DRIVERS.md) | 31 встроенных драйверов — SPI, runtime, каталог §10 |
+| [Драйверы](DRIVERS.md) | 58 встроенных драйверов — полный каталог REQ-PF-14 |
 | [Дашборды и виджеты](DASHBOARDS.md) | HMI builder, 14 типов виджетов, layout JSON |
 | [Workflow / BPMN](WORKFLOWS.md) | Движок, ISPF-расширения, work queue |
 | [Автоматизация](AUTOMATION.md) | События, alert rules, correlators |
@@ -51,37 +51,7 @@ packages/
   ispf-core/              # Домен: ObjectTree, DataRecord, PlatformObject
   ispf-expression/        # Google CEL, BindingEvaluator
   ispf-driver-api/        # SPI DeviceDriver
-  ispf-driver-virtual/    # Simulator profiles
-  ispf-driver-mqtt/       # MQTT (Paho)
-  ispf-driver-modbus/     # Modbus TCP (j2mod)
-  ispf-driver-snmp/       # SNMP v1/v2c/v3 (SNMP4J)
-  ispf-driver-http/       # HTTP client
-  ispf-driver-icmp/       # Ping / reachability
-  ispf-driver-ssh/        # SSH commands
-  ispf-driver-coap/       # CoAP client
-  ispf-driver-opcua/      # OPC UA (Milo)
-  ispf-driver-s7/         # Siemens S7
-  ispf-driver-iec104/     # IEC 60870-5-104
-  ispf-driver-bacnet/     # BACnet/IP
-  ispf-driver-dnp3/       # DNP3 TCP (placeholder)
-  ispf-driver-jmx/        # JMX
-  ispf-driver-jdbc/       # SQL JDBC
-  ispf-driver-file/       # File system
-  ispf-driver-folder/     # Folder listing
-  ispf-driver-application/ # Shell/script
-  ispf-driver-message-stream/ # TCP/UDP stream
-  ispf-driver-nmea/       # NMEA 0183
-  ispf-driver-telnet/     # Telnet
-  ispf-driver-soap/       # SOAP
-  ispf-driver-ip-host/    # IT monitoring (ping, http, dns, …)
-  ispf-driver-kafka/      # Apache Kafka
-  ispf-driver-gps-tracker/ # GPS/M2M TCP server
-  ispf-driver-flexible/   # Flexible TCP/UDP
-  ispf-driver-mbus/       # M-Bus
-  ispf-driver-omron-fins/ # Omron FINS
-  ispf-driver-asterisk/   # Asterisk AMI
-  ispf-driver-smpp/       # SMPP
-  ispf-driver-smb/        # SMB/CIFS
+  ispf-driver-*/          # 58 protocol drivers (см. DRIVERS.md)
   ispf-plugin-model/      # Models plugin
   ispf-plugin-workflow/   # BPMN workflow engine (library)
   ispf-server/            # Spring Boot API
