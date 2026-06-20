@@ -253,6 +253,59 @@ public class ApplicationBundleDeployService {
         });
     }
 
+    public boolean supportsOperatorUi(String appId) {
+        return snapshotStore.findActive(appId)
+                .map(snapshot -> {
+                    try {
+                        BundleManifest manifest = objectMapper.readValue(snapshot.manifestJson(), BundleManifest.class);
+                        return hasOperatorUiManifest(manifest);
+                    } catch (Exception ex) {
+                        return false;
+                    }
+                })
+                .orElse(false);
+    }
+
+    private static boolean hasOperatorUiManifest(BundleManifest manifest) {
+        return (manifest.operatorUi() != null && !manifest.operatorUi().isEmpty())
+                || (manifest.dashboards() != null && !manifest.dashboards().isEmpty());
+    }
+
+    public Map<String, Object> operatorUi(String appId) throws Exception {
+        ApplicationBundleSnapshotStore.BundleSnapshot snapshot = snapshotStore.findActive(appId)
+                .orElseThrow(() -> new IllegalArgumentException("No active bundle deployment for app: " + appId));
+        BundleManifest manifest = objectMapper.readValue(snapshot.manifestJson(), BundleManifest.class);
+        if (manifest.operatorUi() != null && !manifest.operatorUi().isEmpty()) {
+            return manifest.operatorUi();
+        }
+        if (manifest.dashboards() != null && !manifest.dashboards().isEmpty()) {
+            return buildOperatorUiFromDashboards(appId, manifest);
+        }
+        throw new IllegalArgumentException(
+                "Operator UI not defined: set operatorUi or dashboards[] in bundle for app: " + appId
+        );
+    }
+
+    private Map<String, Object> buildOperatorUiFromDashboards(String appId, BundleManifest manifest) {
+        List<Map<String, Object>> dashboards = new ArrayList<>();
+        String defaultPath = null;
+        for (BundleDashboard dashboard : manifest.dashboards()) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("path", dashboard.path());
+            entry.put("title", dashboard.title() != null ? dashboard.title() : dashboard.path());
+            dashboards.add(entry);
+            if (defaultPath == null) {
+                defaultPath = dashboard.path();
+            }
+        }
+        Map<String, Object> ui = new LinkedHashMap<>();
+        ui.put("appId", appId);
+        ui.put("title", manifest.displayName() != null ? manifest.displayName() : appId);
+        ui.put("defaultDashboard", defaultPath);
+        ui.put("dashboards", dashboards);
+        return ui;
+    }
+
     private void deployFunction(String appId, BundleFunction function) throws Exception {
         String version = function.version() != null ? function.version() : "1";
         String inputSchemaJson = objectMapper.writeValueAsString(function.descriptor().inputSchema());
@@ -285,6 +338,7 @@ public class ApplicationBundleDeployService {
             List<BundleSqlBinding> bindings,
             List<BundleReport> reports,
             List<BundleSchedule> schedules,
+            Map<String, Object> operatorUi,
             Map<String, Object> operatorManifest
     ) {
     }

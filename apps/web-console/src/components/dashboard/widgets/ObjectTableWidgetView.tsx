@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchObjects, fetchVariables } from "../../../api";
 import type { ObjectTableColumn, ObjectTableWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
-import { useDashboardContext } from "../DashboardContext";
+import { useDashboardContext, triggerDashboardOpen } from "../DashboardContext";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 
@@ -19,7 +19,7 @@ export default function ObjectTableWidgetView({
   editable,
 }: ObjectTableWidgetViewProps) {
   const styles = useWidgetStyles(widget.stylesJson);
-  const { selection, setSelection } = useDashboardContext();
+  const { selection, setSelection, navigateToDashboard, openDashboardModal } = useDashboardContext();
   const parsedColumns = useMemo(() => {
     try {
       return widget.columnsJson ? (JSON.parse(widget.columnsJson) as ObjectTableColumn[]) : [];
@@ -77,9 +77,18 @@ export default function ObjectTableWidgetView({
                   selected={selectedPath === obj.path}
                   refreshIntervalMs={refreshIntervalMs}
                   onSelect={() => {
-                    if (widget.selectionKey && !editable) {
+                    if (editable) {
+                      return;
+                    }
+                    if (widget.selectionKey) {
                       setSelection(widget.selectionKey, obj.path);
                     }
+                    triggerDashboardOpen(
+                      widget.rowOpenMode,
+                      widget.rowTargetDashboard,
+                      widget.title,
+                      { navigateToDashboard, openDashboardModal }
+                    );
                   }}
                 />
               ))}

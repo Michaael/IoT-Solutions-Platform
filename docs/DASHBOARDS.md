@@ -135,6 +135,33 @@ GET /api/v1/objects/by-path/variables?path=...
 
 В редакторе виджета: поле **«Ключ выбора (selectionKey)»** (`WidgetEditorPanel`). Пустая строка отключает привязку к контексту.
 
+## Навигация между дашбордами
+
+Виджеты могут открывать другой дашборд **переходом** (`navigate`) или **модальным окном** (`modal`).
+
+| Механизм | type | Поля |
+|----------|------|------|
+| Кнопка | `dashboard-link` | `targetDashboardPath`, `openMode`, `buttonLabel`, `modalTitle` |
+| Клик по строке таблицы | `object-table` | `rowTargetDashboard`, `rowOpenMode` (+ `selectionKey` для передачи выбора) |
+| Клик по карточке | `card-grid` | `cardTargetDashboard`, `cardOpenMode`, `cardSelectionKey` |
+
+Контекст выбора (`selectionKey`) **сохраняется** при переходе между дашбордами в operator mode — детализирующий дашборд может читать тот же ключ.
+
+Пример: SNMP overview → клик по устройству в таблице → переход на detail-дашборд с `selectionKey: "device"`.
+
+```json
+{
+  "type": "dashboard-link",
+  "title": "Детали",
+  "targetDashboardPath": "root.platform.dashboards.snmp-host-monitoring",
+  "openMode": "modal",
+  "buttonLabel": "Мониторинг SNMP",
+  "modalTitle": "SNMP Host Monitoring"
+}
+```
+
+В admin-консоли переход открывает дашборд в новой вкладке редактора; в operator mode — меняет активную вкладку приложения или показывает модальное окно поверх HMI.
+
 ### Схема потока данных
 
 ```mermaid
@@ -190,12 +217,13 @@ sequenceDiagram
 | `function` | Кнопка вызова функции | `functionName`, `buttonLabel`, `inputJson` |
 | `function-form` | Форма → invoke | `functionName`, `fieldsJson` |
 | `progress` | Прогресс-бар | `currentVariable`, `maxVariable`, `unit` |
-| `object-table` | Таблица дочерних объектов | `parentPath`, `columnsJson`, `selectionKey` |
+| `object-table` | Таблица дочерних объектов | `parentPath`, `columnsJson`, `selectionKey`, `rowTargetDashboard`, `rowOpenMode` |
 | `event-feed` | Лента событий | `objectPathPrefix`, `eventNamesJson`, `maxItems` |
 | `work-queue` | Очередь BPMN-задач | `operatorId`, `maxItems` |
 | `status-badge` | Badge статуса | `variableName`, `selectionKey` |
 | `gauge` | Шкала min–max | `minVariable`, `maxVariable`, `unit` |
-| `card-grid` | Карточки объектов | `parentPath`, `variablesJson` |
+| `card-grid` | Карточки объектов | `parentPath`, `variablesJson`, `cardTargetDashboard`, `cardOpenMode`, `cardSelectionKey` |
+| `dashboard-link` | Переход / модальный дашборд | `targetDashboardPath`, `openMode`, `buttonLabel`, `modalTitle` |
 
 Исходники типов: `apps/web-console/src/types/dashboard.ts`  
 View-компоненты: `apps/web-console/src/components/dashboard/widgets/`  
@@ -297,10 +325,10 @@ View-компоненты: `apps/web-console/src/components/dashboard/widgets/`
 
 ## Operator HMI
 
-`?mode=operator` — только просмотр layout, без редактора.  
+`?mode=operator&app=<appId>` — навигация по дашбордам из `operatorUi`, только просмотр layout (`DashboardBuilder` + `operatorMode`).  
 Боковая панель: work queue + event journal.
 
-Привязка дашборда: query param или выбор в operator shell (см. `OperatorView.tsx`).
+Привязка дашборда: query param `dashboard` или вкладки в `OperatorDashboardApp` (см. `OperatorView.tsx`).
 
 ## API
 

@@ -23,6 +23,8 @@ import AutomationView from "./components/automation/AutomationView";
 import LoginView from "./components/LoginView";
 import ModelEditorPanel from "./components/ModelEditorPanel";
 import { isModelsPath } from "./types/models";
+import { isOperatorAppChildPath } from "./utils/operatorAppsPath";
+import { APPLICATIONS_ROOT } from "./utils/createObjectMode";
 
 let tabCounter = 1;
 
@@ -148,6 +150,10 @@ export default function App() {
     activeEditor &&
     (propertiesTabPath === activeEditor.path || !isSpecializedEditor);
   const parentForCreate = selectedPath ?? "root";
+  const selectedObject = useMemo(
+    () => objects.data?.find((obj) => obj.path === selectedPath) ?? null,
+    [objects.data, selectedPath]
+  );
   const isAdmin = isAdminSession(session);
   const primaryRole = getPrimaryRole(session);
 
@@ -162,6 +168,7 @@ export default function App() {
     url.searchParams.set("mode", "operator");
     url.searchParams.set("app", appId);
     url.searchParams.delete("screen");
+    url.searchParams.delete("dashboard");
     window.history.replaceState({}, "", url.toString());
     setAppMode("operator");
   };
@@ -169,10 +176,22 @@ export default function App() {
   const handleLoggedIn = (next: AuthSession) => {
     setSession(next);
     queryClient.invalidateQueries();
-    if (next.autoStartEnabled && next.autoStartApp) {
+    const params = new URLSearchParams(window.location.search);
+    const urlApp = params.get("app");
+    if (next.autoStartEnabled && next.autoStartApp && !urlApp) {
       const url = new URL(window.location.href);
       url.searchParams.set("mode", "operator");
       url.searchParams.set("app", next.autoStartApp);
+      url.searchParams.delete("screen");
+      url.searchParams.delete("dashboard");
+      window.history.replaceState({}, "", url.toString());
+      setAppMode("operator");
+    } else if (params.get("mode") === "operator" || urlApp) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("mode", "operator");
+      if (urlApp) {
+        url.searchParams.set("app", urlApp);
+      }
       url.searchParams.delete("screen");
       window.history.replaceState({}, "", url.toString());
       setAppMode("operator");
@@ -232,11 +251,6 @@ export default function App() {
           <button type="button" className="btn" onClick={() => void handleLogout()}>
             Выйти
           </button>
-          {isAdmin && (
-            <button type="button" className="btn primary" onClick={() => setShowCreate(true)}>
-              + Объект
-            </button>
-          )}
         </div>
       </header>
 
@@ -309,7 +323,9 @@ export default function App() {
           <main className="main">
             <ExplorerView
               selectedPath={selectedPath}
+              selectedObject={selectedObject}
               onOpenEditor={openEditor}
+              onCreateChild={() => setShowCreate(true)}
               onDeleted={() => setSelectedPath("root")}
               isAdmin={isAdmin}
             />
@@ -325,6 +341,7 @@ export default function App() {
                 path={activeEditor.path}
                 onClose={() => closeEditor(activeEditor.id)}
                 onOpenProperties={() => setPropertiesTabPath(activeEditor.path)}
+                onNavigateDashboard={openEditor}
               />
             ) : activeEditor.objectType === "WORKFLOW" ? (
               <WorkflowBuilder
@@ -384,7 +401,11 @@ export default function App() {
             setShowCreate(false);
             queryClient.invalidateQueries({ queryKey: ["objects"] });
             setSelectedPath(path);
-            openEditor(path);
+            const stayInExplorer =
+              isOperatorAppChildPath(path) || path.startsWith(`${APPLICATIONS_ROOT}.`);
+            if (!stayInExplorer) {
+              openEditor(path);
+            }
           }}
         />
       )}

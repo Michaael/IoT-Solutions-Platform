@@ -104,6 +104,16 @@ public class PlatformBootstrap {
         );
         tree.register(applications);
 
+        PlatformObject operatorApps = new PlatformObject(
+                UUID.randomUUID().toString(),
+                "root.platform.operator-apps",
+                ObjectType.CUSTOM,
+                "Operator Apps",
+                "Operator HMI — набор дашбордов для ?mode=operator&app=<id>",
+                null
+        );
+        tree.register(operatorApps);
+
         PlatformObject demoWorkflow = new PlatformObject(
                 UUID.randomUUID().toString(),
                 "root.platform.workflows.demo-alarm-handler",

@@ -281,6 +281,27 @@ export default function WidgetEditorPanel({
                 onChange={(e) => update({ columnsJson: e.target.value })}
               />
             </label>
+            <label>
+              Дашборд по клику на строку (path)
+              <input
+                value={widget.rowTargetDashboard ?? ""}
+                onChange={(e) => update({ rowTargetDashboard: e.target.value || undefined })}
+                placeholder="root.platform.dashboards.detail"
+              />
+            </label>
+            <label>
+              Режим открытия строки
+              <select
+                value={widget.rowOpenMode ?? "navigate"}
+                onChange={(e) =>
+                  update({ rowOpenMode: e.target.value as "navigate" | "modal" })
+                }
+                disabled={!widget.rowTargetDashboard}
+              >
+                <option value="navigate">Переход</option>
+                <option value="modal">Модальное окно</option>
+              </select>
+            </label>
           </>
         )}
         {widget.type === "event-feed" && (
@@ -363,6 +384,82 @@ export default function WidgetEditorPanel({
                 rows={3}
                 value={widget.variablesJson ?? "[]"}
                 onChange={(e) => update({ variablesJson: e.target.value })}
+              />
+            </label>
+            <label>
+              Дашборд по клику на карточку (path)
+              <input
+                value={widget.cardTargetDashboard ?? ""}
+                onChange={(e) => update({ cardTargetDashboard: e.target.value || undefined })}
+                placeholder="root.platform.dashboards.detail"
+              />
+            </label>
+            <label>
+              Режим открытия карточки
+              <select
+                value={widget.cardOpenMode ?? "navigate"}
+                onChange={(e) =>
+                  update({ cardOpenMode: e.target.value as "navigate" | "modal" })
+                }
+                disabled={!widget.cardTargetDashboard}
+              >
+                <option value="navigate">Переход</option>
+                <option value="modal">Модальное окно</option>
+              </select>
+            </label>
+            <label>
+              Ключ выбора при клике (cardSelectionKey)
+              <input
+                value={widget.cardSelectionKey ?? ""}
+                onChange={(e) => update({ cardSelectionKey: e.target.value || undefined })}
+                placeholder="device"
+                disabled={!widget.cardTargetDashboard}
+              />
+            </label>
+          </>
+        )}
+        {widget.type === "dashboard-link" && (
+          <>
+            <label>
+              Целевой дашборд (path)
+              <input
+                value={widget.targetDashboardPath}
+                onChange={(e) => update({ targetDashboardPath: e.target.value })}
+                placeholder="root.platform.dashboards.detail"
+              />
+            </label>
+            <label>
+              Режим
+              <select
+                value={widget.openMode ?? "navigate"}
+                onChange={(e) =>
+                  update({ openMode: e.target.value as "navigate" | "modal" })
+                }
+              >
+                <option value="navigate">Переход</option>
+                <option value="modal">Модальное окно</option>
+              </select>
+            </label>
+            <label>
+              Текст кнопки
+              <input
+                value={widget.buttonLabel ?? ""}
+                onChange={(e) => update({ buttonLabel: e.target.value })}
+              />
+            </label>
+            <label>
+              Заголовок модального окна
+              <input
+                value={widget.modalTitle ?? ""}
+                onChange={(e) => update({ modalTitle: e.target.value })}
+                disabled={widget.openMode !== "modal"}
+              />
+            </label>
+            <label>
+              Подтверждение (опционально)
+              <input
+                value={widget.confirmMessage ?? ""}
+                onChange={(e) => update({ confirmMessage: e.target.value })}
               />
             </label>
           </>

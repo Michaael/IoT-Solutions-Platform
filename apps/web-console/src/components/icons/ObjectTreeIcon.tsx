@@ -98,6 +98,12 @@ export function resolveTreeIconKind(path: string, type: ObjectType): TreeIconKin
   if (path.includes(".screens")) {
     return "screens";
   }
+  if (path.includes(".operator-apps.") && !path.endsWith(".operator-apps")) {
+    return "application";
+  }
+  if (path.endsWith(".operator-apps")) {
+    return "folder";
+  }
   if (path.includes(".reports")) {
     return "report";
   }

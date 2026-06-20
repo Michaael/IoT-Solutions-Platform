@@ -14,11 +14,11 @@ import StatusBadgeWidgetView from "./widgets/StatusBadgeWidgetView";
 import GaugeWidgetView from "./widgets/GaugeWidgetView";
 import CardGridWidgetView from "./widgets/CardGridWidgetView";
 import FunctionWidgetView from "./widgets/FunctionWidgetView";
-import { DashboardProvider } from "./DashboardContext";
+import DashboardLinkWidgetView from "./widgets/DashboardLinkWidgetView";
 
 const GRID_MARGIN: [number, number] = [12, 12];
 const DRAG_CANCEL_SELECTOR =
-  "button, input, select, textarea, a, .dash-chart-body, .dash-sparkline-body, .dashboard-grid-resize-handle, .dash-object-table, .dash-event-feed-list, .dash-work-queue-list, .function-form-fields";
+  "button, input, select, textarea, a, .dash-chart-body, .dash-sparkline-body, .dashboard-grid-resize-handle, .dash-object-table, .dash-event-feed-list, .dash-work-queue-list, .function-form-fields, .dashboard-link-btn, .dash-object-card";
 
 interface DashboardGridProps {
   layout: DashboardLayout;
@@ -205,11 +205,10 @@ export default function DashboardGrid({
   const height = canvasHeight(layout.widgets, metrics);
 
   return (
-    <DashboardProvider>
-      <div
-        ref={containerRef}
-        className={`dashboard-grid-host ${editable ? "editable" : ""}`}
-      >
+    <div
+      ref={containerRef}
+      className={`dashboard-grid-host ${editable ? "editable" : ""}`}
+    >
       <div
         ref={canvasRef}
         className="dashboard-grid-canvas"
@@ -254,8 +253,7 @@ export default function DashboardGrid({
           );
         })}
       </div>
-      </div>
-    </DashboardProvider>
+    </div>
   );
 }
 
@@ -363,6 +361,8 @@ function WidgetRenderer({
           editable={editable}
         />
       );
+    case "dashboard-link":
+      return <DashboardLinkWidgetView widget={widget} editable={editable} />;
     default:
       return <div className="dash-widget">Неизвестный виджет</div>;
   }

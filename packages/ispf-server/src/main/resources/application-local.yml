@@ -9,11 +9,19 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
+  neo4j:
+    # graph-db driver on classpath enables Neo4j auto-config; no Neo4j in local dev
+    enabled: false
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: https://example.invalid/realms/ispf
+
+management:
+  health:
+    neo4j:
+      enabled: false
 
 ispf:
   security:

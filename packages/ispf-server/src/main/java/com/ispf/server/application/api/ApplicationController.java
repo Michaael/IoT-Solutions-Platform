@@ -91,6 +91,25 @@ public class ApplicationController {
         }
     }
 
+    @GetMapping("/{appId}/operator-ui")
+    public Map<String, Object> operatorUi(@PathVariable String appId) throws Exception {
+        return loadOperatorUi(appId);
+    }
+
+    /** Alias for environments where legacy security rules block paths containing "operator". */
+    @GetMapping("/{appId}/hmi-ui")
+    public Map<String, Object> hmiUi(@PathVariable String appId) throws Exception {
+        return loadOperatorUi(appId);
+    }
+
+    private Map<String, Object> loadOperatorUi(String appId) throws Exception {
+        try {
+            return bundleDeployService.operatorUi(appId);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage(), ex);
+        }
+    }
+
     @PostMapping
     public Map<String, Object> register(@RequestBody RegisterApplicationRequest request) {
         return dataService.register(

@@ -13,14 +13,22 @@ import {
   parseLayoutJson,
   WIDGET_TYPES,
 } from "../../types/dashboard";
+import { DashboardProvider } from "./DashboardContext";
 import DashboardGrid from "./DashboardGrid";
+import DashboardModal from "./DashboardModal";
 import WidgetEditorPanel from "./WidgetEditorPanel";
 
 interface DashboardBuilderProps {
   path: string;
-  onClose: () => void;
+  onClose?: () => void;
   onOpenProperties?: () => void;
   operatorMode?: boolean;
+  /** Rendered inside DashboardModal — do not mount another backdrop */
+  embeddedModal?: boolean;
+  onNavigateDashboard?: (path: string) => void;
+  onOpenDashboardModal?: (path: string, title?: string) => void;
+  selection?: Record<string, string>;
+  onSelectionChange?: (next: Record<string, string>) => void;
 }
 
 export default function DashboardBuilder({
@@ -28,6 +36,11 @@ export default function DashboardBuilder({
   onClose,
   onOpenProperties,
   operatorMode = false,
+  embeddedModal = false,
+  onNavigateDashboard,
+  onOpenDashboardModal,
+  selection,
+  onSelectionChange,
 }: DashboardBuilderProps) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"view" | "edit">(operatorMode ? "view" : "view");
@@ -35,6 +48,27 @@ export default function DashboardBuilder({
   const [draftTitle, setDraftTitle] = useState<string | null>(null);
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const [showJson, setShowJson] = useState(false);
+  const [modalDashboard, setModalDashboard] = useState<{ path: string; title: string } | null>(
+    null
+  );
+
+  const handleNavigateDashboard = (targetPath: string) => {
+    if (!embeddedModal) {
+      setModalDashboard(null);
+    }
+    onNavigateDashboard?.(targetPath);
+  };
+
+  const handleOpenDashboardModal = (targetPath: string, title?: string) => {
+    if (embeddedModal) {
+      onOpenDashboardModal?.(targetPath, title);
+      return;
+    }
+    setModalDashboard({
+      path: targetPath,
+      title: title?.trim() || targetPath.split(".").pop() || targetPath,
+    });
+  };
 
   const dashboard = useQuery({
     queryKey: ["dashboard", path],
@@ -190,9 +224,11 @@ export default function DashboardBuilder({
               Сохранить
             </button>
           )}
-          <button type="button" className="btn" onClick={onClose}>
-            Закрыть
-          </button>
+          {onClose && (
+            <button type="button" className="btn" onClick={onClose}>
+              Закрыть
+            </button>
+          )}
         </div>
       </header>
       )}
@@ -214,19 +250,26 @@ export default function DashboardBuilder({
       )}
 
       <div className={`dashboard-body ${!operatorMode && mode === "edit" ? "with-sidebar" : ""}`}>
-        <main className="dashboard-canvas">
-          <DashboardGrid
-            layout={layout}
-            refreshIntervalMs={refreshIntervalMs}
-            editable={!operatorMode && mode === "edit"}
-            selectedWidgetId={!operatorMode && mode === "edit" ? selectedWidgetId : null}
-            onSelectWidget={!operatorMode && mode === "edit" ? setSelectedWidgetId : undefined}
-            onLayoutChange={!operatorMode && mode === "edit" ? handleLayoutChange : undefined}
-          />
-          {!operatorMode && showJson && (
-            <pre className="dashboard-json-panel">{layoutToJson(layout)}</pre>
-          )}
-        </main>
+        <DashboardProvider
+          selection={selection}
+          onSelectionChange={onSelectionChange}
+          onNavigateDashboard={handleNavigateDashboard}
+          onOpenDashboardModal={handleOpenDashboardModal}
+        >
+          <main className="dashboard-canvas">
+            <DashboardGrid
+              layout={layout}
+              refreshIntervalMs={refreshIntervalMs}
+              editable={!operatorMode && mode === "edit"}
+              selectedWidgetId={!operatorMode && mode === "edit" ? selectedWidgetId : null}
+              onSelectWidget={!operatorMode && mode === "edit" ? setSelectedWidgetId : undefined}
+              onLayoutChange={!operatorMode && mode === "edit" ? handleLayoutChange : undefined}
+            />
+            {!operatorMode && showJson && (
+              <pre className="dashboard-json-panel">{layoutToJson(layout)}</pre>
+            )}
+          </main>
+        </DashboardProvider>
         {!operatorMode && mode === "edit" && (
           <WidgetEditorPanel
             widget={selectedWidget}
@@ -236,6 +279,22 @@ export default function DashboardBuilder({
           />
         )}
       </div>
+      {!embeddedModal && modalDashboard && (
+        <DashboardModal
+          path={modalDashboard.path}
+          title={modalDashboard.title}
+          selection={selection}
+          onSelectionChange={onSelectionChange}
+          onNavigateDashboard={handleNavigateDashboard}
+          onOpenDashboardModal={(nextPath, nextTitle) =>
+            setModalDashboard({
+              path: nextPath,
+              title: nextTitle?.trim() || nextPath.split(".").pop() || nextPath,
+            })
+          }
+          onClose={() => setModalDashboard(null)}
+        />
+      )}
     </div>
   );
 }

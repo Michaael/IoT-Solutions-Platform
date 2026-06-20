@@ -1,6 +1,6 @@
 import type { AuthSession } from "../../auth/session";
-import OperatorManifestView from "./OperatorManifestView";
 import OperatorAppLauncher from "./OperatorAppLauncher";
+import OperatorDashboardApp from "./OperatorDashboardApp";
 
 interface OperatorViewProps {
   operatorId?: string;
@@ -29,7 +29,7 @@ export default function OperatorView({
   }
 
   return (
-    <OperatorManifestView
+    <OperatorDashboardApp
       appId={appId}
       operatorId={operatorId}
       onSwitchAdmin={onSwitchAdmin}

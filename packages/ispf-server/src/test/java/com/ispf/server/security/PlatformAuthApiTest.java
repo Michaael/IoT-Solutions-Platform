@@ -95,6 +95,23 @@ class PlatformAuthApiTest {
                 .andExpect(jsonPath("$.autoStartApp").value("demo"));
     }
 
+    @Test
+    void operatorAppsApiListsPlatformAndReturnsUi() throws Exception {
+        String token = adminToken();
+
+        mockMvc.perform(get("/api/v1/operator-apps")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].appId", hasItem("platform")));
+
+        mockMvc.perform(get("/api/v1/operator-apps/platform/ui")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.appId").value("platform"))
+                .andExpect(jsonPath("$.defaultDashboard").value("root.platform.dashboards.snmp-host-monitoring"))
+                .andExpect(jsonPath("$.dashboards").isArray());
+    }
+
     private String adminToken() throws Exception {
         MvcResult login = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -12,7 +12,10 @@ export type WidgetType =
   | "work-queue"
   | "status-badge"
   | "gauge"
-  | "card-grid";
+  | "card-grid"
+  | "dashboard-link";
+
+export type DashboardOpenMode = "navigate" | "modal";
 
 export type ChartStyle = "line" | "area";
 
@@ -121,6 +124,9 @@ export interface ObjectTableWidget extends DashboardWidgetBase {
   columnsJson?: string;
   /** Writes selected row path into dashboard selection */
   selectionKey?: string;
+  /** Open another dashboard when a row is clicked */
+  rowTargetDashboard?: string;
+  rowOpenMode?: DashboardOpenMode;
 }
 
 export interface EventFeedWidget extends DashboardWidgetBase {
@@ -154,6 +160,20 @@ export interface CardGridWidget extends DashboardWidgetBase {
   type: "card-grid";
   parentPath: string;
   variablesJson?: string;
+  /** Open another dashboard when a card is clicked */
+  cardTargetDashboard?: string;
+  cardOpenMode?: DashboardOpenMode;
+  /** Copy clicked card path into selection before navigation */
+  cardSelectionKey?: string;
+}
+
+export interface DashboardLinkWidget extends DashboardWidgetBase {
+  type: "dashboard-link";
+  targetDashboardPath: string;
+  openMode?: DashboardOpenMode;
+  buttonLabel?: string;
+  modalTitle?: string;
+  confirmMessage?: string;
 }
 
 export type DashboardWidget =
@@ -170,7 +190,8 @@ export type DashboardWidget =
   | WorkQueueWidget
   | StatusBadgeWidget
   | GaugeWidget
-  | CardGridWidget;
+  | CardGridWidget
+  | DashboardLinkWidget;
 
 export interface DashboardLayout {
   columns: number;
@@ -201,6 +222,7 @@ export const WIDGET_TYPES: Array<{ type: WidgetType; label: string }> = [
   { type: "status-badge", label: "Статус (badge)" },
   { type: "gauge", label: "Шкала / gauge" },
   { type: "card-grid", label: "Карточки объектов" },
+  { type: "dashboard-link", label: "Переход / модальный дашборд" },
 ];
 
 export function emptyLayout(): DashboardLayout {
@@ -354,6 +376,16 @@ export function newWidget(type: WidgetType, index: number): DashboardWidget {
         h: 4,
         parentPath: "",
         variablesJson: '["levelM3","qualityOk"]',
+      };
+    case "dashboard-link":
+      return {
+        ...base,
+        type: "dashboard-link",
+        w: 3,
+        h: 2,
+        targetDashboardPath: "",
+        openMode: "navigate",
+        buttonLabel: "Открыть дашборд",
       };
     default:
       return { ...base, type: "value", decimals: 1 };

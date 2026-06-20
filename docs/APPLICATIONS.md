@@ -245,8 +245,8 @@ Content-Type: application/json
 
 | Endpoint | Роль |
 |----------|------|
-| `/applications/**`, `/schedules/**` | `admin` |
-| `/applications/*/operator-manifest` | `operator`, `admin` |
+| `/applications/**`, `/schedules/**` (POST/PUT) | `admin` |
+| `/applications/*/operator-ui`, `/applications/*/hmi-ui`, `/applications/*/operator-manifest` (GET) | `operator`, `admin` |
 | `/bff/invoke`, `/workflows/instances/*/cancel`, `/applications/*/reports/*/run` | `operator`, `admin` |
 
 ## SQL bindings (REQ-PF-08)
@@ -305,11 +305,37 @@ SQL-отчёты в app schema: deploy через bundle `reports[]` или `POS
 
 Подробнее: [REPORTS.md](REPORTS.md).
 
-## Operator manifest (из bundle)
+## Operator UI (дашборды из дерева)
 
-Поле `operatorManifest` в deploy bundle → `GET /api/v1/applications/{appId}/operator-manifest`.
+Единый operator shell: навигация по объектам `DASHBOARD` из дерева, те же виджеты что в Dashboard Builder (read-only).
 
-Web Console: API first, fallback `public/operator-apps/<appId>.manifest.json`.
+Контракт `operatorUi`:
+
+```json
+{
+  "appId": "platform",
+  "title": "Platform HMI",
+  "defaultDashboard": "root.platform.dashboards.snmp-host-monitoring",
+  "dashboards": [
+    { "path": "root.platform.dashboards.snmp-host-monitoring", "title": "SNMP Host Monitoring" }
+  ]
+}
+```
+
+Источники (по приоритету):
+
+1. `GET /api/v1/operator-apps/{appId}/ui` — встроенные и настроенные в админке приложения (таблица `operator_app_ui`, узел дерева `root.platform.operator-apps`)
+2. Поле `operatorUi` в deploy bundle → `GET /api/v1/applications/{appId}/operator-ui`
+3. Автогенерация из `dashboards[]` в bundle (path + title)
+4. Legacy fallback: `public/operator-apps/{appId}.ui.json` (только dev)
+
+URL: `?mode=operator&app=platform&dashboard=<path>`.
+
+### Legacy: operator manifest
+
+Поле `operatorManifest` в deploy bundle → `GET /api/v1/applications/{appId}/operator-manifest` — **deprecated** (таблицы/отчёты через BFF). Для новых приложений используйте `operatorUi` + дашборды.
+
+Web Console: API first, fallback `public/operator-apps/<appId>.manifest.json` (только legacy shell).
 
 ### Дерево объектов
 
@@ -322,11 +348,11 @@ Web Console: API first, fallback `public/operator-apps/<appId>.manifest.json`.
 | `schedules` | `platform_schedules` |
 | `bindings` | SQL bindings |
 | `migrations` | Применённые data migrations |
-| `screens` | Экраны operator manifest |
+| `screens` | Экраны operator manifest (legacy) |
 
 Синхронизация: при deploy/register/migrate и при старте сервера.
 
-**Пример:** [examples/demo-app/bundle.json](../examples/demo-app/bundle.json) — три SQL-отчёта и operator UI для `appId=demo`.
+**Пример:** `appId=platform` настраивается в админке: дерево → `root.platform.operator-apps`. Deploy-приложения — `operatorUi` в bundle.
 
 ## Связанная документация
 

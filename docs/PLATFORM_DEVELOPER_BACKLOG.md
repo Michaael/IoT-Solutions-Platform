@@ -53,7 +53,7 @@
 | Package deploy            | PF-03 bundle                    | app manifest      |
 | Process + operator tasks  | PF-04, PF-10 workflow           | app BPMN          |
 | Cron / integration tick   | PF-05 scheduler                 | app schedules     |
-| HMI wire                  | PF-06 BFF gateway               | operator manifest |
+| HMI wire                  | PF-06 BFF gateway               | operator dashboards |
 | Models survive restart    | PF-07                           | app models        |
 | Telemetry → HMI           | PF-08, PF-09 bindings/simulator | demo dashboards   |
 
@@ -67,7 +67,7 @@
 Считаем REQ-PF закрытым на `main`, когда:
 
 1. `POST /api/v1/applications/{appId}/deploy` поднимает metadata + migrations + functions + objects/dashboards/workflows из bundle.
-2. Operator UI работает через `POST /api/v1/bff/invoke` и `operatorManifest` — без отраслевых маршрутов в server.
+2. Operator UI — дашборды из дерева (`operatorUi` / `dashboards[]` в bundle, `GET .../operator-ui`); BFF — для виджетов/функций app, без отраслевых маршрутов в server.
 3. App-функции — **script/deploy**, не `FunctionHandler` в platform repo.
 4. Расписания — `platform_schedules`, не `@Scheduled` в Java.
 5. В `main` **нет** отраслевого кода и BFF (чеклист [PLUGINS.md](PLUGINS.md)).
@@ -358,9 +358,8 @@ POST /api/v1/applications/{appId}/functions/rollback
 
 Web Console (`apps/web-console`):
 
-- **Только** `POST /api/v1/bff/invoke` + `wireProfile: anima-operator-v1`.
-- В `main`: manifest shell (`?mode=operator&app=<appId>`), экраны описываются в `operatorManifest` app bundle.
-- Platform **не** знает про конкретные экраны app — только wire + invoke.
+- В `main`: dashboard shell (`?mode=operator&app=<appId>`), навигация в `operatorUi` (дашборды `DASHBOARD` из дерева).
+- Platform **не** знает про конкретные экраны app — только deploy bundle, dashboards API и generic BFF invoke.
 
 ---
 
@@ -598,7 +597,7 @@ Post-PF (P3+) — platform evolution (см. §9, §10)
 | Доменная модель, UC/US, канон БД app | Репозиторий приложения      |
 | JSON script bodies, SQL migrations   | App bundle deploy           |
 | BPMN процессов app                   | App bundle deploy           |
-| Operator UI экраны app               | `operatorManifest` в bundle |
+| Operator UI дашборды app             | `operatorUi` или `dashboards[]` в bundle |
 | E2E smoke конкретного заказчика      | CI репозитория приложения   |
 
 

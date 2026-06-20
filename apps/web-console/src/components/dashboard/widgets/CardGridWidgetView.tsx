@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchObjects, fetchVariables } from "../../../api";
 import type { CardGridWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
+import { triggerDashboardOpen, useDashboardContext } from "../DashboardContext";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 
@@ -18,6 +19,7 @@ export default function CardGridWidgetView({
   editable,
 }: CardGridWidgetViewProps) {
   const styles = useWidgetStyles(widget.stylesJson);
+  const { setSelection, navigateToDashboard, openDashboardModal } = useDashboardContext();
   const variables = useMemo(() => {
     try {
       return widget.variablesJson ? (JSON.parse(widget.variablesJson) as string[]) : [];
@@ -32,6 +34,21 @@ export default function CardGridWidgetView({
     enabled: Boolean(widget.parentPath),
     refetchInterval: refreshIntervalMs,
   });
+
+  const handleCardClick = (path: string) => {
+    if (editable) {
+      return;
+    }
+    if (widget.cardSelectionKey) {
+      setSelection(widget.cardSelectionKey, path);
+    }
+    triggerDashboardOpen(widget.cardOpenMode, widget.cardTargetDashboard, widget.title, {
+      navigateToDashboard,
+      openDashboardModal,
+    });
+  };
+
+  const navigable = Boolean(widget.cardTargetDashboard?.trim()) && !editable;
 
   return (
     <DashWidgetShell
@@ -51,6 +68,8 @@ export default function CardGridWidgetView({
               title={obj.displayName}
               variables={variables}
               refreshIntervalMs={refreshIntervalMs}
+              navigable={navigable}
+              onOpen={() => handleCardClick(obj.path)}
             />
           ))}
         </div>
@@ -64,11 +83,15 @@ function ObjectCard({
   title,
   variables,
   refreshIntervalMs,
+  navigable,
+  onOpen,
 }: {
   path: string;
   title: string;
   variables: string[];
   refreshIntervalMs: number;
+  navigable: boolean;
+  onOpen: () => void;
 }) {
   const vars = useQuery({
     queryKey: ["variables", path],
@@ -77,7 +100,21 @@ function ObjectCard({
   });
 
   return (
-    <article className="dash-object-card">
+    <article
+      className={`dash-object-card ${navigable ? "clickable" : ""}`}
+      onClick={navigable ? onOpen : undefined}
+      onKeyDown={
+        navigable
+          ? (event) => {
+              if (event.key === "Enter") {
+                onOpen();
+              }
+            }
+          : undefined
+      }
+      role={navigable ? "button" : undefined}
+      tabIndex={navigable ? 0 : undefined}
+    >
       <h4>{title}</h4>
       <dl>
         {variables.map((name) => {

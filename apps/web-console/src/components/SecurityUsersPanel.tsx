@@ -7,19 +7,15 @@ import {
   updateSecurityUser,
   type SecurityUserSummary,
 } from "../api/securityUsers";
-
-interface OperatorAppEntry {
-  appId: string;
-  title: string;
-}
+import { fetchOperatorApps, type OperatorAppEntry } from "../api/operatorApps";
 
 async function loadOperatorApps(): Promise<OperatorAppEntry[]> {
-  const response = await fetch("/operator-apps/index.json");
-  if (!response.ok) {
-    return [{ appId: "demo", title: "Demo Application" }];
+  try {
+    const apps = await fetchOperatorApps();
+    return apps.length ? apps : [{ appId: "platform", title: "Platform HMI" }];
+  } catch {
+    return [{ appId: "platform", title: "Platform HMI" }];
   }
-  const index = (await response.json()) as { apps?: OperatorAppEntry[] };
-  return index.apps?.length ? index.apps : [{ appId: "demo", title: "Demo Application" }];
 }
 
 function serverSupportsAutoStart(users: SecurityUserSummary[] | undefined): boolean {
@@ -34,7 +30,7 @@ interface UserAutoStartControlsProps {
 
 function UserAutoStartControls({ user, apps, serverReady }: UserAutoStartControlsProps) {
   const queryClient = useQueryClient();
-  const defaultApp = apps[0]?.appId ?? "demo";
+  const defaultApp = apps[0]?.appId ?? "platform";
   const enabled = user.autoStartEnabled === true;
   const selectedApp = user.autoStartApp || defaultApp;
 
@@ -119,7 +115,7 @@ export default function SecurityUsersPanel({ canManage }: SecurityUsersPanelProp
     queryFn: fetchSecurityUsers,
   });
   const appsQuery = useQuery({
-    queryKey: ["operator-apps-index"],
+    queryKey: ["operator-apps"],
     queryFn: loadOperatorApps,
   });
 
@@ -147,9 +143,11 @@ export default function SecurityUsersPanel({ canManage }: SecurityUsersPanelProp
     <section className="security-users-panel">
       <h3>Пользователи платформы</h3>
       <p className="op-muted">
-        Учётные записи синхронизированы с деревом: <code>root.platform.security.users</code>.
-        При включённом автозапуске пользователь после входа попадает в operator-приложение, а не в
-        админ-консоль.
+        Учётные записи: <code>root.platform.security.users</code>. Автозапуск открывает
+        operator-приложение с дашбордами (<code>?mode=operator&amp;app=…</code>). В списке —
+        <code>platform</code> (настройка в <code>Operator Apps</code>) и deploy-приложения с{" "}
+        <code>operatorUi</code>/<code>dashboards[]</code> в bundle. Узел <code>Applications</code> —
+        backend (функции, отчёты), не меню operator.
       </p>
       {!serverReady && usersQuery.data && (
         <div className="op-alert op-alert-error">

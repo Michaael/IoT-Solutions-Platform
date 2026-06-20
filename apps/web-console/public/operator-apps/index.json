@@ -1,9 +1,0 @@
-{
-  "apps": [
-    {
-      "appId": "demo",
-      "title": "Demo Application",
-      "description": "Пример SQL-отчётов (ready-items, items-summary, items-by-category)"
-    }
-  ]
-}

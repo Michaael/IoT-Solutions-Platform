@@ -1,35 +1,95 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
+export type DashboardOpenMode = "navigate" | "modal";
+
 export interface DashboardContextValue {
   selection: Record<string, string>;
   setSelection: (key: string, path: string) => void;
+  navigateToDashboard: (path: string) => void;
+  openDashboardModal: (path: string, title?: string) => void;
 }
 
-const DashboardContext = createContext<DashboardContextValue | null>(null);
+const noop = () => {};
 
-export function DashboardProvider({ children }: { children: ReactNode }) {
-  const [selection, setSelectionState] = useState<Record<string, string>>({});
+const defaultValue: DashboardContextValue = {
+  selection: {},
+  setSelection: noop,
+  navigateToDashboard: noop,
+  openDashboardModal: noop,
+};
 
-  const value = useMemo(
-    () => ({
+const DashboardContext = createContext<DashboardContextValue>(defaultValue);
+
+interface DashboardProviderProps {
+  children: ReactNode;
+  value?: DashboardContextValue;
+  selection?: Record<string, string>;
+  onSelectionChange?: (next: Record<string, string>) => void;
+  onNavigateDashboard?: (path: string) => void;
+  onOpenDashboardModal?: (path: string, title?: string) => void;
+}
+
+export function DashboardProvider({
+  children,
+  value,
+  selection: controlledSelection,
+  onSelectionChange,
+  onNavigateDashboard,
+  onOpenDashboardModal,
+}: DashboardProviderProps) {
+  const [internalSelection, setInternalSelection] = useState<Record<string, string>>({});
+
+  const derivedValue = useMemo<DashboardContextValue>(() => {
+    if (value) {
+      return value;
+    }
+
+    const selection = controlledSelection ?? internalSelection;
+    const setSelection = (key: string, path: string) => {
+      const next = { ...selection, [key]: path };
+      if (onSelectionChange) {
+        onSelectionChange(next);
+      } else {
+        setInternalSelection(next);
+      }
+    };
+
+    return {
       selection,
-      setSelection: (key: string, path: string) => {
-        setSelectionState((prev) => ({ ...prev, [key]: path }));
-      },
-    }),
-    [selection]
-  );
+      setSelection,
+      navigateToDashboard: onNavigateDashboard ?? noop,
+      openDashboardModal: onOpenDashboardModal ?? noop,
+    };
+  }, [
+    value,
+    controlledSelection,
+    internalSelection,
+    onSelectionChange,
+    onNavigateDashboard,
+    onOpenDashboardModal,
+  ]);
 
-  return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;
+  return <DashboardContext.Provider value={derivedValue}>{children}</DashboardContext.Provider>;
 }
 
 export function useDashboardContext(): DashboardContextValue {
-  const ctx = useContext(DashboardContext);
-  if (!ctx) {
-    return {
-      selection: {},
-      setSelection: () => {},
-    };
+  return useContext(DashboardContext);
+}
+
+export function triggerDashboardOpen(
+  mode: DashboardOpenMode | undefined,
+  targetPath: string | undefined,
+  title: string | undefined,
+  actions: Pick<DashboardContextValue, "navigateToDashboard" | "openDashboardModal">
+): boolean {
+  const path = targetPath?.trim();
+  if (!path) {
+    return false;
   }
-  return ctx;
+  if (mode === "modal") {
+    actions.openDashboardModal(path, title);
+  } else {
+    actions.navigateToDashboard(path);
+  }
+  return true;
 }

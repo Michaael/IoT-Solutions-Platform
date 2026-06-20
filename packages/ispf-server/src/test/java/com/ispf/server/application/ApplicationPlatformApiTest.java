@@ -453,6 +453,14 @@ class ApplicationPlatformApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.bpmnXml").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/applications/%s/operator-ui".formatted(APP_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.appId").value(APP_ID))
+                .andExpect(jsonPath("$.defaultDashboard").value("root.platform.demo-app.ops"))
+                .andExpect(jsonPath("$.dashboards", hasSize(1)))
+                .andExpect(jsonPath("$.dashboards[0].path").value("root.platform.demo-app.ops"))
+                .andExpect(jsonPath("$.dashboards[0].title").value("Ops Board"));
     }
 
     @Test

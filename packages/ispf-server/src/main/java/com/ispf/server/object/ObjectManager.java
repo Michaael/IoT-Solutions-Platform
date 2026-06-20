@@ -81,6 +81,7 @@ public class ObjectManager {
         }
         if (nodeRepository.existsByPath("root.platform")) {
             loadFromDatabase();
+            ensureBootstrapNodes();
         } else {
             seedPlatformStructure();
         }
@@ -216,6 +217,32 @@ public class ObjectManager {
             persistVariable(path, variable);
         }
         publish(ObjectChangeEvent.of(ObjectChangeType.UPDATED, path));
+    }
+
+    private void ensureBootstrapNodes() {
+        ensureBootstrapNode(
+                "root.platform.operator-apps",
+                ObjectType.CUSTOM,
+                "Operator Apps",
+                "Operator HMI — набор дашбордов для ?mode=operator&app=<id>",
+                "app-folder-v1"
+        );
+    }
+
+    private void ensureBootstrapNode(
+            String path,
+            ObjectType type,
+            String displayName,
+            String description,
+            String templateId
+    ) {
+        if (objectTree.findByPath(path).isPresent()) {
+            return;
+        }
+        int lastDot = path.lastIndexOf('.');
+        String parentPath = path.substring(0, lastDot);
+        String name = path.substring(lastDot + 1);
+        create(parentPath, name, type, displayName, description, templateId);
     }
 
     private void seedPlatformStructure() {

@@ -33,23 +33,28 @@ URL: `http://localhost:5173?mode=operator`
 - Sidebar: Work Queue + Event Journal
 - Без редактирования layout и объектов
 
-### Operator app (manifest + BFF)
+### Operator app (дашборды)
 
-URL: `http://localhost:5173?mode=operator&app=demo`
+URL: `http://localhost:5173?mode=operator&app=platform`
 
 Generic operator shell без отраслевого кода в `main`:
 
-- Manifest: сначала `GET /api/v1/applications/{appId}/operator-manifest` (из deploy bundle), fallback `public/operator-apps/<appId>.manifest.json`.
-- Все вызовы: `POST /api/v1/bff/invoke` + `wireProfile: anima-operator-v1` (`src/api/bff.ts`)
-- Экраны: `screens[]` с `actions` и опциональной `table` (список из `result[]`)
+- Operator UI: `GET /api/v1/operator-apps/{appId}/ui` (встроенные app, настройка в `root.platform.operator-apps`), затем `GET /api/v1/applications/{appId}/operator-ui` (bundle), legacy fallback `public/operator-apps/<appId>.ui.json`
+- Навигация по вкладкам дашбордов; виджеты — те же что в Dashboard Builder (`DashboardBuilder` + `operatorMode`)
+- BFF (`POST /api/v1/bff/invoke`) — только если виджеты/функции app вызывают backend (не отдельный manifest shell)
+
+### Legacy: operator manifest
+
+`?mode=operator&app=demo` + `operatorManifest` — deprecated. Используйте `operatorUi` и объекты `DASHBOARD`.
 
 ## Навигация
 
 Клиентский роутер не используется. Состояние в `App.tsx`:
 
 - `mode`: `admin` | `operator`
-- `app`: operator manifest id (опционально)
-- `screen`: id экрана в manifest
+- `app`: operator application id (опционально)
+- `dashboard`: path объекта `DASHBOARD` (опционально)
+- `screen`: id экрана в legacy manifest (deprecated)
 - `selectedPath`, `editorPath`
 
 ## Роли
@@ -68,12 +73,13 @@ src/
 ├── App.tsx                 # Shell, tabs, role selector
 ├── api.ts                  # REST client
 ├── api/bff.ts              # POST /bff/invoke (anima-operator-v1)
-├── types/                  # dashboard, workflow, bff, operatorManifest
+├── types/                  # dashboard, workflow, bff, operatorUi, operatorManifest (legacy)
 ├── hooks/
 │   ├── useObjectWebSocket.ts
 │   ├── useBoundVariable.ts
 │   ├── useTrendSeries.ts
-│   └── useOperatorManifest.ts
+│   ├── useOperatorUi.ts
+│   └── useOperatorManifest.ts (legacy)
 ├── bpmn/
 │   ├── ispf-moddle.json    # ISPF BPMN extensions
 │   ├── constants.ts        # EMPTY_BPMN (с минимальным bpmndi)
@@ -85,10 +91,10 @@ src/
     ├── dashboard/          # Builder + 14 widgets
     ├── workflow/           # BPMN editor/viewer
     ├── automation/         # Alert/correlator CRUD
-    └── operator/           # OperatorView, manifest shell, sidebar panels
+    └── operator/           # OperatorView, OperatorDashboardApp, sidebar panels
 ```
 
-`public/operator-apps/` — JSON manifest для `?app=`.
+`public/operator-apps/` — legacy fallback `{appId}.ui.json` (dev). Настройка встроенных app — админка → `root.platform.operator-apps`.
 
 ## Dashboard Builder
 

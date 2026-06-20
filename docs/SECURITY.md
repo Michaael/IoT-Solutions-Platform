@@ -35,7 +35,7 @@ curl -H "Authorization: Bearer <token>" http://localhost:8080/api/v1/objects
 
 Web Console: экран входа; сессия хранится в `localStorage`. Админ управляет пользователями в дереве `root.platform.security.users`.
 
-**Автозапуск приложения:** у пользователя можно включить `autoStartEnabled` и указать `autoStartApp` (id manifest из `operator-apps/`). После входа Web Console открывает operator-приложение вместо админ-консоли. Пользователи с ролью `operator` всегда попадают в operator UI; `admin` может вернуться в консоль кнопкой «Админ-консоль» (если не задан принудительный `?mode=admin` в URL).
+**Автозапуск приложения:** у пользователя можно включить `autoStartEnabled` и указать `autoStartApp` (id operator app, список — `GET /api/v1/operator-apps`). После входа Web Console открывает operator-приложение вместо админ-консоли.
 
 ### Управление пользователями (admin)
 
