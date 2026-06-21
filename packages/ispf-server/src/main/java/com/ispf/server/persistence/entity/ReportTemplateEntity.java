@@ -20,7 +20,7 @@ public class ReportTemplateEntity {
     @Column(nullable = false, length = 16)
     private String format;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.BINARY)
     @Column(nullable = false)
     private byte[] content;
 
