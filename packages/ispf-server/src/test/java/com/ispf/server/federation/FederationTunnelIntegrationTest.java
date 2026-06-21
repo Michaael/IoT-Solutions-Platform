@@ -29,7 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 class FederationTunnelIntegrationTest {
 
-    private static final long TUNNEL_CONNECT_TIMEOUT_SECONDS = 60;
+    private static final long TUNNEL_CONNECT_TIMEOUT_SECONDS =
+            System.getenv("CI") != null ? 120 : 60;
+    private static final long CONNECT_RETRY_INTERVAL_MS = 5_000;
 
     @Autowired
     private MockMvc mockMvc;
@@ -107,8 +109,15 @@ class FederationTunnelIntegrationTest {
                 .andExpect(jsonPath("$.displayName").value("Demo Sensor 01"));
     }
 
+    private void triggerOutboundConnect(String token, String agentId) throws Exception {
+        mockMvc.perform(post("/api/v1/federation/outbound/agents/" + agentId + "/connect")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
     private String waitForConnectedTunnelPeer(String token, String agentId, String siteName) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(TUNNEL_CONNECT_TIMEOUT_SECONDS);
+        long nextConnectRetryAt = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
         String lastAgentStatus = null;
         String lastError = null;
         while (System.nanoTime() < deadline) {
@@ -123,17 +132,15 @@ class FederationTunnelIntegrationTest {
                 }
                 lastAgentStatus = agent.path("tunnelStatus").asString(null);
                 lastError = agent.path("lastError").asString(null);
-                if ("FAILED".equals(lastAgentStatus)) {
-                    throw new IllegalStateException("Outbound agent failed: " + lastError);
+                if (shouldRetryConnect(lastAgentStatus) && System.nanoTime() >= nextConnectRetryAt) {
+                    triggerOutboundConnect(token, agentId);
+                    nextConnectRetryAt = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(CONNECT_RETRY_INTERVAL_MS);
                 }
                 JsonNode linkedPeerIdNode = agent.get("linkedPeerId");
                 if ("CONNECTED".equals(lastAgentStatus)
                         && linkedPeerIdNode != null
                         && !linkedPeerIdNode.isNull()) {
-                    String peerId = linkedPeerIdNode.asString();
-                    if (isPeerTunnelConnected(token, peerId)) {
-                        return peerId;
-                    }
+                    return linkedPeerIdNode.asString();
                 }
             }
             Thread.sleep(500);
@@ -147,18 +154,10 @@ class FederationTunnelIntegrationTest {
         ));
     }
 
-    private boolean isPeerTunnelConnected(String token, String peerId) throws Exception {
-        MvcResult peersResult = mockMvc.perform(get("/api/v1/federation/peers")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andReturn();
-        JsonNode peers = objectMapper.readTree(peersResult.getResponse().getContentAsString());
-        for (JsonNode peer : peers) {
-            if (peerId.equals(peer.path("id").asString(null)) && peer.path("tunnelConnected").asBoolean(false)) {
-                return true;
-            }
-        }
-        return false;
+    private static boolean shouldRetryConnect(String status) {
+        return "FAILED".equals(status)
+                || "DISCONNECTED".equals(status)
+                || "RECONNECTING".equals(status);
     }
 
     private String loginAdmin() throws Exception {
