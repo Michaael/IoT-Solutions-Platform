@@ -11,6 +11,7 @@ import { parseInstanceState } from "../../types/workflow";
 
 const BpmnDiagramEditor = lazy(() => import("./BpmnDiagramEditor"));
 const BpmnDiagramViewer = lazy(() => import("./BpmnDiagramViewer"));
+const WorkflowIspfActionsReference = lazy(() => import("./WorkflowIspfActionsReference"));
 
 interface WorkflowBuilderProps {
   path: string;
@@ -170,6 +171,12 @@ export default function WorkflowBuilder({
         <section className="workflow-panel workflow-side-panel">
           <h3>Триггер</h3>
           <pre className="workflow-code-block">{workflow.data?.triggerJson}</pre>
+
+          {mode === "edit" && (
+            <Suspense fallback={null}>
+              <WorkflowIspfActionsReference />
+            </Suspense>
+          )}
 
           <h3>Экземпляр</h3>
           <div className="workflow-instance-grid">

@@ -4,6 +4,28 @@
 
 **IoT Solutions Platform Framework (ISPF)** — middleware-платформа для IoT, промышленной автоматизации и IT-операций. Единая модель данных и API для устройств, HMI-дашбордов, алертов и BPMN-автоматизации.
 
+## Основной принцип: бизнес-логика в механизмах платформы
+
+Бизнес-логика прикладного решения **живёт на платформе** — в declarative-конфигурации **дерева объектов**, а не в отраслевом Java-коде сервера.
+
+| Механизм | Что описывает |
+|----------|---------------|
+| **Модели** | Blueprint: переменные, события, функции, bindings |
+| **Переменные** | Состояние, вычисления (CEL, platform bindings), historian |
+| **События** | Типы событий; alert rules и correlators — узлы дерева |
+| **Функции** | Вызываемая логика на объекте (script, `INVOKE_FUNCTION`) |
+| **Workflow** | BPMN-процессы, user tasks, эскалация |
+
+**Платформа (framework)** реализует **generic-движки один раз**: CEL, bindings, historian, BPMN, script runtime, drivers, event bus.
+
+**Решение (solution)** наполняет эти механизмы конфигурацией: модели, пороги, процессы, функции, дашборды.
+
+Bundle deploy ([APPLICATIONS.md](APPLICATIONS.md)) — **упаковка и доставка** конфигурации в дерево объектов и app schema, а не отдельный runtime вне платформы.
+
+**Запрещено в `main`:** отраслевой Java в `ispf-server`, hardcoded BFF routes, дублирование логики вне object tree.
+
+**Развитие platform:** усиление выразительности механизмов object tree (Phase 5), чтобы больше логики выражалось declarative, без custom code. См. [ROADMAP.md § Phase 5](ROADMAP.md#phase-5--усиление-механизмов-north-star), [PLATFORM_DEVELOPER_BACKLOG.md §8.1](PLATFORM_DEVELOPER_BACKLOG.md#81-усиление-механизмов-phase-5).
+
 ## Core Domain Model
 
 ```mermaid

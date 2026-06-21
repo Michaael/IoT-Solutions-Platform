@@ -190,6 +190,33 @@ public class ModelController {
         return list.stream().map(ModelAttachmentDto::from).toList();
     }
 
+    @PostMapping("/{id}/upgrade")
+    public Map<String, Object> upgradeModel(
+            @PathVariable String id,
+            @RequestParam @NotBlank String targetPath,
+            @RequestParam(required = false) String targetVersion
+    ) {
+        try {
+            ModelDefinition model = modelRegistry.requireById(id);
+            if (targetVersion != null && !targetVersion.isBlank()
+                    && !targetVersion.equals(model.modelVersion())) {
+                throw new ModelException(
+                        "Model version mismatch: requested " + targetVersion + ", actual " + model.modelVersion()
+                );
+            }
+            ModelAttachment attachment = modelEngine.applyModel(id, targetPath);
+            objectManager.persistNodeTree(targetPath);
+            return Map.of(
+                    "status", "OK",
+                    "targetPath", targetPath,
+                    "modelVersion", model.modelVersion(),
+                    "attachmentId", attachment.id()
+            );
+        } catch (ModelException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
     public record CreateModelRequest(
             @NotBlank String name,
             String description,

@@ -82,7 +82,7 @@ public class ModelEngine {
         ModelDefinition model = registry.requireById(modelId);
         PlatformObject target = objectTree.require(targetPath);
         assertSuitable(model, target);
-        mergeModelIntoObject(model, target);
+        mergeModelChain(model, target, model.parameters());
         bindingEvaluator.evaluateBindings(target);
         ModelAttachment attachment = new ModelAttachment(
                 UUID.randomUUID().toString(),
@@ -128,7 +128,7 @@ public class ModelEngine {
                 model.id()
         );
         objectTree.register(instance);
-        mergeModelIntoObject(model, instance, parameters);
+        mergeModelChain(model, instance, parameters);
         bindingEvaluator.evaluateBindings(instance);
 
         attachments.add(new ModelAttachment(
@@ -278,6 +278,17 @@ public class ModelEngine {
                         Map.of("value", model.suitabilityExpression())
                 )
         ));
+    }
+
+    private void mergeModelChain(ModelDefinition model, PlatformObject target, Map<String, String> parameters) {
+        String parentRef = model.parameters().get("extendsModelId");
+        if (parentRef != null && !parentRef.isBlank()) {
+            ModelDefinition parent = registry.findById(parentRef)
+                    .or(() -> registry.findByName(parentRef))
+                    .orElseThrow(() -> new ModelException("Parent model not found: " + parentRef));
+            mergeModelChain(parent, target, parameters);
+        }
+        mergeModelIntoObject(model, target, parameters);
     }
 
     private void mergeModelIntoObject(ModelDefinition model, PlatformObject target) {

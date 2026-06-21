@@ -9,6 +9,7 @@ import com.ispf.server.federation.FederationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -75,6 +76,38 @@ public class FederationController {
             @RequestParam String path
     ) {
         JsonNode json = federationService.proxyObjectByPath(peerId, path);
+        return objectMapper.convertValue(json, Object.class);
+    }
+
+    @PatchMapping("/proxy/objects/by-path/variables/value")
+    public Object proxyVariablePatch(
+            @RequestParam UUID peerId,
+            @RequestParam String path,
+            @RequestParam String name,
+            @RequestBody(required = false) Map<String, Object> body
+    ) throws tools.jackson.core.JacksonException {
+        JsonNode json = federationService.proxyVariablePatch(
+                peerId,
+                path,
+                name,
+                objectMapper.writeValueAsString(body != null ? body : Map.of())
+        );
+        return objectMapper.convertValue(json, Object.class);
+    }
+
+    @PostMapping("/proxy/objects/by-path/functions/invoke")
+    public Object proxyFunctionInvoke(
+            @RequestParam UUID peerId,
+            @RequestParam String path,
+            @RequestParam String name,
+            @RequestBody(required = false) Map<String, Object> body
+    ) throws tools.jackson.core.JacksonException {
+        JsonNode json = federationService.proxyFunctionInvoke(
+                peerId,
+                path,
+                name,
+                objectMapper.writeValueAsString(body != null ? body : Map.of())
+        );
         return objectMapper.convertValue(json, Object.class);
     }
 

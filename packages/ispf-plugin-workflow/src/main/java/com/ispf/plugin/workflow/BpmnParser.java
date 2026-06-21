@@ -209,6 +209,12 @@ public class BpmnParser {
         readIspfAttribute(task, parameters, "functionName");
         readIspfAttribute(task, parameters, "inputMap");
         readIspfAttribute(task, parameters, "outputMap");
+        readIspfAttribute(task, parameters, "eventName");
+        readIspfAttribute(task, parameters, "payloadVariable");
+        readIspfAttribute(task, parameters, "contextKey");
+        readIspfAttribute(task, parameters, "sourceVariable");
+        readIspfAttribute(task, parameters, "valueField");
+        readIspfAttribute(task, parameters, "workflowPath");
 
         Element extensions = firstChildElement(task, "extensionElements");
         if (extensions != null) {
@@ -299,6 +305,9 @@ public class BpmnParser {
             case "setvariable", "set_variable" -> WorkflowActionType.SET_VARIABLE;
             case "publishnats", "publish_nats" -> WorkflowActionType.PUBLISH_NATS;
             case "invokefunction", "invoke_function" -> WorkflowActionType.INVOKE_FUNCTION;
+            case "fireevent", "fire_event" -> WorkflowActionType.FIRE_EVENT;
+            case "readvariable", "read_variable" -> WorkflowActionType.READ_VARIABLE;
+            case "startworkflow", "start_workflow" -> WorkflowActionType.START_WORKFLOW;
             default -> throw new WorkflowException("Unsupported service task action: " + actionRaw);
         };
     }

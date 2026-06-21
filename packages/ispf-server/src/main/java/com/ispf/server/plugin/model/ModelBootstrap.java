@@ -110,6 +110,97 @@ public class ModelBootstrap {
         seedModels();
         ensureDeviceDriverModel();
         ensureAutomationModels();
+        ensureModelInheritanceDemo();
+    }
+
+    private void ensureModelInheritanceDemo() {
+        if (modelRegistry.findByName("base-sensor-v1").isEmpty()) {
+            modelEngine.createModel(buildBaseSensorModel());
+        }
+        if (modelRegistry.findByName("vendor-sensor-ext-v1").isEmpty()) {
+            String baseId = modelRegistry.findByName("base-sensor-v1")
+                    .orElseThrow()
+                    .id();
+            modelEngine.createModel(buildVendorSensorExtensionModel(baseId));
+        }
+    }
+
+    private static ModelDefinition buildBaseSensorModel() {
+        return new ModelDefinition(
+                UUID.randomUUID().toString(),
+                "base-sensor-v1",
+                "Base temperature sensor — family blueprint",
+                ModelType.INSTANCE,
+                ObjectType.DEVICE,
+                "",
+                List.of(
+                        ModelVariableDefinition.of(
+                                "temperature",
+                                "Current temperature",
+                                "telemetry",
+                                TEMPERATURE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(TEMPERATURE_SCHEMA, Map.of("value", 20.0, "unit", "C"))
+                        ),
+                        ModelVariableDefinition.of(
+                                "threshold",
+                                "Alarm threshold",
+                                "config",
+                                THRESHOLD_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(THRESHOLD_SCHEMA, Map.of("value", 35.0))
+                        )
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                Map.of("modelVersion", "1"),
+                Instant.now(),
+                Instant.now()
+        );
+    }
+
+    private static ModelDefinition buildVendorSensorExtensionModel(String baseModelId) {
+        return new ModelDefinition(
+                UUID.randomUUID().toString(),
+                "vendor-sensor-ext-v1",
+                "Vendor extension — adds humidity without duplicating base sensor",
+                ModelType.INSTANCE,
+                ObjectType.DEVICE,
+                "",
+                List.of(
+                        ModelVariableDefinition.of(
+                                "humidity",
+                                "Relative humidity percent",
+                                "telemetry",
+                                THRESHOLD_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(THRESHOLD_SCHEMA, Map.of("value", 45.0))
+                        ),
+                        ModelVariableDefinition.of(
+                                "threshold",
+                                "Vendor-specific threshold override",
+                                "config",
+                                THRESHOLD_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(THRESHOLD_SCHEMA, Map.of("value", 40.0))
+                        )
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                Map.of("extendsModelId", baseModelId, "modelVersion", "1"),
+                Instant.now(),
+                Instant.now()
+        );
     }
 
     private void ensureAutomationModels() {
@@ -201,6 +292,23 @@ public class ModelBootstrap {
                                 DataRecord.single(BOOLEAN_VALUE_SCHEMA, Map.of("value", true))
                         ),
                         ModelVariableDefinition.of(
+                                "rateLimitSeconds",
+                                "Minimum seconds between event fires (0 = no limit)",
+                                "config",
+                                com.ispf.core.model.DataSchema.builder("rateLimitSeconds")
+                                        .field("value", com.ispf.core.model.FieldType.INTEGER)
+                                        .build(),
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(
+                                        com.ispf.core.model.DataSchema.builder("rateLimitSeconds")
+                                                .field("value", com.ispf.core.model.FieldType.INTEGER)
+                                                .build(),
+                                        Map.of("value", 0)
+                                )
+                        ),
+                        ModelVariableDefinition.of(
                                 "lastConditionMet",
                                 "Runtime: last evaluated condition result",
                                 "runtime",
@@ -209,6 +317,16 @@ public class ModelBootstrap {
                                 false,
                                 null,
                                 DataRecord.single(BOOLEAN_VALUE_SCHEMA, Map.of("value", false))
+                        ),
+                        ModelVariableDefinition.of(
+                                "lastFiredAt",
+                                "Runtime: last event fire timestamp (ISO-8601)",
+                                "runtime",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                false,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", ""))
                         )
                 ),
                 List.of(),
@@ -241,7 +359,7 @@ public class ModelBootstrap {
                         ),
                         ModelVariableDefinition.of(
                                 "patternType",
-                                "COUNT or SEQUENCE",
+                                "COUNT, SEQUENCE or EVENT_CHAIN",
                                 "config",
                                 STRING_VALUE_SCHEMA,
                                 true,

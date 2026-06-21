@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { updateCorrelator, fetchVariables } from "../../api";
-import type { CorrelatorPatternType, CreateCorrelatorPayload } from "../../types/automation";
+import type { CorrelatorActionType, CorrelatorPatternType, CreateCorrelatorPayload } from "../../types/automation";
 import { variableBoolean, variableNumber, variableString } from "../../utils/variableFieldValue";
 
 interface CorrelatorInspectorProps {
@@ -17,6 +17,7 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
 
   const variables = variablesQuery.data ?? [];
   const patternType = (variableString(variables, "patternType") || "COUNT") as CorrelatorPatternType;
+  const actionType = (variableString(variables, "actionType") || "RUN_WORKFLOW") as CorrelatorActionType;
 
   const saveMutation = useMutation({
     mutationFn: (payload: Partial<CreateCorrelatorPayload>) => updateCorrelator(path, payload),
@@ -57,7 +58,7 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
             windowSeconds: Number(data.get("windowSeconds") ?? 0),
             minOccurrences: Number(data.get("minOccurrences") ?? 1),
             cooldownSeconds: Number(data.get("cooldownSeconds") ?? 120),
-            actionType: "RUN_WORKFLOW",
+            actionType: String(data.get("actionType") ?? "RUN_WORKFLOW") as CorrelatorActionType,
             actionTarget: String(data.get("actionTarget") ?? ""),
             enabled: data.get("enabled") === "on",
           });
@@ -76,6 +77,14 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           <select name="patternType" defaultValue={patternType} disabled={!canManage}>
             <option value="COUNT">COUNT</option>
             <option value="SEQUENCE">SEQUENCE</option>
+            <option value="EVENT_CHAIN">EVENT_CHAIN</option>
+          </select>
+        </label>
+        <label>
+          Действие
+          <select name="actionType" defaultValue={actionType} disabled={!canManage}>
+            <option value="RUN_WORKFLOW">RUN_WORKFLOW</option>
+            <option value="FIRE_EVENT">FIRE_EVENT</option>
           </select>
         </label>
         <label>
@@ -88,11 +97,12 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label>
-          Второе событие (SEQUENCE)
+          {actionType === "FIRE_EVENT" ? "Событие (actionTarget) *" : "Второе событие / цепочка"}
           <input
             name="secondEventName"
             defaultValue={variableString(variables, "secondEventName")}
             readOnly={!canManage}
+            placeholder="eventB или eventA,eventB,eventC"
           />
         </label>
         <label>
@@ -126,7 +136,7 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label className="full">
-          Workflow (actionTarget) *
+          {actionType === "FIRE_EVENT" ? "Имя события (actionTarget) *" : "Workflow (actionTarget) *"}
           <input
             name="actionTarget"
             defaultValue={variableString(variables, "actionTarget")}

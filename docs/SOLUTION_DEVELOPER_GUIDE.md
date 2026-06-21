@@ -6,15 +6,22 @@
 
 ---
 
+## Основной принцип
+
+**Бизнес-логика живёт на платформе** — в моделях, переменных, событиях, функциях и workflow **дерева объектов**. Ваше решение не добавляет Java в server: оно наполняет механизмы ISPF declarative-конфигурацией (модели, BPMN, script-функции, объекты, alert rules). Bundle deploy — способ **доставить** эту конфигурацию в платформу. См. [ARCHITECTURE.md](ARCHITECTURE.md#основной-принцип-бизнес-логика-в-механизмах-платформы).
+
 ## Что такое «решение» на ISPF
 
-**Решение (application)** — зарегистрированный app с изолированной SQL-схемой, набором функций, опциональным bundle и operator UI. Оно **не** является узлом дерева объектов в runtime (хотя в admin console может отображаться под `root.platform.applications`).
+**Решение (application)** — зарегистрированный app с изолированной SQL-схемой, script-функциями, bundle (объекты, dashboards, BPMN, модели) и operator UI. Логика решения **исполняется** на узлах object tree и через platform runtime; запись `applications` — реестр и app schema, не параллельный движок.
 
 | Концепция | Где живёт | Пример |
 |-----------|-----------|--------|
+| **Бизнес-логика** | Механизмы object tree | модель, переменная + CEL, `WORKFLOW`, `ALERT`, script-функция |
 | **Platform object** | Дерево объектов | `root.platform.devices.pump-01` |
-| **Application** | Таблица `applications` + schema `app_myapp` | `my-terminal` |
+| **Application** | Реестр + schema `app_myapp` | `my-terminal` |
 | **Operator app** | `operator_app_ui` + дерево `operator-apps` | `platform`, `oil-terminal` |
+
+**Tree-first convergence (Phase 5.5):** после `POST .../deploy` функции адресуются как `{appId}.functions.{name}` на object path; SQL bindings могут жить как `bindingExpression: sqlBinding('appId','var')` на переменной; `objects[]` в bundle обновляет существующие узлы (reconcile), а не только создаёт новые.
 
 ---
 

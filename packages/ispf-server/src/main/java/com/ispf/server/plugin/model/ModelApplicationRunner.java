@@ -14,6 +14,7 @@ import com.ispf.plugin.model.ModelDefinition;
 import com.ispf.plugin.model.ModelEngine;
 import com.ispf.plugin.model.ModelRegistry;
 import com.ispf.plugin.model.ModelVariableDefinition;
+import com.ispf.plugin.model.ModelBindingDefinition;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -247,7 +248,7 @@ public class ModelApplicationRunner {
                         varDef.schema(),
                         varDef.readable(),
                         varDef.writable(),
-                        varDef.defaultBinding(),
+                        model.bindingFor(varDef.name()),
                         varDef.defaultValue(),
                         varDef.historyEnabled(),
                         varDef.historyRetentionDays()

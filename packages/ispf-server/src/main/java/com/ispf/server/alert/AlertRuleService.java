@@ -104,6 +104,13 @@ public class AlertRuleService {
             }
             automationTreeService.setAlertRuleLastConditionMet(rule.id(), conditionMet);
             if (shouldFire) {
+                if (rule.rateLimitSeconds() > 0) {
+                    if (rule.lastFiredAt() != null
+                            && rule.lastFiredAt().plusSeconds(rule.rateLimitSeconds()).isAfter(java.time.Instant.now())) {
+                        continue;
+                    }
+                    automationTreeService.setAlertRuleLastFiredAt(rule.id(), java.time.Instant.now());
+                }
                 DataRecord payload = resolvePayload(node, rule.payloadVariable());
                 eventService.fire(objectPath, rule.eventName(), payload);
             }

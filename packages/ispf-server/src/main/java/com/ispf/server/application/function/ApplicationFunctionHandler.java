@@ -19,12 +19,17 @@ public class ApplicationFunctionHandler implements FunctionHandler {
 
     @Override
     public boolean supports(String objectPath, String functionName) {
-        return store.findLatest(objectPath, functionName).isPresent();
+        if (store.findLatest(objectPath, functionName).isPresent()) {
+            return true;
+        }
+        return store.findLatestByTreeFunctionPath(objectPath).isPresent();
     }
 
     @Override
     public DataRecord invoke(String objectPath, String functionName, DataRecord input) {
-        return runtime.invoke(objectPath, functionName, input);
+        return store.findLatestByTreeFunctionPath(objectPath)
+                .map(fn -> runtime.invoke(fn.objectPath(), fn.functionName(), input))
+                .orElseGet(() -> runtime.invoke(objectPath, functionName, input));
     }
 
     public record DeployedFunction(

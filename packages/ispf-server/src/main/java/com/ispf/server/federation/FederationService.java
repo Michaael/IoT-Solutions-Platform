@@ -26,13 +26,19 @@ public class FederationService {
 
     private final FederationPeerStore peerStore;
     private final ObjectMapper objectMapper;
+    private final FederationWebSocketFanoutService webSocketFanout;
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
-    public FederationService(FederationPeerStore peerStore, ObjectMapper objectMapper) {
+    public FederationService(
+            FederationPeerStore peerStore,
+            ObjectMapper objectMapper,
+            FederationWebSocketFanoutService webSocketFanout
+    ) {
         this.peerStore = peerStore;
         this.objectMapper = objectMapper;
+        this.webSocketFanout = webSocketFanout;
     }
 
     public List<FederationPeer> listPeers() {
@@ -183,6 +189,55 @@ public class FederationService {
             query.append("&to=").append(URLEncoder.encode(to.toString(), StandardCharsets.UTF_8));
         }
         return sendGet(peer, query.toString());
+    }
+
+    public JsonNode proxyVariablePatch(UUID peerId, String objectPath, String variableName, String bodyJson) {
+        FederationPeer peer = requirePeer(peerId);
+        String remotePath = resolveRemotePath(peer.pathPrefix(), objectPath);
+        String path = "/api/v1/objects/by-path/variables/value?path="
+                + URLEncoder.encode(remotePath, StandardCharsets.UTF_8)
+                + "&name=" + URLEncoder.encode(variableName, StandardCharsets.UTF_8);
+        JsonNode result = sendJson(peer, "PATCH", path, bodyJson);
+        webSocketFanout.notifyFederatedPathUpdated(objectPath, variableName);
+        return result;
+    }
+
+    public JsonNode proxyFunctionInvoke(UUID peerId, String objectPath, String functionName, String bodyJson) {
+        FederationPeer peer = requirePeer(peerId);
+        String remotePath = resolveRemotePath(peer.pathPrefix(), objectPath);
+        String path = "/api/v1/objects/by-path/functions/invoke?path="
+                + URLEncoder.encode(remotePath, StandardCharsets.UTF_8)
+                + "&name=" + URLEncoder.encode(functionName, StandardCharsets.UTF_8);
+        JsonNode result = sendJson(peer, "POST", path, bodyJson);
+        webSocketFanout.notifyFederatedPathUpdated(objectPath, null);
+        return result;
+    }
+
+    private JsonNode sendJson(FederationPeer peer, String method, String pathAndQuery, String body) {
+        if (!peer.enabled()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Peer is disabled: " + peer.name());
+        }
+        String url = peer.baseUrl() + pathAndQuery;
+        try {
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Content-Type", "application/json")
+                    .method(method, HttpRequest.BodyPublishers.ofString(body != null ? body : "{}"));
+            applyAuthorization(builder, peer);
+            HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_GATEWAY,
+                        "Peer " + peer.name() + " returned HTTP " + response.statusCode()
+                );
+            }
+            return objectMapper.readTree(response.body());
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Peer request failed: " + e.getMessage(), e);
+        }
     }
 
     private JsonNode sendGet(FederationPeer peer, String pathAndQuery) {

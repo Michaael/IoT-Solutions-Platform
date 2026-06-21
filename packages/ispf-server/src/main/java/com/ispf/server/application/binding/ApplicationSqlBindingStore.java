@@ -100,6 +100,25 @@ public class ApplicationSqlBindingStore {
         );
     }
 
+    public List<SqlBinding> listForEvent(String objectPath, String eventName) {
+        return jdbcTemplate.query("""
+                SELECT id, app_id, object_path, variable_name, query_sql, refresh_mode,
+                       refresh_interval_ms, value_field, trigger_object_path, trigger_function_name,
+                       enabled, last_refreshed_at
+                FROM %s
+                WHERE enabled = TRUE
+                  AND refresh_mode = 'on_event'
+                  AND object_path = ?
+                  AND (trigger_object_path IS NULL OR trigger_object_path = ?)
+                  AND (trigger_function_name IS NULL OR trigger_function_name = ?)
+                """.formatted(bindingsTable),
+                this::mapRow,
+                objectPath,
+                objectPath,
+                eventName
+        );
+    }
+
     public List<SqlBinding> listForFunctionSuccess(String appId, String objectPath, String functionName) {
         return jdbcTemplate.query("""
                 SELECT id, app_id, object_path, variable_name, query_sql, refresh_mode,

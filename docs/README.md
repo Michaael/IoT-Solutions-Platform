@@ -16,7 +16,7 @@
 | Раздел | Описание |
 |--------|----------|
 | [Быстрый старт](GETTING_STARTED.md) | Установка, профили, первый запуск |
-| [Архитектура](ARCHITECTURE.md) | Видение, слои, расширяемость |
+| [Архитектура](ARCHITECTURE.md) | Видение, **основной принцип**, слои, расширяемость |
 | [Модель объектов](OBJECT_MODEL.md) | Дерево, переменные, события, функции |
 | [Привязки переменных](BINDINGS.md) | CEL, platform bindings (`counterRate`, `scale`, …) |
 | [История переменных](VARIABLE_HISTORY.md) | Time-series, флаги, retention, roadmap |
@@ -24,7 +24,7 @@
 | [Приложения (REQ-PF)](APPLICATIONS.md) | Deploy функций, миграций, bundle, BFF, scheduler |
 | [Отчёты (REQ-PF-12)](REPORTS.md) | SQL reports, CSV export, operator manifest |
 | [Backlog разработчика platform](PLATFORM_DEVELOPER_BACKLOG.md) | Статус REQ-PF, gap, sprint roadmap, каталог драйверов (§10) |
-| [Roadmap](ROADMAP.md) | Единый roadmap platform + production ops |
+| [Roadmap](ROADMAP.md) | Единый roadmap platform + production ops; **Phase 5** — усиление механизмов |
 | [WebSocket](API.md#websocket) | Live-обновления объектов |
 | [Модели (Models)](MODELS.md) | Шаблоны объектов, типы, встроенные модели |
 | [Драйверы](DRIVERS.md) | 58 встроенных драйверов — полный каталог REQ-PF-14 |

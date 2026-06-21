@@ -83,6 +83,10 @@ public class ApplicationSqlBindingService {
         );
     }
 
+    public void refreshBinding(ApplicationSqlBindingStore.SqlBinding binding) {
+        executeRefresh(binding);
+    }
+
     public void refreshAfterFunction(String appId, String objectPath, String functionName) {
         for (ApplicationSqlBindingStore.SqlBinding binding : store.listForFunctionSuccess(appId, objectPath, functionName)) {
             executeRefresh(binding);
@@ -101,7 +105,7 @@ public class ApplicationSqlBindingService {
         }
     }
 
-    private void refreshBinding(String appId, String objectPath, String variableName) {
+    public void refreshBinding(String appId, String objectPath, String variableName) {
         store.listByApp(appId).stream()
                 .filter(binding -> binding.objectPath().equals(objectPath)
                         && binding.variableName().equals(variableName))
@@ -129,7 +133,7 @@ public class ApplicationSqlBindingService {
             }
             extractedHolder[0] = value;
         });
-        DataRecord record = toValueRecord(extractedHolder[0]);
+        DataRecord record = toValueRecord(extractedHolder[0], binding);
         schemaSession.runWithPlatformCatalog(() ->
                 objectManager.setSystemVariableValue(binding.objectPath(), binding.variableName(), record)
         );
@@ -161,18 +165,61 @@ public class ApplicationSqlBindingService {
         return normalized;
     }
 
-    private static DataRecord toValueRecord(Object value) {
-        double numeric = 0.0;
-        if (value instanceof Number number) {
-            numeric = number.doubleValue();
-        } else if (value != null) {
-            try {
-                numeric = Double.parseDouble(value.toString());
-            } catch (NumberFormatException ignored) {
-                numeric = 0.0;
+    private static DataRecord toValueRecord(Object value, ApplicationSqlBindingStore.SqlBinding binding) {
+        com.ispf.core.model.FieldType fieldType = resolveValueFieldType(binding);
+        return switch (fieldType) {
+            case STRING -> DataRecord.single(
+                    DataSchema.builder("sqlBindingValue").field("value", FieldType.STRING).build(),
+                    Map.of("value", value != null ? String.valueOf(value) : "")
+            );
+            case INTEGER, LONG -> {
+                long numeric = 0L;
+                if (value instanceof Number number) {
+                    numeric = number.longValue();
+                } else if (value != null) {
+                    try {
+                        numeric = Long.parseLong(value.toString());
+                    } catch (NumberFormatException ignored) {
+                        numeric = 0L;
+                    }
+                }
+                yield DataRecord.single(
+                        DataSchema.builder("sqlBindingValue").field("value", fieldType).build(),
+                        Map.of("value", numeric)
+                );
             }
+            default -> {
+                double numeric = 0.0;
+                if (value instanceof Number number) {
+                    numeric = number.doubleValue();
+                } else if (value != null) {
+                    try {
+                        numeric = Double.parseDouble(value.toString());
+                    } catch (NumberFormatException ignored) {
+                        numeric = 0.0;
+                    }
+                }
+                yield DataRecord.single(SINGLE_VALUE_SCHEMA, Map.of("value", numeric));
+            }
+        };
+    }
+
+    private static com.ispf.core.model.FieldType resolveValueFieldType(ApplicationSqlBindingStore.SqlBinding binding) {
+        if (binding == null) {
+            return FieldType.DOUBLE;
         }
-        return DataRecord.single(SINGLE_VALUE_SCHEMA, Map.of("value", numeric));
+        String field = binding.valueField() != null ? binding.valueField() : "value";
+        if ("value".equalsIgnoreCase(field) || field.isBlank()) {
+            return FieldType.DOUBLE;
+        }
+        if (field.toLowerCase().contains("code") || field.toLowerCase().contains("name") || field.toLowerCase().contains("status")) {
+            return FieldType.STRING;
+        }
+        return FieldType.DOUBLE;
+    }
+
+    private static DataRecord toValueRecord(Object value) {
+        return toValueRecord(value, null);
     }
 
     private String resolveSchemaName(String appId) {
@@ -188,6 +235,7 @@ public class ApplicationSqlBindingService {
         }
         return switch (refresh) {
             case "on_function_success" -> "on_function_success";
+            case "on_event" -> "on_event";
             default -> "on_schedule";
         };
     }

@@ -27,7 +27,13 @@
         { "name": "condition", "isAttr": true, "type": "String" },
         { "name": "conditionExpression", "isAttr": true, "type": "String" },
         { "name": "default", "isAttr": true, "type": "String" },
-        { "name": "signal", "isAttr": true, "type": "String" }
+        { "name": "signal", "isAttr": true, "type": "String" },
+        { "name": "objectPath", "isAttr": true, "type": "String" },
+        { "name": "eventName", "isAttr": true, "type": "String" },
+        { "name": "payloadJson", "isAttr": true, "type": "String" },
+        { "name": "contextKey", "isAttr": true, "type": "String" },
+        { "name": "workflowPath", "isAttr": true, "type": "String" },
+        { "name": "inputJson", "isAttr": true, "type": "String" }
       ]
     },
     {

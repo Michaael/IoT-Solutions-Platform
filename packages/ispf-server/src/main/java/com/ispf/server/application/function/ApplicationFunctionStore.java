@@ -159,6 +159,14 @@ public class ApplicationFunctionStore {
     }
 
     public Optional<ApplicationFunctionHandler.DeployedFunction> findLatest(String objectPath, String functionName) {
+        Optional<ApplicationFunctionHandler.DeployedFunction> direct = findLatestDirect(objectPath, functionName);
+        if (direct.isPresent()) {
+            return direct;
+        }
+        return findLatestByTreeFunctionPath(objectPath);
+    }
+
+    private Optional<ApplicationFunctionHandler.DeployedFunction> findLatestDirect(String objectPath, String functionName) {
         List<ApplicationFunctionHandler.DeployedFunction> rows = jdbcTemplate.query("""
                 SELECT id, app_id, object_path, function_name, version,
                        source_type, source_body, input_schema_json, output_schema_json
@@ -172,6 +180,45 @@ public class ApplicationFunctionStore {
                 functionName
         );
         return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    public Optional<ApplicationFunctionHandler.DeployedFunction> findLatestByTreeFunctionPath(String treeFunctionPath) {
+        TreeFunctionRef ref = TreeFunctionRef.parse(treeFunctionPath);
+        if (ref == null) {
+            return Optional.empty();
+        }
+        List<ApplicationFunctionHandler.DeployedFunction> rows = jdbcTemplate.query("""
+                SELECT id, app_id, object_path, function_name, version,
+                       source_type, source_body, input_schema_json, output_schema_json
+                FROM %s
+                WHERE app_id = ? AND function_name = ?
+                ORDER BY deployed_at DESC
+                LIMIT 1
+                """.formatted(functionsTable),
+                this::mapDeployedFunction,
+                ref.appId(),
+                ref.functionName()
+        );
+        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    record TreeFunctionRef(String appId, String functionName) {
+        static TreeFunctionRef parse(String path) {
+            if (path == null || !path.contains(".applications.") || !path.contains(".functions.")) {
+                return null;
+            }
+            int appsIdx = path.indexOf(".applications.");
+            int funcIdx = path.indexOf(".functions.");
+            if (funcIdx <= appsIdx) {
+                return null;
+            }
+            String appId = path.substring(appsIdx + ".applications.".length(), funcIdx);
+            String functionName = path.substring(funcIdx + ".functions.".length());
+            if (appId.isBlank() || functionName.isBlank() || functionName.contains(".")) {
+                return null;
+            }
+            return new TreeFunctionRef(appId, functionName);
+        }
     }
 
     public int countDeployedVersions() {

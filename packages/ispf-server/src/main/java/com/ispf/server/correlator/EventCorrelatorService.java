@@ -2,6 +2,7 @@ package com.ispf.server.correlator;
 
 import com.ispf.plugin.workflow.WorkflowException;
 import com.ispf.server.automation.AutomationTreeService;
+import com.ispf.server.event.EventService;
 import com.ispf.server.persistence.CorrelatorHitRepository;
 import com.ispf.server.persistence.entity.CorrelatorHitEntity;
 import com.ispf.server.workflow.WorkflowService;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -24,15 +26,18 @@ public class EventCorrelatorService {
     private final AutomationTreeService automationTreeService;
     private final CorrelatorHitRepository hitRepository;
     private final WorkflowService workflowService;
+    private final EventService eventService;
 
     public EventCorrelatorService(
             AutomationTreeService automationTreeService,
             CorrelatorHitRepository hitRepository,
-            @Lazy WorkflowService workflowService
+            @Lazy WorkflowService workflowService,
+            EventService eventService
     ) {
         this.automationTreeService = automationTreeService;
         this.hitRepository = hitRepository;
         this.workflowService = workflowService;
+        this.eventService = eventService;
     }
 
     @Transactional(readOnly = true)
@@ -128,6 +133,7 @@ public class EventCorrelatorService {
             boolean triggered = switch (correlator.patternType()) {
                 case COUNT -> processCountPattern(correlator, objectPath, eventName, now);
                 case SEQUENCE -> processSequencePattern(correlator, objectPath, eventName, now);
+                case EVENT_CHAIN -> processEventChainPattern(correlator, objectPath, eventName, now);
             };
             if (triggered) {
                 executeAction(correlator, objectPath);
@@ -185,12 +191,68 @@ public class EventCorrelatorService {
         );
     }
 
+    private boolean processEventChainPattern(
+            EventCorrelator correlator,
+            String objectPath,
+            String eventName,
+            Instant now
+    ) {
+        List<String> chain = eventChain(correlator);
+        if (chain.isEmpty() || !chain.contains(eventName)) {
+            return false;
+        }
+        recordHit(correlator.id(), objectPath, eventName, now);
+        if (!eventName.equals(chain.get(chain.size() - 1))) {
+            return false;
+        }
+        Instant since = correlator.windowSeconds() > 0
+                ? now.minusSeconds(correlator.windowSeconds())
+                : now.minusSeconds(3600);
+        List<String> observed = hitRepository
+                .findByCorrelatorIdAndObjectPathAndOccurredAtAfterOrderByOccurredAtAsc(
+                        correlator.id(),
+                        objectPath,
+                        since
+                )
+                .stream()
+                .map(hit -> hit.getEventName())
+                .toList();
+        return matchesEventChain(chain, observed);
+    }
+
+    private static List<String> eventChain(EventCorrelator correlator) {
+        List<String> chain = new ArrayList<>();
+        if (correlator.eventName() != null && !correlator.eventName().isBlank()) {
+            chain.add(correlator.eventName());
+        }
+        if (correlator.secondEventName() != null && !correlator.secondEventName().isBlank()) {
+            for (String part : correlator.secondEventName().split(",")) {
+                String trimmed = part.trim();
+                if (!trimmed.isBlank()) {
+                    chain.add(trimmed);
+                }
+            }
+        }
+        return chain;
+    }
+
+    private static boolean matchesEventChain(List<String> chain, List<String> observed) {
+        int chainIndex = 0;
+        for (String event : observed) {
+            if (chainIndex < chain.size() && chain.get(chainIndex).equals(event)) {
+                chainIndex++;
+            }
+        }
+        return chainIndex >= chain.size();
+    }
+
     private void executeAction(EventCorrelator correlator, String objectPath) {
         try {
             switch (correlator.actionType()) {
                 case RUN_WORKFLOW -> workflowService.runWorkflow(correlator.actionTarget(), objectPath);
+                case FIRE_EVENT -> eventService.fire(objectPath, correlator.actionTarget(), (com.ispf.core.model.DataRecord) null);
             }
-        } catch (WorkflowException e) {
+        } catch (Exception e) {
             log.warn("Correlator {} action failed: {}", correlator.id(), e.getMessage());
         }
     }
@@ -253,8 +315,11 @@ public class EventCorrelatorService {
         if (windowSeconds < 0) {
             throw new IllegalArgumentException("windowSeconds must be >= 0");
         }
-        if (actionType != CorrelatorActionType.RUN_WORKFLOW) {
-            throw new IllegalArgumentException("Unsupported action type: " + actionType);
+        if (actionType == CorrelatorActionType.RUN_WORKFLOW && (actionTarget == null || actionTarget.isBlank())) {
+            throw new IllegalArgumentException("actionTarget workflow path is required for RUN_WORKFLOW");
+        }
+        if (actionType == CorrelatorActionType.FIRE_EVENT && (actionTarget == null || actionTarget.isBlank())) {
+            throw new IllegalArgumentException("actionTarget event name is required for FIRE_EVENT");
         }
         if (patternType == CorrelatorPatternType.SEQUENCE) {
             if (secondEventName == null || secondEventName.isBlank()) {
@@ -265,6 +330,11 @@ public class EventCorrelatorService {
             }
             if (windowSeconds <= 0) {
                 throw new IllegalArgumentException("windowSeconds must be > 0 for SEQUENCE pattern");
+            }
+        }
+        if (patternType == CorrelatorPatternType.EVENT_CHAIN) {
+            if (secondEventName == null || secondEventName.isBlank()) {
+                throw new IllegalArgumentException("secondEventName chain (comma-separated) is required for EVENT_CHAIN");
             }
         }
     }

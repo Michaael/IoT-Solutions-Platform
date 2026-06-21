@@ -6,6 +6,8 @@
 
 ## Концепция
 
+**Основной принцип:** бизнес-логика решения живёт **на платформе** — в моделях, переменных, событиях, функциях и workflow дерева объектов. Ядро — generic-движки; решение — declarative-конфигурация (в т.ч. через bundle deploy). См. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#основной-принцип-бизнес-логика-в-механизмах-платформы).
+
 ISPF строится вокруг **иерархического дерева объектов** с типизированными переменными, событиями, функциями и вычисляемыми привязками:
 
 | Концепция | Реализация |
@@ -186,7 +188,10 @@ cd apps/web-console && npm install && npm run dev
 
 ### В работе / далее
 
-См. [docs/ROADMAP.md](docs/ROADMAP.md) — Phase 1–4 (auth, TimescaleDB, ACL, federation).
+- **Phase 3.2** — stub-драйверы → production по demand
+- **Phase 5** — усиление механизмов object tree (модели, функции, события, workflow, bundle как упаковка дерева)
+
+См. [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Лицензия
 

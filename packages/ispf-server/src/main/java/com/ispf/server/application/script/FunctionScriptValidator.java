@@ -16,6 +16,8 @@ public class FunctionScriptValidator {
             "setVar",
             "buildRecord",
             "map",
+            "when",
+            "if",
             "invoke_function",
             "cancel_workflows",
             "failIfNull",
@@ -41,7 +43,10 @@ public class FunctionScriptValidator {
         if (steps == null || !steps.isArray() || steps.isEmpty()) {
             throw new IllegalArgumentException("Script must contain a non-empty steps array");
         }
+        validateSteps(steps, true);
+    }
 
+    private void validateSteps(JsonNode steps, boolean requireReturn) {
         boolean hasReturn = false;
         for (JsonNode step : steps) {
             String type = step.path("type").asText("");
@@ -56,19 +61,19 @@ public class FunctionScriptValidator {
             }
             validateStep(type, step);
         }
-        if (!hasReturn) {
+        if (requireReturn && !hasReturn) {
             throw new IllegalArgumentException("Script must include at least one return step");
         }
     }
 
-    private static void validateStep(String type, JsonNode step) {
+    private void validateStep(String type, JsonNode step) {
         switch (type) {
             case "selectOne", "selectMany" -> require(step, "var", "sql");
             case "exec" -> require(step, "sql");
             case "setVar" -> {
                 require(step, "var");
-                if (!step.has("value")) {
-                    throw new IllegalArgumentException("setVar step requires value");
+                if (!step.has("value") && !step.has("expression")) {
+                    throw new IllegalArgumentException("setVar step requires value or expression");
                 }
             }
             case "buildRecord" -> {
@@ -81,6 +86,20 @@ public class FunctionScriptValidator {
                 require(step, "var", "source");
                 if (!step.has("fields") || !step.get("fields").isObject()) {
                     throw new IllegalArgumentException("map step requires fields object");
+                }
+            }
+            case "when", "if" -> {
+                if (!step.has("var") && !step.has("notNull")) {
+                    throw new IllegalArgumentException(type + " step requires var or notNull");
+                }
+                JsonNode thenSteps = step.get("then");
+                if (thenSteps == null || !thenSteps.isArray() || thenSteps.isEmpty()) {
+                    throw new IllegalArgumentException(type + " step requires non-empty then array");
+                }
+                validateSteps(thenSteps, false);
+                JsonNode elseSteps = step.get("else");
+                if (elseSteps != null && elseSteps.isArray() && !elseSteps.isEmpty()) {
+                    validateSteps(elseSteps, false);
                 }
             }
             case "invoke_function" -> require(step, "objectPath", "functionName");

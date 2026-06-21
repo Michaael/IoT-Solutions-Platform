@@ -25,6 +25,7 @@ import com.ispf.server.persistence.WorkflowInstanceRepository;
 import com.ispf.server.persistence.entity.WorkflowInstanceEntity;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.function.FunctionService;
+import com.ispf.server.event.EventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -56,6 +57,7 @@ public class WorkflowService {
     private final WorkflowInstanceStore instanceStore;
     private final WorkflowConditionFactory conditionFactory;
     private final FunctionService functionService;
+    private final EventService eventService;
     private final WorkQueueService workQueueService;
     private final WorkflowInstanceRepository instanceRepository;
 
@@ -69,6 +71,7 @@ public class WorkflowService {
             WorkflowInstanceStore instanceStore,
             WorkflowConditionFactory conditionFactory,
             FunctionService functionService,
+            EventService eventService,
             @Lazy WorkQueueService workQueueService,
             WorkflowInstanceRepository instanceRepository
     ) {
@@ -81,6 +84,7 @@ public class WorkflowService {
         this.instanceStore = instanceStore;
         this.conditionFactory = conditionFactory;
         this.functionService = functionService;
+        this.eventService = eventService;
         this.workQueueService = workQueueService;
         this.instanceRepository = instanceRepository;
     }
@@ -360,7 +364,49 @@ public class WorkflowService {
                     params.getOrDefault("message", task.name())
             );
             case INVOKE_FUNCTION -> invokeWorkflowFunction(params, instance);
+            case FIRE_EVENT -> {
+                String target = params.getOrDefault("objectPath", params.getOrDefault("targetObject", ""));
+                String eventName = required(params, "eventName");
+                DataRecord payload = resolveEventPayload(target, params.get("payloadVariable"));
+                eventService.fire(target, eventName, payload);
+            }
+            case READ_VARIABLE -> {
+                String target = params.getOrDefault("objectPath", params.getOrDefault("targetObject", ""));
+                String variable = required(params, "sourceVariable");
+                if (variable.isBlank()) {
+                    variable = required(params, "variable");
+                }
+                String valueField = params.getOrDefault("valueField", "value");
+                String contextKey = params.getOrDefault("contextKey", variable);
+                String value = readObjectVariableField(target, variable, valueField);
+                instance.setVariable(contextKey, value);
+            }
+            case START_WORKFLOW -> {
+                String childPath = required(params, "workflowPath");
+                runWorkflow(childPath, params.get("objectPath"));
+            }
         }
+    }
+
+    private DataRecord resolveEventPayload(String objectPath, String payloadVariable) {
+        if (payloadVariable == null || payloadVariable.isBlank()) {
+            return null;
+        }
+        PlatformObject node = objectManager.require(objectPath);
+        return node.getVariable(payloadVariable)
+                .flatMap(Variable::value)
+                .orElse(null);
+    }
+
+    private String readObjectVariableField(String objectPath, String variableName, String valueField) {
+        PlatformObject node = objectManager.require(objectPath);
+        return node.getVariable(variableName)
+                .flatMap(Variable::value)
+                .map(record -> {
+                    Object value = record.firstRow().get(valueField);
+                    return value != null ? String.valueOf(value) : "";
+                })
+                .orElse("");
     }
 
     private void invokeWorkflowFunction(Map<String, String> params, WorkflowInstance instance) throws WorkflowException {

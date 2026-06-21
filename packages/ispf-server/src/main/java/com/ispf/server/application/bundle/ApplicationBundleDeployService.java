@@ -97,7 +97,9 @@ public class ApplicationBundleDeployService {
         if (manifest.objects() != null) {
             for (BundleObject object : manifest.objects()) {
                 try {
-                    if (metadataService.deployObject(object) == ApplicationBundleMetadataService.DeployOutcome.APPLIED) {
+                    ApplicationBundleMetadataService.DeployOutcome outcome = metadataService.deployObject(object);
+                    if (outcome == ApplicationBundleMetadataService.DeployOutcome.APPLIED
+                            || outcome == ApplicationBundleMetadataService.DeployOutcome.UPDATED) {
                         applied.add("object:" + object.name());
                     } else {
                         skipped.add("object:" + object.name());

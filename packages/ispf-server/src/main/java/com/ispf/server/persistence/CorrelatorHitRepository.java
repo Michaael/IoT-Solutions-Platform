@@ -6,7 +6,10 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.ispf.server.persistence.entity.CorrelatorHitEntity;
+
 import java.time.Instant;
+import java.util.List;
 
 public interface CorrelatorHitRepository extends JpaRepository<CorrelatorHitEntity, Long> {
 
@@ -20,6 +23,12 @@ public interface CorrelatorHitRepository extends JpaRepository<CorrelatorHitEnti
             String correlatorId,
             String objectPath,
             String eventName,
+            Instant since
+    );
+
+    List<CorrelatorHitEntity> findByCorrelatorIdAndObjectPathAndOccurredAtAfterOrderByOccurredAtAsc(
+            String correlatorId,
+            String objectPath,
             Instant since
     );
 

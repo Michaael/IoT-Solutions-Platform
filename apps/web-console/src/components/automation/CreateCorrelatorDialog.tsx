@@ -25,13 +25,15 @@ const DEFAULT: CreateCorrelatorPayload = {
 export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCorrelatorDialogProps) {
   const [form, setForm] = useState<CreateCorrelatorPayload>({ ...DEFAULT });
   const isSequence = form.patternType === "SEQUENCE";
+  const isEventChain = form.patternType === "EVENT_CHAIN";
+  const needsSecondEvent = isSequence || isEventChain;
 
   const mutation = useMutation({
     mutationFn: () =>
       createCorrelator({
         ...form,
         objectPath: form.objectPath?.trim() || undefined,
-        secondEventName: isSequence ? form.secondEventName?.trim() || undefined : undefined,
+        secondEventName: needsSecondEvent ? form.secondEventName?.trim() || undefined : undefined,
       }),
     onSuccess: () => onCreated(),
   });
@@ -72,6 +74,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
             >
               <option value="COUNT">COUNT — одно событие (N раз за окно)</option>
               <option value="SEQUENCE">SEQUENCE — A → B за окно</option>
+              <option value="EVENT_CHAIN">EVENT_CHAIN — цепочка 3+ событий (через запятую)</option>
             </select>
           </label>
           <label>
@@ -82,14 +85,14 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
               required
             />
           </label>
-          {isSequence && (
+          {needsSecondEvent && (
             <label>
-              Событие B *
+              {isEventChain ? "Цепочка событий (через запятую) *" : "Событие B *"}
               <input
                 value={form.secondEventName ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, secondEventName: e.target.value }))}
                 required
-                placeholder="alarmActive"
+                placeholder={isEventChain ? "eventA,eventB,eventC" : "alarmActive"}
               />
             </label>
           )}
@@ -110,7 +113,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
               onChange={(e) => setForm((f) => ({ ...f, windowSeconds: Number(e.target.value) }))}
             />
           </label>
-          {!isSequence && (
+          {!needsSecondEvent && (
             <label>
               Мин. повторений
               <input
@@ -138,11 +141,12 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
                 setForm((f) => ({ ...f, actionType: e.target.value as CreateCorrelatorPayload["actionType"] }))
               }
             >
-              <option value="RUN_WORKFLOW">RUN_WORKFLOW</option>
+              <option value="RUN_WORKFLOW">RUN_WORKFLOW — запустить workflow</option>
+              <option value="FIRE_EVENT">FIRE_EVENT — опубликовать событие</option>
             </select>
           </label>
           <label className="full">
-            Цель (путь workflow) *
+            {form.actionType === "FIRE_EVENT" ? "Имя события (actionTarget) *" : "Цель (путь workflow) *"}
             <input
               value={form.actionTarget}
               onChange={(e) => setForm((f) => ({ ...f, actionTarget: e.target.value }))}

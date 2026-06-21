@@ -54,6 +54,24 @@ class EventCorrelatorApiTest {
 
         mockMvc.perform(put("/api/v1/objects/by-path/variables")
                         .param("path", DEMO_DEVICE)
+                        .param("name", "temperature")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "schema": {
+                                    "name": "temperature",
+                                    "fields": [
+                                      {"name": "value", "type": "DOUBLE"},
+                                      {"name": "unit", "type": "STRING"}
+                                    ]
+                                  },
+                                  "rows": [{"value": 20.0, "unit": "C"}]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/objects/by-path/variables")
+                        .param("path", DEMO_DEVICE)
                         .param("name", "threshold")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

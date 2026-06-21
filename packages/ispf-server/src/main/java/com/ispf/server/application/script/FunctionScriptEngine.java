@@ -16,6 +16,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Executes JSON step scripts for application-deployed functions (REQ-PF-01).
@@ -49,98 +51,187 @@ public class FunctionScriptEngine {
             if (steps == null || !steps.isArray()) {
                 throw new IllegalArgumentException("Script must contain steps array");
             }
-
             Map<String, Object> inputMap = input != null && input.rowCount() > 0
                     ? new LinkedHashMap<>(input.firstRow())
                     : new LinkedHashMap<>();
             Map<String, Object> vars = new LinkedHashMap<>();
             vars.put("input", inputMap);
-
-            for (JsonNode step : steps) {
-                String type = step.path("type").asText();
-                switch (type) {
-                    case "selectOne" -> {
-                        String var = step.path("var").asText();
-                        String sql = step.path("sql").asText();
-                        List<Object> params = resolveParams(step.get("params"), vars);
-                        List<Map<String, Object>> rows = normalizeRows(jdbcTemplate.queryForList(sql, params.toArray()));
-                        vars.put(var, rows.isEmpty() ? null : rows.get(0));
-                    }
-                    case "selectMany" -> {
-                        String var = step.path("var").asText();
-                        String sql = step.path("sql").asText();
-                        List<Object> params = resolveParams(step.get("params"), vars);
-                        vars.put(var, normalizeRows(jdbcTemplate.queryForList(sql, params.toArray())));
-                    }
-                    case "exec" -> {
-                        String sql = step.path("sql").asText();
-                        List<Object> params = resolveParams(step.get("params"), vars);
-                        jdbcTemplate.update(sql, params.toArray());
-                    }
-                    case "setVar" -> vars.put(step.path("var").asText(), resolveStepValue(step.get("value"), vars));
-                    case "buildRecord" -> vars.put(
-                            step.path("var").asText(),
-                            resolveFields(step.get("fields"), vars)
-                    );
-                    case "map" -> vars.put(step.path("var").asText(), mapCollection(step, vars));
-                    case "invoke_function" -> {
-                        Map<String, Object> nestedInput = resolveInputObject(step.get("input"), vars);
-                        DataRecord nestedOutput = context.invokeFunction(
-                                step.path("objectPath").asText(),
-                                step.path("functionName").asText(),
-                                nestedInput
-                        );
-                        Map<String, Object> nestedRow = ApplicationFunctionRuntime.rowAsMap(nestedOutput);
-                        if (!"OK".equals(ApplicationFunctionRuntime.errorCode(nestedRow))) {
-                            return toOutputRecord(outputSchema, nestedRow);
-                        }
-                        String var = step.path("var").asText("");
-                        if (!var.isBlank()) {
-                            vars.put(var, nestedRow);
-                        }
-                    }
-                    case "cancel_workflows" -> {
-                        List<String> statusIn = readStringList(step.get("statusIn"));
-                        Map<String, Object> detail = resolveInputObject(step.get("detail"), vars);
-                        int cancelled = workflowCancelService.cancelByWorkflowPath(
-                                step.path("workflowPath").asText(),
-                                statusIn,
-                                step.path("reason").asText("cancelled"),
-                                objectMapper.writeValueAsString(detail),
-                                "application-script"
-                        );
-                        Map<String, Object> cancelResult = Map.of("cancelledCount", cancelled);
-                        String var = step.path("var").asText("");
-                        if (!var.isBlank()) {
-                            vars.put(var, cancelResult);
-                        }
-                    }
-                    case "failIfNull" -> {
-                        String var = step.path("var").asText();
-                        if (resolvePath(vars, var) == null) {
-                            return wireError(outputSchema, step);
-                        }
-                    }
-                    case "failIfNotEquals" -> {
-                        Object actual = resolvePath(vars, step.path("var").asText());
-                        String expected = step.path("equals").asText();
-                        if (!Objects.equals(String.valueOf(actual), expected)) {
-                            return wireError(outputSchema, step);
-                        }
-                    }
-                    case "return" -> {
-                        Map<String, Object> row = resolveFields(step.get("fields"), vars);
-                        return toOutputRecord(outputSchema, row);
-                    }
-                    default -> throw new IllegalArgumentException("Unknown script step type: " + type);
-                }
-            }
-            throw new IllegalStateException("Script must end with return step");
+            return executeSteps(steps, vars, outputSchema, context, true);
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new IllegalStateException("Script execution failed: " + ex.getMessage(), ex);
         }
+    }
+
+    private DataRecord executeSteps(
+            JsonNode steps,
+            Map<String, Object> vars,
+            DataSchema outputSchema,
+            ScriptExecutionContext context,
+            boolean requireReturn
+    ) {
+        for (JsonNode step : steps) {
+            DataRecord early = executeStep(step, vars, outputSchema, context);
+            if (early != null) {
+                return early;
+            }
+        }
+        if (requireReturn) {
+            throw new IllegalStateException("Script must end with return step");
+        }
+        return null;
+    }
+
+    private DataRecord executeStep(
+            JsonNode step,
+            Map<String, Object> vars,
+            DataSchema outputSchema,
+            ScriptExecutionContext context
+    ) {
+        String type = step.path("type").asText();
+        return switch (type) {
+            case "selectOne" -> {
+                String var = step.path("var").asText();
+                String sql = step.path("sql").asText();
+                List<Object> params = resolveParams(step.get("params"), vars);
+                List<Map<String, Object>> rows = normalizeRows(jdbcTemplate.queryForList(sql, params.toArray()));
+                vars.put(var, rows.isEmpty() ? null : rows.get(0));
+                yield null;
+            }
+            case "selectMany" -> {
+                String var = step.path("var").asText();
+                String sql = step.path("sql").asText();
+                List<Object> params = resolveParams(step.get("params"), vars);
+                vars.put(var, normalizeRows(jdbcTemplate.queryForList(sql, params.toArray())));
+                yield null;
+            }
+            case "exec" -> {
+                String sql = step.path("sql").asText();
+                List<Object> params = resolveParams(step.get("params"), vars);
+                jdbcTemplate.update(sql, params.toArray());
+                yield null;
+            }
+            case "setVar" -> {
+                String varName = step.path("var").asText();
+                if (step.has("expression")) {
+                    vars.put(varName, evaluateSetVarExpression(step.path("expression").asText(), vars));
+                } else {
+                    vars.put(varName, resolveStepValue(step.get("value"), vars));
+                }
+                yield null;
+            }
+            case "buildRecord" -> {
+                vars.put(step.path("var").asText(), resolveFields(step.get("fields"), vars));
+                yield null;
+            }
+            case "map" -> {
+                vars.put(step.path("var").asText(), mapCollection(step, vars));
+                yield null;
+            }
+            case "when", "if" -> {
+                if (evaluateWhenCondition(step, vars)) {
+                    JsonNode thenSteps = step.get("then");
+                    if (thenSteps != null && thenSteps.isArray()) {
+                        DataRecord result = executeSteps(thenSteps, vars, outputSchema, context, false);
+                        if (result != null) {
+                            yield result;
+                        }
+                    }
+                } else {
+                    JsonNode elseSteps = step.get("else");
+                    if (elseSteps != null && elseSteps.isArray()) {
+                        DataRecord result = executeSteps(elseSteps, vars, outputSchema, context, false);
+                        if (result != null) {
+                            yield result;
+                        }
+                    }
+                }
+                yield null;
+            }
+            case "invoke_function" -> {
+                Map<String, Object> nestedInput = resolveInputObject(step.get("input"), vars);
+                DataRecord nestedOutput = context.invokeFunction(
+                        step.path("objectPath").asText(),
+                        step.path("functionName").asText(),
+                        nestedInput
+                );
+                Map<String, Object> nestedRow = ApplicationFunctionRuntime.rowAsMap(nestedOutput);
+                if (!"OK".equals(ApplicationFunctionRuntime.errorCode(nestedRow))) {
+                    yield toOutputRecord(outputSchema, nestedRow);
+                }
+                String var = step.path("var").asText("");
+                if (!var.isBlank()) {
+                    vars.put(var, nestedRow);
+                }
+                yield null;
+            }
+            case "cancel_workflows" -> {
+                List<String> statusIn = readStringList(step.get("statusIn"));
+                Map<String, Object> detail = resolveInputObject(step.get("detail"), vars);
+                String detailJson;
+                try {
+                    detailJson = objectMapper.writeValueAsString(detail);
+                } catch (Exception ex) {
+                    throw new IllegalStateException("Failed to serialize cancel detail", ex);
+                }
+                int cancelled = workflowCancelService.cancelByWorkflowPath(
+                        step.path("workflowPath").asText(),
+                        statusIn,
+                        step.path("reason").asText("cancelled"),
+                        detailJson,
+                        "application-script"
+                );
+                Map<String, Object> cancelResult = Map.of("cancelledCount", cancelled);
+                String var = step.path("var").asText("");
+                if (!var.isBlank()) {
+                    vars.put(var, cancelResult);
+                }
+                yield null;
+            }
+            case "failIfNull" -> {
+                String var = step.path("var").asText();
+                if (resolvePath(vars, var) == null) {
+                    yield wireError(outputSchema, step);
+                }
+                yield null;
+            }
+            case "failIfNotEquals" -> {
+                Object actual = resolvePath(vars, step.path("var").asText());
+                String expected = step.path("equals").asText();
+                if (!Objects.equals(String.valueOf(actual), expected)) {
+                    yield wireError(outputSchema, step);
+                }
+                yield null;
+            }
+            case "return" -> toOutputRecord(outputSchema, resolveFields(step.get("fields"), vars));
+            default -> throw new IllegalArgumentException("Unknown script step type: " + type);
+        };
+    }
+
+    private boolean evaluateWhenCondition(JsonNode step, Map<String, Object> vars) {
+        if (step.has("notNull")) {
+            String var = step.path("var").asText();
+            boolean expectNotNull = step.path("notNull").asBoolean(true);
+            boolean isNull = resolvePath(vars, var) == null;
+            return expectNotNull != isNull;
+        }
+        if (step.has("equals")) {
+            Object actual = resolvePath(vars, step.path("var").asText());
+            String expected = step.path("equals").asText();
+            return Objects.equals(String.valueOf(actual), expected);
+        }
+        if (step.has("var")) {
+            Object value = resolvePath(vars, step.path("var").asText());
+            if (value instanceof Boolean bool) {
+                return bool;
+            }
+            if (value instanceof Number number) {
+                return number.doubleValue() != 0;
+            }
+            return value != null && !"false".equalsIgnoreCase(String.valueOf(value)) && !String.valueOf(value).isBlank();
+        }
+        return false;
     }
 
     private static DataRecord toOutputRecord(DataSchema outputSchema, Map<String, Object> row) {
@@ -243,7 +334,28 @@ public class FunctionScriptEngine {
         if (valueNode.isObject() || valueNode.isArray()) {
             return objectMapper.convertValue(valueNode, Object.class);
         }
-        return resolveValue(valueNode.asText(), vars);
+        String text = valueNode.asText();
+        if ("true".equalsIgnoreCase(text)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(text)) {
+            return false;
+        }
+        if (text.matches("-?\\d+")) {
+            try {
+                return Long.parseLong(text);
+            } catch (NumberFormatException ignored) {
+                // fall through
+            }
+        }
+        if (text.matches("-?\\d+(\\.\\d+)?")) {
+            try {
+                return Double.parseDouble(text);
+            } catch (NumberFormatException ignored) {
+                // fall through
+            }
+        }
+        return resolveValue(text, vars);
     }
 
     private List<Object> resolveParams(JsonNode paramsNode, Map<String, Object> vars) {
@@ -306,5 +418,35 @@ public class FunctionScriptEngine {
         Map<String, Object> normalized = new LinkedHashMap<>();
         row.forEach((key, value) -> normalized.put(key.toLowerCase(), value));
         return normalized;
+    }
+
+    private static final Pattern ADD_EXPRESSION = Pattern.compile("^(.+?)\\s*\\+\\s*(.+)$");
+
+    private Object evaluateSetVarExpression(String expression, Map<String, Object> vars) {
+        String trimmed = expression.trim();
+        Matcher add = ADD_EXPRESSION.matcher(trimmed);
+        if (add.matches()) {
+            double left = toNumber(resolveExpressionOperand(add.group(1).trim(), vars));
+            double right = toNumber(resolveExpressionOperand(add.group(2).trim(), vars));
+            return left + right;
+        }
+        return resolveValue(trimmed, vars);
+    }
+
+    private Object resolveExpressionOperand(String token, Map<String, Object> vars) {
+        if (token.matches("-?\\d+(\\.\\d+)?")) {
+            return Double.parseDouble(token);
+        }
+        return resolveValue(token, vars);
+    }
+
+    private static double toNumber(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value == null) {
+            return 0.0;
+        }
+        return Double.parseDouble(String.valueOf(value));
     }
 }

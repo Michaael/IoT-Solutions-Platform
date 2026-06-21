@@ -29,8 +29,13 @@ public class ApplicationBundleMetadataService {
     @Transactional
     public DeployOutcome deployObject(ApplicationBundleDeployService.BundleObject object) {
         String path = objectManager.tree().resolveChildPath(object.parentPath(), object.name());
-        if (objectManager.tree().findByPath(path).isPresent()) {
-            return DeployOutcome.SKIPPED;
+        var existing = objectManager.tree().findByPath(path);
+        if (existing.isPresent()) {
+            PlatformObject node = existing.get();
+            if (object.displayName() != null) {
+                objectManager.updateInfo(path, object.displayName(), object.description() != null ? object.description() : node.description());
+            }
+            return DeployOutcome.UPDATED;
         }
         ObjectType type = ObjectType.valueOf(object.type());
         PlatformObject node = objectManager.create(
@@ -106,6 +111,7 @@ public class ApplicationBundleMetadataService {
 
     public enum DeployOutcome {
         APPLIED,
+        UPDATED,
         SKIPPED
     }
 }

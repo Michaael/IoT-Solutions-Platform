@@ -280,6 +280,116 @@ class ApplicationPlatformApiTest {
     }
 
     @Test
+    void setVarScriptStepAssignsLiteralAndPath() throws Exception {
+        mockMvc.perform(post("/api/v1/applications/%s/deploy".formatted(APP_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "version": "7.0.0-setvar",
+                                  "functions": [
+                                    {
+                                      "objectPath": "%s",
+                                      "functionName": "platform_setvar_demo",
+                                      "version": "1",
+                                      "descriptor": {
+                                        "inputSchema": {
+                                          "name": "in",
+                                          "fields": [{"name": "label", "type": "STRING"}]
+                                        },
+                                        "outputSchema": {
+                                          "name": "out",
+                                          "fields": [
+                                            {"name": "error_code", "type": "STRING"},
+                                            {"name": "error_message", "type": "STRING"},
+                                            {"name": "marker", "type": "STRING"},
+                                            {"name": "copied", "type": "STRING"}
+                                          ]
+                                        }
+                                      },
+                                      "source": {
+                                        "type": "script",
+                                        "body": "{\\"steps\\":[{\\"type\\":\\"setVar\\",\\"var\\":\\"marker\\",\\"value\\":\\"ready\\"},{\\"type\\":\\"setVar\\",\\"var\\":\\"copied\\",\\"value\\":\\"${input.label}\\"},{\\"type\\":\\"return\\",\\"fields\\":{\\"error_code\\":\\"OK\\",\\"error_message\\":\\"\\",\\"marker\\":\\"${marker}\\",\\"copied\\":\\"${copied}\\"}}]}"
+                                      }
+                                    }
+                                  ]
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/bff/invoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "objectPath": "%s",
+                                  "functionName": "platform_setvar_demo",
+                                  "input": {
+                                    "schema": {
+                                      "name": "in",
+                                      "fields": [{"name": "label", "type": "STRING"}]
+                                    },
+                                    "rows": [{"label": "alpha"}]
+                                  }
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.error_code").value("OK"))
+                .andExpect(jsonPath("$.result.marker").value("ready"))
+                .andExpect(jsonPath("$.result.copied").value("alpha"));
+    }
+
+    @Test
+    void whenScriptStepBranchesWithoutSql() throws Exception {
+        mockMvc.perform(post("/api/v1/applications/%s/deploy".formatted(APP_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "version": "7.0.1-when-%s",
+                                  "functions": [
+                                    {
+                                      "objectPath": "%s",
+                                      "functionName": "platform_when_demo",
+                                      "version": "1",
+                                      "descriptor": {
+                                        "inputSchema": {
+                                          "name": "in",
+                                          "fields": [{"name": "mode", "type": "STRING"}]
+                                        },
+                                        "outputSchema": {
+                                          "name": "out",
+                                          "fields": [
+                                            {"name": "error_code", "type": "STRING"},
+                                            {"name": "error_message", "type": "STRING"},
+                                            {"name": "branch", "type": "STRING"}
+                                          ]
+                                        }
+                                      },
+                                      "source": {
+                                        "type": "script",
+                                        "body": "{\\"steps\\":[{\\"type\\":\\"when\\",\\"var\\":\\"input.mode\\",\\"equals\\":\\"hot\\",\\"then\\":[{\\"type\\":\\"setVar\\",\\"var\\":\\"branch\\",\\"value\\":\\"hot-path\\"}],\\"else\\":[{\\"type\\":\\"setVar\\",\\"var\\":\\"branch\\",\\"value\\":\\"cold-path\\"}]},{\\"type\\":\\"return\\",\\"fields\\":{\\"error_code\\":\\"OK\\",\\"error_message\\":\\"\\",\\"branch\\":\\"${branch}\\"}}]}"
+                                      }
+                                    }
+                                  ]
+                                }
+                                """.formatted(UUID.randomUUID(), DEMO_DEVICE)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/bff/invoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "objectPath": "%s",
+                                  "functionName": "platform_when_demo",
+                                  "input": {
+                                    "schema": { "name": "in", "fields": [{"name": "mode", "type": "STRING"}] },
+                                    "rows": [{"mode": "hot"}]
+                                  }
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.branch").value("hot-path"));
+    }
+
+    @Test
     void invokeFunctionPropagatesNestedError() throws Exception {
         mockMvc.perform(post("/api/v1/applications/%s/deploy".formatted(APP_ID))
                         .contentType(MediaType.APPLICATION_JSON)

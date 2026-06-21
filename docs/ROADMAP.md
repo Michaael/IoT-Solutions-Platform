@@ -53,6 +53,18 @@
 | 4.1 | PF-13 federation design + spike | Done (peers + proxy read + catalog sync) |
 | 4.2 | Multi-tenant tree namespaces | Done (spike: root.tenant.* + scope) |
 
+## Phase 5 — Усиление механизмов (north star)
+
+Следующая волна после Phase 0–4: **больше выразительности object tree**, меньше поводов для custom Java и «application layer как отдельного мира». Детали — [PLATFORM_DEVELOPER_BACKLOG.md §8.1](PLATFORM_DEVELOPER_BACKLOG.md#81-усиление-механизмов-phase-5).
+
+| # | Механизм | Направление | Статус |
+|---|----------|-------------|--------|
+| 5.1 | **Модели** | Богаче bindings; наследование шаблонов; версионирование моделей | In progress (`extendsModelId`, `modelVersion`, upgrade API) |
+| 5.2 | **Функции** | Больше script steps (`setVar`, `when`/`if`, …); declarative SQL bindings (PF-08); меньше поводов для custom code | In progress |
+| 5.3 | **События + correlators** | Сложнее паттерны (окна, цепочки, агрегации); эскалация без Java | In progress (`EVENT_CHAIN`, N-in-window demo) |
+| 5.4 | **Workflow** | Больше `serviceTask` через platform primitives (`fire_event`, `read_variable`, `start_workflow`, …) | In progress |
+| 5.5 | **Bundle / application layer** | Bundle = упаковка объектов дерева; tree-first invoke; reconcile `objects[]` | In progress |
+
 ## Platform baseline
 
 | # | Тема | Статус |

@@ -66,4 +66,9 @@ public record ModelDefinition(
                 .findFirst()
                 .orElse(null);
     }
+
+    /** Semantic version string stored in {@link #parameters()} under {@code modelVersion}. */
+    public String modelVersion() {
+        return parameters.getOrDefault("modelVersion", "1");
+    }
 }

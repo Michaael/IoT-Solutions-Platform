@@ -12,7 +12,9 @@ public record AlertRule(
         String payloadVariable,
         boolean enabled,
         boolean edgeTrigger,
+        int rateLimitSeconds,
         Boolean lastConditionMet,
+        Instant lastFiredAt,
         Instant createdAt,
         Instant updatedAt
 ) {

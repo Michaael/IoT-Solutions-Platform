@@ -208,6 +208,15 @@ public class AutomationTreeService {
     }
 
     @Transactional
+    public void setAlertRuleLastFiredAt(String path, Instant lastFiredAt) {
+        if (objectManager.require(path).getVariable("lastFiredAt").isEmpty()) {
+            setString(path, "lastFiredAt", "");
+        }
+        setRuntimeString(path, "lastFiredAt", lastFiredAt != null ? lastFiredAt.toString() : "");
+        objectManager.persistNodeTree(path);
+    }
+
+    @Transactional
     public void setAlertRuleLastConditionMet(String path, boolean lastConditionMet) {
         setRuntimeBoolean(path, "lastConditionMet", lastConditionMet);
         objectManager.persistNodeTree(path);
@@ -231,8 +240,25 @@ public class AutomationTreeService {
     public List<EventCorrelator> findEnabledCorrelatorsForEvent(String eventName) {
         return listCorrelators().stream()
                 .filter(c -> c.enabled())
-                .filter(c -> eventName.equals(c.eventName()) || eventName.equals(c.secondEventName()))
+                .filter(c -> correlatorWatchesEvent(c, eventName))
                 .toList();
+    }
+
+    private static boolean correlatorWatchesEvent(EventCorrelator correlator, String eventName) {
+        if (eventName.equals(correlator.eventName())) {
+            return true;
+        }
+        if (correlator.secondEventName() == null || correlator.secondEventName().isBlank()) {
+            return false;
+        }
+        if (correlator.patternType() == CorrelatorPatternType.EVENT_CHAIN) {
+            for (String part : correlator.secondEventName().split(",")) {
+                if (eventName.equals(part.trim())) {
+                    return true;
+                }
+            }
+        }
+        return eventName.equals(correlator.secondEventName());
     }
 
     @Transactional
@@ -347,34 +373,57 @@ public class AutomationTreeService {
 
     @Transactional
     public void ensureDemoCorrelators() {
-        if (listCorrelators().isEmpty()) {
-            createCorrelator(
-                    "Alarm handler on threshold event",
-                    "root.platform.devices.demo-sensor-01",
-                    CorrelatorPatternType.COUNT,
-                    "thresholdExceeded",
-                    null,
-                    0,
-                    1,
-                    120,
-                    CorrelatorActionType.RUN_WORKFLOW,
-                    "root.platform.workflows.demo-alarm-handler",
-                    true
-            );
-            createCorrelator(
-                    "Threshold then alarm active (sequence demo)",
-                    "root.platform.devices.demo-sensor-01",
-                    CorrelatorPatternType.SEQUENCE,
-                    "thresholdExceeded",
-                    "alarmActive",
-                    300,
-                    1,
-                    120,
-                    CorrelatorActionType.RUN_WORKFLOW,
-                    "root.platform.workflows.demo-alarm-handler",
-                    false
-            );
+        ensureEscalationCorrelator();
+        if (objectManager.tree().findByPath(correlatorPathForName("Alarm handler on threshold event")).isPresent()) {
+            return;
         }
+        createCorrelator(
+                "Alarm handler on threshold event",
+                "root.platform.devices.demo-sensor-01",
+                CorrelatorPatternType.COUNT,
+                "thresholdExceeded",
+                null,
+                0,
+                1,
+                120,
+                CorrelatorActionType.RUN_WORKFLOW,
+                "root.platform.workflows.demo-alarm-handler",
+                true
+        );
+        createCorrelator(
+                "Threshold then alarm active (sequence demo)",
+                "root.platform.devices.demo-sensor-01",
+                CorrelatorPatternType.SEQUENCE,
+                "thresholdExceeded",
+                "alarmActive",
+                300,
+                1,
+                120,
+                CorrelatorActionType.RUN_WORKFLOW,
+                "root.platform.workflows.demo-alarm-handler",
+                false
+        );
+    }
+
+    @Transactional
+    public void ensureEscalationCorrelator() {
+        String path = correlatorPathForName("Recurring threshold escalation");
+        if (objectManager.tree().findByPath(path).isPresent()) {
+            return;
+        }
+        createCorrelator(
+                "Recurring threshold escalation",
+                "root.platform.devices.demo-sensor-01",
+                CorrelatorPatternType.COUNT,
+                "thresholdExceeded",
+                null,
+                300,
+                3,
+                120,
+                CorrelatorActionType.RUN_WORKFLOW,
+                "root.platform.workflows.demo-alarm-handler",
+                true
+        );
     }
 
     private void createAlertRuleNode(
@@ -455,10 +504,23 @@ public class AutomationTreeService {
                 blankToNull(readString(node, "payloadVariable").orElse(null)),
                 readBoolean(node, "enabled").orElse(true),
                 readBoolean(node, "edgeTrigger").orElse(true),
+                readInteger(node, "rateLimitSeconds").orElse(0),
                 readBoolean(node, "lastConditionMet").orElse(null),
+                parseInstant(readString(node, "lastFiredAt").orElse("")),
                 createdAt,
                 createdAt
         );
+    }
+
+    private static Instant parseInstant(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return Instant.parse(raw);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private EventCorrelator toCorrelator(PlatformObject node) {

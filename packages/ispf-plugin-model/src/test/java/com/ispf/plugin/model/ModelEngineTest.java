@@ -229,4 +229,79 @@ class ModelEngineTest {
                 .isEqualTo("scale(temperature, 0, 100, 0, 1)");
         assertThat(model.bindingFor("missing")).isNull();
     }
+
+    @Test
+    void appliesModelInheritanceChain() {
+        DataSchema baseSchema = DataSchema.builder("temperature")
+                .field("value", FieldType.DOUBLE)
+                .build();
+        ModelDefinition base = new ModelDefinition(
+                UUID.randomUUID().toString(),
+                "sensor-base-v1",
+                "Base sensor",
+                ModelType.RELATIVE,
+                ObjectType.DEVICE,
+                "",
+                List.of(ModelVariableDefinition.of(
+                        "temperature",
+                        "Temperature",
+                        "telemetry",
+                        baseSchema,
+                        true,
+                        true,
+                        null,
+                        DataRecord.single(baseSchema, Map.of("value", 0.0))
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                Map.of(),
+                Instant.now(),
+                Instant.now()
+        );
+        ModelDefinition extension = new ModelDefinition(
+                UUID.randomUUID().toString(),
+                "sensor-vendor-v1",
+                "Vendor extension",
+                ModelType.RELATIVE,
+                ObjectType.DEVICE,
+                "",
+                List.of(ModelVariableDefinition.of(
+                        "vendorId",
+                        "Vendor id",
+                        "meta",
+                        DataSchema.builder("vendorId").field("value", FieldType.STRING).build(),
+                        true,
+                        true,
+                        null,
+                        DataRecord.single(
+                                DataSchema.builder("vendorId").field("value", FieldType.STRING).build(),
+                                Map.of("value", "ACME")
+                        )
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                Map.of("extendsModelId", base.id()),
+                Instant.now(),
+                Instant.now()
+        );
+        engine.createModel(base);
+        engine.createModel(extension);
+
+        PlatformObject device = new PlatformObject(
+                UUID.randomUUID().toString(),
+                "root.platform.devices.vendor-sensor",
+                ObjectType.DEVICE,
+                "vendor-sensor",
+                null,
+                null
+        );
+        objectTree.register(device);
+
+        engine.applyModel(extension.id(), device.path());
+
+        assertThat(device.getVariable("temperature")).isPresent();
+        assertThat(device.getVariable("vendorId")).isPresent();
+    }
 }
