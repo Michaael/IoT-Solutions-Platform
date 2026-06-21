@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invokeFunction } from "../../../api";
+import type { DataRecord } from "../../../types";
 import type { FunctionWidget } from "../../../types/dashboard";
 import { resolveWidgetPath } from "../dashboardUtils";
 import { useDashboardContext } from "../DashboardContext";
@@ -25,10 +26,10 @@ export default function FunctionWidgetView({ widget, editable }: FunctionWidgetV
       if (!objectPath || !widget.functionName) {
         throw new Error("Объект и функция обязательны");
       }
-      let input: unknown;
+      let input: DataRecord | undefined;
       if (widget.inputJson?.trim()) {
         try {
-          input = JSON.parse(widget.inputJson);
+          input = JSON.parse(widget.inputJson) as DataRecord;
         } catch {
           throw new Error("Некорректный inputJson");
         }

@@ -24,3 +24,7 @@ ispf:
     enabled: false
   variable-history:
     min-interval-ms: 0
+  platform:
+    update:
+      check-enabled: false
+      apply-enabled: false

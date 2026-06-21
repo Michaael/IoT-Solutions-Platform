@@ -9,7 +9,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @org.springframework.boot.context.properties.EnableConfigurationProperties({
         com.ispf.server.config.NatsProperties.class,
         com.ispf.server.config.IspfSecurityProperties.class,
-        com.ispf.server.config.VariableHistoryProperties.class
+        com.ispf.server.config.VariableHistoryProperties.class,
+        com.ispf.server.config.PlatformUpdateProperties.class
 })
 public class IspfServerApplication {
 

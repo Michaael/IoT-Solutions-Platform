@@ -25,14 +25,18 @@ fi
 java -version
 
 echo "=== Deploying ISPF to /opt/ispf ==="
-mkdir -p /opt/ispf/data /opt/ispf/web-console
+mkdir -p /opt/ispf/data /opt/ispf/web-console /opt/ispf/bin /opt/ispf/staging
+install -m 755 /tmp/apply-platform-update.sh /opt/ispf/bin/apply-platform-update.sh 2>/dev/null || true
+if [ -f deploy/apply-platform-update.sh ]; then
+  install -m 755 deploy/apply-platform-update.sh /opt/ispf/bin/apply-platform-update.sh
+fi
 mv -f /tmp/ispf-server.jar /opt/ispf/ispf-server.jar
 rm -rf /opt/ispf/web-console/*
 if [ -d /tmp/ispf-web-console-dist/dist ]; then
-  mv /tmp/ispf-web-console-dist/dist/* /tmp/ispf-web-console-dist/
-  rmdir /tmp/ispf-web-console-dist/dist
+  cp -a /tmp/ispf-web-console-dist/dist/. /opt/ispf/web-console/
+elif [ -d /tmp/ispf-web-console-dist ]; then
+  cp -a /tmp/ispf-web-console-dist/. /opt/ispf/web-console/
 fi
-mv /tmp/ispf-web-console-dist/* /opt/ispf/web-console/
 chmod -R a+rX /opt/ispf/web-console
 find /opt/ispf/web-console -type d -exec chmod 755 {} +
 
@@ -53,6 +57,10 @@ Type=simple
 User=root
 WorkingDirectory=/opt/ispf
 Environment=ISPF_SERVER_PORT=8080
+Environment=ISPF_UPDATE_CHECK_ENABLED=true
+Environment=ISPF_UPDATE_APPLY_ENABLED=true
+Environment=ISPF_UPDATE_STAGING_DIR=/opt/ispf/staging
+Environment=ISPF_UPDATE_APPLY_SCRIPT=/opt/ispf/bin/apply-platform-update.sh
 ExecStart=/usr/bin/java -jar /opt/ispf/ispf-server.jar --spring.profiles.active=local
 Restart=always
 RestartSec=10

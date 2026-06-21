@@ -145,6 +145,18 @@ ssh user@host 'bash /tmp/remote-setup-ispf.sh'
 | `deploy/remote-cleanup-apache-ispf-only.sh` | Убрать Apache/ISPmanager, оставить только ISPF на :80 |
 | `deploy/update-snmp-mappings.sh` | Обновить OID mappings на уже работающем сервере |
 | `deploy/start-snmp-driver.sh` | Login + start SNMP driver |
+| `deploy/apply-platform-update.sh` | Установка jar + UI из staging и перезапуск systemd (вызывается API обновления) |
+| `deploy/remote-update-ispf.sh` | Ручное обновление с `/tmp` артефактов |
+
+### Автообновление с GitHub Releases
+
+1. Опубликуйте релиз: `git tag v0.1.1 && git push origin v0.1.1` — workflow `.github/workflows/release.yml` соберёт `ispf-server.jar` и `web-console.zip`.
+2. На VPS в `ispf-server.service` включено:
+   - `ISPF_UPDATE_CHECK_ENABLED=true` — периодическая проверка (по умолчанию раз в час)
+   - `ISPF_UPDATE_APPLY_ENABLED=true` — кнопка «Обновить и перезапустить» в админ-консоли
+3. Админ видит баннер, когда на GitHub есть более новая версия, чем текущий jar (`/api/v1/info` → `version` из build-info).
+
+Локально `apply-enabled=false` — только уведомление / ссылка на релиз.
 
 ### SNMP demo driver на remote
 

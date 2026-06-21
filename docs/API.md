@@ -11,6 +11,9 @@
 |--------|------|------|----------|
 | GET | `/api/v1/info` | public | Имя, версия, `javaVersion`, `springBootVersion`, `capabilities[]` |
 | GET | `/api/v1/platform/metrics` | admin | Сводные метрики платформы (runtime, БД, дерево, драйверы, подключения, безопасность, historian, автоматизация) |
+| GET | `/api/v1/platform/update/status` | admin | Проверка обновлений с GitHub Releases |
+| POST | `/api/v1/platform/update/check` | admin | Принудительная проверка релиза |
+| POST | `/api/v1/platform/update/apply` | admin | Скачать релиз и перезапустить сервер (VPS, `apply-enabled=true`) |
 | GET | `/api/v1/auth/me` | public | Principal и роли |
 | POST | `/api/v1/expressions/validate` | admin | Валидация CEL |
 

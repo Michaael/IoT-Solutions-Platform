@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web-console/package-lock.json
+
+      - name: Build server jar
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ./gradlew :packages:ispf-server:bootJar -x test --no-daemon -Pversion="$VERSION"
+
+      - name: Build web console
+        working-directory: apps/web-console
+        run: |
+          npm ci
+          npm run build
+
+      - name: Package web console
+        run: |
+          cd apps/web-console/dist
+          zip -r ../web-console.zip .
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          cp "$(ls packages/ispf-server/build/libs/ispf-server-*.jar | grep -v plain | head -1)" ispf-server.jar
+          gh release create "$TAG" \
+            --title "ISPF $TAG" \
+            --generate-notes \
+            ispf-server.jar \
+            apps/web-console/web-console.zip

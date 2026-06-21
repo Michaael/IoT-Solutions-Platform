@@ -181,6 +181,49 @@ code,
   gap: 0.5rem;
 }
 
+.platform-update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1.25rem;
+  border-bottom: 1px solid #1f6feb55;
+  background: linear-gradient(90deg, #1f6feb22, #8957e522);
+}
+
+.platform-update-banner-error {
+  border-bottom-color: #f8514966;
+  background: linear-gradient(90deg, #f8514922, #da363322);
+}
+
+.platform-update-banner-busy {
+  border-bottom-color: #d2992266;
+  background: linear-gradient(90deg, #d2992222, #bb800022);
+}
+
+.platform-update-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.platform-update-banner-body strong {
+  font-size: 0.88rem;
+}
+
+.platform-update-banner-body span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.platform-update-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .workspace {
   display: flex;
   flex: 1;

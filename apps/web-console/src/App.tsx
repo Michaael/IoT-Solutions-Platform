@@ -33,6 +33,7 @@ import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
 import OperatorView from "./components/operator/OperatorView";
 import SystemView from "./components/SystemView";
 import LoginView from "./components/LoginView";
+import PlatformUpdateBanner from "./components/PlatformUpdateBanner";
 import ModelEditorPanel from "./components/ModelEditorPanel";
 import { isModelsPath } from "./types/models";
 import { isOperatorAppChildPath } from "./utils/operatorAppsPath";
@@ -345,6 +346,8 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {isAdmin && <PlatformUpdateBanner />}
 
       <nav className="workspace-tabs">
         <button
