@@ -193,6 +193,11 @@ export default function App() {
     return buildObjectTree(list);
   }, [objects.data, treeFilter]);
 
+  const selectPathInExplorer = (path: string) => {
+    setSelectedPath(path);
+    setWorkspaceTab("explorer");
+  };
+
   const openEditor = (path: string) => {
     const existing = editorTabs.find((t) => t.path === path);
     if (existing) {
@@ -409,7 +414,7 @@ export default function App() {
               <ObjectTree
                 nodes={tree}
                 selectedPath={selectedPath}
-                onSelect={setSelectedPath}
+                onSelect={selectPathInExplorer}
                 onOpenEditor={openEditor}
                 canReorder={isAdmin && !treeFilter.trim()}
                 onReorder={(parentPath, orderedPaths) =>
