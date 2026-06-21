@@ -4,11 +4,15 @@ import { getStoredSession } from "../auth/session";
 import { isFederatedCatalogPath } from "../utils/federationPath";
 
 export interface ObjectWsMessage {
-  type: "CREATED" | "UPDATED" | "DELETED" | "VARIABLE_UPDATED" | "EVENT_FIRED";
+  type: "CREATED" | "UPDATED" | "DELETED" | "VARIABLE_UPDATED" | "EVENT_FIRED" | "presence";
   path: string;
   variableName: string;
   timestamp: string;
+  revision?: number;
+  changedBy?: string;
 }
+
+export const OBJECT_WS_EVENT = "ispf-object-ws-message";
 
 let activeSocket: WebSocket | null = null;
 
@@ -31,6 +35,13 @@ export function subscribeObjectPaths(paths: string[]) {
   activeSocket.send(JSON.stringify({ type: "subscribe", paths: unique }));
 }
 
+export function sendPresence(path: string, username: string, mode: "view" | "edit") {
+  if (!activeSocket || activeSocket.readyState !== WebSocket.OPEN) {
+    return;
+  }
+  activeSocket.send(JSON.stringify({ type: "presence", path, username, mode }));
+}
+
 export function useObjectWebSocket() {
   const queryClient = useQueryClient();
 
@@ -51,6 +62,7 @@ export function useObjectWebSocket() {
       socket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data) as ObjectWsMessage;
+          window.dispatchEvent(new CustomEvent(OBJECT_WS_EVENT, { detail: message }));
           queryClient.invalidateQueries({ queryKey: ["objects"] });
           queryClient.invalidateQueries({ queryKey: ["object", message.path] });
           queryClient.invalidateQueries({ queryKey: ["object-editor", message.path] });

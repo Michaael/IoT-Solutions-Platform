@@ -17,6 +17,10 @@ import com.ispf.expression.BindingExpressionValidator;
 import com.ispf.server.api.dto.ObjectDto;
 import com.ispf.server.api.dto.ObjectEditorDto;
 import com.ispf.server.api.dto.VariableDto;
+import com.ispf.server.object.ObjectChangeEvent;
+import com.ispf.server.object.ObjectRevisionConflictException;
+import com.ispf.server.object.ObjectEditLeaseService;
+import com.ispf.server.api.support.ObjectCollaborationSupport;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectUiIconService;
 import com.ispf.server.dashboard.DashboardService;
@@ -30,7 +34,9 @@ import com.ispf.server.workflow.WorkflowService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,7 +50,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/objects")
@@ -63,6 +72,7 @@ public class ObjectController {
     private final FederationProxyService federationProxyService;
     private final FederationBindService federationBindService;
     private final ObjectMapper objectMapper;
+    private final ObjectEditLeaseService editLeaseService;
 
     public ObjectController(
             ObjectManager objectManager,
@@ -77,7 +87,8 @@ public class ObjectController {
             TenantScopeService tenantScopeService,
             FederationProxyService federationProxyService,
             FederationBindService federationBindService,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            ObjectEditLeaseService editLeaseService
     ) {
         this.objectManager = objectManager;
         this.dashboardService = dashboardService;
@@ -92,10 +103,81 @@ public class ObjectController {
         this.federationProxyService = federationProxyService;
         this.federationBindService = federationBindService;
         this.objectMapper = objectMapper;
+        this.editLeaseService = editLeaseService;
     }
 
     private ObjectDto toDto(PlatformObject node) {
         return ObjectDto.from(node, objectUiIconService.readIconId(node).orElse(null));
+    }
+
+    private void beginWrite(String path, Authentication authentication, HttpHeaders headers) {
+        objectAccessService.requireWrite(path, authentication);
+        editLeaseService.assertWritable(path, authentication != null ? authentication.getName() : "system");
+        ObjectCollaborationSupport.bindWriteContext(authentication, headers);
+    }
+
+    private void endWrite() {
+        ObjectCollaborationSupport.clearContext();
+    }
+
+    @GetMapping("/by-path/audit")
+    public List<Map<String, Object>> audit(
+            @RequestParam String path,
+            @RequestParam(defaultValue = "50") int limit,
+            Authentication authentication
+    ) {
+        objectAccessService.requireRead(path, authentication);
+        return objectManager.configAudit(path, limit).stream()
+                .map(entry -> Map.<String, Object>of(
+                        "id", entry.id(),
+                        "objectPath", entry.objectPath(),
+                        "changeType", entry.changeType(),
+                        "field", entry.field() != null ? entry.field() : "",
+                        "actor", entry.actor() != null ? entry.actor() : "",
+                        "occurredAt", entry.occurredAt().toString(),
+                        "revisionBefore", entry.revisionBefore(),
+                        "revisionAfter", entry.revisionAfter(),
+                        "summaryJson", entry.summaryJson() != null ? entry.summaryJson() : ""
+                ))
+                .toList();
+    }
+
+    @GetMapping("/leases")
+    public List<ObjectEditLeaseService.EditLease> listLeases(Authentication authentication) {
+        objectAccessService.requireAdmin(authentication);
+        return editLeaseService.listActive();
+    }
+
+    @PostMapping("/leases")
+    public ObjectEditLeaseService.EditLease acquireLease(
+            @Valid @RequestBody AcquireLeaseRequest request,
+            Authentication authentication
+    ) {
+        objectAccessService.requireAdmin(authentication);
+        Duration ttl = request.ttlMinutes() != null
+                ? Duration.ofMinutes(request.ttlMinutes())
+                : Duration.ofHours(2);
+        return editLeaseService.acquire(
+                request.pathPrefix(),
+                authentication.getName(),
+                ttl
+        );
+    }
+
+    @DeleteMapping("/leases")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void releaseLease(
+            @RequestParam String pathPrefix,
+            Authentication authentication
+    ) {
+        objectAccessService.requireAdmin(authentication);
+        editLeaseService.release(pathPrefix, authentication.getName());
+    }
+
+    public record AcquireLeaseRequest(
+            @NotBlank String pathPrefix,
+            Integer ttlMinutes
+    ) {
     }
 
     @GetMapping
@@ -186,9 +268,10 @@ public class ObjectController {
     public ObjectDto update(
             @RequestParam String path,
             @Valid @RequestBody UpdateObjectRequest request,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
+        beginWrite(path, authentication, headers);
         try {
             if (request.iconId() != null) {
                 objectUiIconService.setIconId(path, request.iconId());
@@ -197,6 +280,8 @@ public class ObjectController {
             return toDto(node);
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } finally {
+            endWrite();
         }
     }
 
@@ -272,23 +357,24 @@ public class ObjectController {
             @RequestParam String path,
             @RequestParam String name,
             @RequestBody DataRecord value,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
-        var proxy = federationProxyService.resolve(path);
-        if (proxy.isPresent()) {
-            try {
-                JsonNode json = federationProxyService.proxyVariablePut(
-                        proxy.get(),
-                        name,
-                        objectMapper.writeValueAsString(value)
-                );
-                return objectMapper.convertValue(json, VariableDto.class);
-            } catch (tools.jackson.core.JacksonException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-            }
-        }
+        beginWrite(path, authentication, headers);
         try {
+            var proxy = federationProxyService.resolve(path);
+            if (proxy.isPresent()) {
+                try {
+                    JsonNode json = federationProxyService.proxyVariablePut(
+                            proxy.get(),
+                            name,
+                            objectMapper.writeValueAsString(value)
+                    );
+                    return objectMapper.convertValue(json, VariableDto.class);
+                } catch (tools.jackson.core.JacksonException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+                }
+            }
             Variable variable = objectManager.setVariableValue(path, name, value);
             if (platformUserService.isSecurityUserPath(path)) {
                 platformUserService.syncVariableFromObject(path, name, value);
@@ -296,6 +382,8 @@ public class ObjectController {
             return VariableDto.from(variable);
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } finally {
+            endWrite();
         }
     }
 
@@ -304,9 +392,10 @@ public class ObjectController {
             @RequestParam String path,
             @RequestParam String name,
             @Valid @RequestBody UpdateVariableHistoryRequest request,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
+        beginWrite(path, authentication, headers);
         try {
             Variable variable = objectManager.updateVariableHistory(
                     path,
@@ -317,6 +406,8 @@ public class ObjectController {
             return VariableDto.from(variable);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } finally {
+            endWrite();
         }
     }
 
@@ -324,11 +415,12 @@ public class ObjectController {
     public VariableDto createVariable(
             @RequestParam String path,
             @Valid @RequestBody CreateVariableRequest request,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
-        assertNotFederationBound(path);
+        beginWrite(path, authentication, headers);
         try {
+            assertNotFederationBound(path);
             BindingExpressionValidator.validateOrThrow(request.bindingExpression());
             Variable variable = objectManager.createVariable(
                     path,
@@ -344,6 +436,8 @@ public class ObjectController {
             return VariableDto.from(variable);
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } finally {
+            endWrite();
         }
     }
 
@@ -352,9 +446,10 @@ public class ObjectController {
             @RequestParam String path,
             @RequestParam String name,
             @Valid @RequestBody UpdateVariableDefinitionRequest request,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
+        beginWrite(path, authentication, headers);
         try {
             if (request.bindingExpression() != null) {
                 BindingExpressionValidator.validateOrThrow(request.bindingExpression());
@@ -369,6 +464,8 @@ public class ObjectController {
             return VariableDto.from(variable);
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } finally {
+            endWrite();
         }
     }
 
@@ -377,13 +474,16 @@ public class ObjectController {
     public void deleteVariable(
             @RequestParam String path,
             @RequestParam String name,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
+        beginWrite(path, authentication, headers);
         try {
             objectManager.deleteVariable(path, name);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } finally {
+            endWrite();
         }
     }
 
@@ -391,13 +491,16 @@ public class ObjectController {
     public FunctionDescriptor upsertFunction(
             @RequestParam String path,
             @Valid @RequestBody FunctionDescriptor function,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
+        beginWrite(path, authentication, headers);
         try {
             return objectManager.upsertFunction(path, function);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } finally {
+            endWrite();
         }
     }
 
@@ -406,23 +509,31 @@ public class ObjectController {
     public void deleteFunction(
             @RequestParam String path,
             @RequestParam String name,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
-        objectManager.deleteFunction(path, name);
+        beginWrite(path, authentication, headers);
+        try {
+            objectManager.deleteFunction(path, name);
+        } finally {
+            endWrite();
+        }
     }
 
     @PutMapping("/by-path/events")
     public EventDescriptor upsertEvent(
             @RequestParam String path,
             @Valid @RequestBody EventDescriptor event,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
+        beginWrite(path, authentication, headers);
         try {
             return objectManager.upsertEvent(path, event);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } finally {
+            endWrite();
         }
     }
 
@@ -431,10 +542,15 @@ public class ObjectController {
     public void deleteEvent(
             @RequestParam String path,
             @RequestParam String name,
-            Authentication authentication
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader HttpHeaders headers
     ) {
-        objectAccessService.requireWrite(path, authentication);
-        objectManager.deleteEvent(path, name);
+        beginWrite(path, authentication, headers);
+        try {
+            objectManager.deleteEvent(path, name);
+        } finally {
+            endWrite();
+        }
     }
 
     public record CreateVariableRequest(
@@ -508,6 +624,9 @@ public class ObjectController {
                 remote.iconId(),
                 remote.createdAt(),
                 remote.sortOrder(),
+                remote.revision(),
+                remote.lastChangedBy(),
+                remote.lastChangedAt(),
                 remote.variableNames(),
                 remote.eventNames(),
                 true,

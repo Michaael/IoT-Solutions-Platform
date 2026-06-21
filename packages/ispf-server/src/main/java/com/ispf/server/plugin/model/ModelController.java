@@ -48,17 +48,20 @@ public class ModelController {
     private final ModelEngine modelEngine;
     private final ObjectManager objectManager;
     private final ModelPersistenceService modelPersistence;
+    private final ModelMergeService modelMergeService;
 
     public ModelController(
             ModelRegistry modelRegistry,
             ModelEngine modelEngine,
             ObjectManager objectManager,
-            ModelPersistenceService modelPersistence
+            ModelPersistenceService modelPersistence,
+            ModelMergeService modelMergeService
     ) {
         this.modelRegistry = modelRegistry;
         this.modelEngine = modelEngine;
         this.objectManager = objectManager;
         this.modelPersistence = modelPersistence;
+        this.modelMergeService = modelMergeService;
     }
 
     @GetMapping
@@ -219,8 +222,30 @@ public class ModelController {
         }
     }
 
+    @PostMapping("/merge-preview")
+    public Map<String, Object> mergePreview(@Valid @RequestBody MergePreviewRequest request) {
+        return modelMergeService.mergePreview(
+                request.baseModelId(),
+                request.theirsModelId(),
+                request.objectPath()
+        );
+    }
+
+    @PostMapping("/merge-apply")
+    public Map<String, Object> mergeApply(@Valid @RequestBody MergeApplyRequest request) {
+        return modelMergeService.applyMerge(
+                request.baseModelId(),
+                request.theirsModelId(),
+                request.objectPath(),
+                request.resolutions()
+        );
+    }
+
     @PostMapping("/{id}/upgrade-instances")
-    public Map<String, Object> upgradeInstances(@PathVariable String id) {
+    public Map<String, Object> upgradeInstances(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "false") boolean dryRun
+    ) {
         try {
             ModelDefinition model = modelRegistry.requireById(id);
             LinkedHashSet<String> targets = new LinkedHashSet<>();
@@ -246,12 +271,17 @@ public class ModelController {
             }
             List<String> upgraded = new ArrayList<>();
             for (String targetPath : targets) {
+                if (dryRun) {
+                    upgraded.add(targetPath);
+                    continue;
+                }
                 modelEngine.applyModel(id, targetPath);
                 objectManager.persistNodeTree(targetPath);
                 upgraded.add(targetPath);
             }
             return Map.of(
-                    "status", "OK",
+                    "status", dryRun ? "DRY_RUN" : "OK",
+                    "dryRun", dryRun,
                     "modelVersion", model.modelVersion(),
                     "upgraded", upgraded,
                     "count", upgraded.size()
@@ -374,6 +404,21 @@ public class ModelController {
             @NotBlank String modelName,
             String description,
             ModelType type
+    ) {
+    }
+
+    public record MergePreviewRequest(
+            @NotBlank String baseModelId,
+            @NotBlank String theirsModelId,
+            @NotBlank String objectPath
+    ) {
+    }
+
+    public record MergeApplyRequest(
+            @NotBlank String baseModelId,
+            @NotBlank String theirsModelId,
+            @NotBlank String objectPath,
+            List<ModelMergeService.MergeResolution> resolutions
     ) {
     }
 }

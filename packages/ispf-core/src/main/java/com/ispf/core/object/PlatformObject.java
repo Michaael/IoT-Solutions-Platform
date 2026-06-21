@@ -22,6 +22,9 @@ public class PlatformObject {
     private final String templateId;
     private volatile int sortOrder;
     private final Instant createdAt;
+    private volatile long revision;
+    private volatile String lastChangedBy;
+    private volatile Instant lastChangedAt;
     private final Map<String, Variable> variables = new ConcurrentHashMap<>();
     private final Map<String, FunctionDescriptor> functions = new ConcurrentHashMap<>();
     private final Map<String, EventDescriptor> events = new ConcurrentHashMap<>();
@@ -54,6 +57,32 @@ public class PlatformObject {
         this.templateId = templateId;
         this.sortOrder = sortOrder;
         this.createdAt = Instant.now();
+        this.revision = 0L;
+    }
+
+    public PlatformObject(
+            String id,
+            String path,
+            ObjectType type,
+            String displayName,
+            String description,
+            String templateId,
+            int sortOrder,
+            long revision,
+            String lastChangedBy,
+            Instant lastChangedAt
+    ) {
+        this.id = id;
+        this.path = path;
+        this.type = type;
+        this.displayName = displayName != null ? displayName : path.substring(path.lastIndexOf('.') + 1);
+        this.description = description != null ? description : "";
+        this.templateId = templateId;
+        this.sortOrder = sortOrder;
+        this.createdAt = Instant.now();
+        this.revision = revision;
+        this.lastChangedBy = lastChangedBy;
+        this.lastChangedAt = lastChangedAt;
     }
 
     public String id() {
@@ -89,6 +118,30 @@ public class PlatformObject {
 
     public Instant createdAt() {
         return createdAt;
+    }
+
+    public long revision() {
+        return revision;
+    }
+
+    public void setRevision(long revision) {
+        this.revision = revision;
+    }
+
+    public String lastChangedBy() {
+        return lastChangedBy;
+    }
+
+    public void setLastChangedBy(String lastChangedBy) {
+        this.lastChangedBy = lastChangedBy;
+    }
+
+    public Instant lastChangedAt() {
+        return lastChangedAt;
+    }
+
+    public void setLastChangedAt(Instant lastChangedAt) {
+        this.lastChangedAt = lastChangedAt;
     }
 
     public int sortOrder() {

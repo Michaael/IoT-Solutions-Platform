@@ -26,12 +26,37 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(parseApiError(text, `Request failed: ${response.status}`));
+    let message = parseApiError(text, `Request failed: ${response.status}`);
+    try {
+      const json = JSON.parse(text) as { error?: string; message?: string };
+      if (json.error === "REVISION_CONFLICT") {
+        message = `REVISION_CONFLICT:${text}`;
+      }
+    } catch {
+      // keep parsed message
+    }
+    throw new Error(message);
   }
   if (response.status === 204) {
     return undefined as T;
   }
   return response.json();
+}
+
+export interface ObjectWriteOptions {
+  revision?: number;
+  force?: boolean;
+}
+
+function writeHeaders(options?: ObjectWriteOptions): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (options?.revision != null) {
+    headers["If-Match"] = String(options.revision);
+  }
+  if (options?.force) {
+    headers["X-ISPF-Force"] = "true";
+  }
+  return headers;
 }
 
 export function fetchPlatformInfo(): Promise<PlatformInfo> {
@@ -190,9 +215,14 @@ export function createObject(payload: CreateObjectPayload): Promise<ObjectSummar
   });
 }
 
-export function updateObject(path: string, payload: UpdateObjectPayload): Promise<ObjectSummary> {
+export function updateObject(
+  path: string,
+  payload: UpdateObjectPayload,
+  options?: ObjectWriteOptions
+): Promise<ObjectSummary> {
   return request(`/api/v1/objects/by-path?path=${encodeURIComponent(path)}`, {
     method: "PATCH",
+    headers: writeHeaders(options),
     body: JSON.stringify(payload),
   });
 }
@@ -203,10 +233,16 @@ export function deleteObject(path: string): Promise<void> {
   });
 }
 
-export function setVariable(path: string, name: string, value: DataRecord): Promise<VariableDto> {
+export function setVariable(
+  path: string,
+  name: string,
+  value: DataRecord,
+  options?: ObjectWriteOptions
+): Promise<VariableDto> {
   const params = new URLSearchParams({ path, name });
   return request(`/api/v1/objects/by-path/variables?${params}`, {
     method: "PUT",
+    headers: writeHeaders(options),
     body: JSON.stringify(value),
   });
 }
@@ -219,11 +255,13 @@ export interface UpdateVariableHistoryPayload {
 export function updateVariableHistory(
   path: string,
   name: string,
-  payload: UpdateVariableHistoryPayload
+  payload: UpdateVariableHistoryPayload,
+  options?: ObjectWriteOptions
 ): Promise<VariableDto> {
   const params = new URLSearchParams({ path, name });
   return request(`/api/v1/objects/by-path/variables/history?${params}`, {
     method: "PATCH",
+    headers: writeHeaders(options),
     body: JSON.stringify(payload),
   });
 }
@@ -261,11 +299,13 @@ export interface UpdateVariableDefinitionPayload {
 export function updateVariableDefinition(
   path: string,
   name: string,
-  payload: UpdateVariableDefinitionPayload
+  payload: UpdateVariableDefinitionPayload,
+  options?: ObjectWriteOptions
 ): Promise<VariableDto> {
   const params = new URLSearchParams({ path, name });
   return request(`/api/v1/objects/by-path/variables?${params}`, {
     method: "PATCH",
+    headers: writeHeaders(options),
     body: JSON.stringify(payload),
   });
 }
@@ -472,4 +512,45 @@ export function updateCorrelator(
 
 export function deleteCorrelator(path: string): Promise<void> {
   return request(`/api/v1/correlators/by-path?path=${encodeURIComponent(path)}`, { method: "DELETE" });
+}
+
+export interface ObjectConfigAuditEntry {
+  id: string;
+  objectPath: string;
+  changeType: string;
+  field: string;
+  actor: string;
+  occurredAt: string;
+  revisionBefore: number;
+  revisionAfter: number;
+  summaryJson: string;
+}
+
+export function fetchObjectAudit(path: string, limit = 50): Promise<ObjectConfigAuditEntry[]> {
+  const params = new URLSearchParams({ path, limit: String(limit) });
+  return request(`/api/v1/objects/by-path/audit?${params}`);
+}
+
+export interface EditLease {
+  id: string;
+  pathPrefix: string;
+  holder: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export function fetchEditLeases(): Promise<EditLease[]> {
+  return request("/api/v1/objects/leases");
+}
+
+export function acquireEditLease(pathPrefix: string, ttlMinutes = 120): Promise<EditLease> {
+  return request("/api/v1/objects/leases", {
+    method: "POST",
+    body: JSON.stringify({ pathPrefix, ttlMinutes }),
+  });
+}
+
+export function releaseEditLease(pathPrefix: string): Promise<void> {
+  const params = new URLSearchParams({ pathPrefix });
+  return request(`/api/v1/objects/leases?${params}`, { method: "DELETE" });
 }

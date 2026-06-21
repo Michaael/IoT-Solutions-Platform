@@ -20,6 +20,9 @@ public record ObjectDto(
         String iconId,
         Instant createdAt,
         int sortOrder,
+        long revision,
+        String lastChangedBy,
+        Instant lastChangedAt,
         List<String> variableNames,
         List<String> eventNames,
         boolean federated,
@@ -42,6 +45,9 @@ public record ObjectDto(
                 iconId,
                 node.createdAt(),
                 node.sortOrder(),
+                node.revision(),
+                node.lastChangedBy(),
+                node.lastChangedAt(),
                 node.variables().keySet().stream()
                         .filter(name -> !ObjectUiIconService.UI_ICON_VARIABLE.equals(name))
                         .filter(name -> !BindingStateVariables.isReserved(name))

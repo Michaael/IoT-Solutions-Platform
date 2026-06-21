@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteObject,
+  fetchObjectAudit,
   fetchObjectEditor,
   setVariable,
   updateObject,
@@ -9,6 +10,8 @@ import {
   updateVariableHistory,
 } from "../api";
 import type { ObjectEditorDto, DataRecord, VariableDto } from "../types";
+import { fetchAuthMe } from "../api";
+import { OBJECT_WS_EVENT, sendPresence, type ObjectWsMessage } from "../hooks/useObjectWebSocket";
 import {
   cloneRecord,
   ensureRecord,
@@ -34,7 +37,7 @@ interface ObjectPropertiesEditorProps {
   canManage?: boolean;
 }
 
-type SectionKey = "info" | "federation" | "variables" | "events" | "functions";
+type SectionKey = "info" | "federation" | "variables" | "events" | "functions" | "history";
 
 interface EditorState {
   displayName: string;
@@ -209,6 +212,22 @@ export default function ObjectPropertiesEditor({
     variables: true,
     events: true,
     functions: true,
+    history: false,
+  });
+  const [revision, setRevision] = useState<number>(0);
+  const [remoteRevision, setRemoteRevision] = useState<number | null>(null);
+  const [conflictMessage, setConflictMessage] = useState<string | null>(null);
+  const [forceNextSave, setForceNextSave] = useState(false);
+
+  const authQuery = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: fetchAuthMe,
+  });
+
+  const auditQuery = useQuery({
+    queryKey: ["object-audit", path],
+    queryFn: () => fetchObjectAudit(path),
+    enabled: openSections.history,
   });
 
   const editorQuery = useQuery({
@@ -225,6 +244,9 @@ export default function ObjectPropertiesEditor({
       const next = buildState(editorQuery.data);
       setState(next);
       setBaseline(next);
+      setRevision(editorQuery.data.object.revision ?? 0);
+      setRemoteRevision(null);
+      setConflictMessage(null);
     }
   }, [editorQuery.data]);
 
@@ -247,14 +269,39 @@ export default function ObjectPropertiesEditor({
     return false;
   }, [state, baseline]);
 
+  useEffect(() => {
+    const username = authQuery.data?.principal;
+    if (!username) return;
+    sendPresence(path, username, isDirty ? "edit" : "view");
+    const timer = window.setInterval(() => {
+      sendPresence(path, username, isDirty ? "edit" : "view");
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [authQuery.data?.principal, path, isDirty]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const message = (event as CustomEvent<ObjectWsMessage>).detail;
+      if (message.path !== path || message.revision == null) return;
+      if (message.revision > revision) {
+        setRemoteRevision(message.revision);
+      }
+    };
+    window.addEventListener(OBJECT_WS_EVENT, handler);
+    return () => window.removeEventListener(OBJECT_WS_EVENT, handler);
+  }, [path, revision]);
+
+  const staleRemote = remoteRevision != null && remoteRevision > revision && isDirty;
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!state || !baseline || !editorQuery.data) return;
+      const writeOpts = { revision, force: forceNextSave };
       await updateObject(path, {
         displayName: state.displayName,
         description: state.description,
         iconId: state.iconId ?? "",
-      });
+      }, writeOpts);
       for (const variable of editorQuery.data.variables) {
         const current = state.variables[variable.name];
         const base = baseline.variables[variable.name];
@@ -263,27 +310,37 @@ export default function ObjectPropertiesEditor({
         if (currentBinding.trim() !== baseBinding.trim()) {
           await updateVariableDefinition(path, variable.name, {
             bindingExpression: currentBinding.trim() || "",
-          });
+          }, writeOpts);
         }
         const writableWithoutBinding =
           variable.writable && !currentBinding.trim() && !baseBinding.trim();
         if (writableWithoutBinding && current && base && !recordsEqual(current, base)) {
-          await setVariable(path, variable.name, current);
+          await setVariable(path, variable.name, current, writeOpts);
         }
         const currentHistory = state.variableHistory[variable.name];
         const baseHistory = baseline.variableHistory[variable.name];
         if (currentHistory && baseHistory && !historyEqual(currentHistory, baseHistory)) {
-          await updateVariableHistory(path, variable.name, currentHistory);
+          await updateVariableHistory(path, variable.name, currentHistory, writeOpts);
         }
       }
     },
     onSuccess: async () => {
+      setForceNextSave(false);
+      setConflictMessage(null);
       await queryClient.invalidateQueries({ queryKey: ["objects"] });
       await queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
+      await queryClient.invalidateQueries({ queryKey: ["object-audit", path] });
       const fresh = await fetchObjectEditor(path);
       const next = buildState(fresh);
       setState(next);
       setBaseline(next);
+      setRevision(fresh.object.revision ?? 0);
+      setRemoteRevision(null);
+    },
+    onError: (error: Error) => {
+      if (error.message.startsWith("REVISION_CONFLICT:")) {
+        setConflictMessage("Объект изменился другим пользователем. Перезагрузите или перезапишите (admin).");
+      }
     },
   });
 
@@ -354,7 +411,7 @@ export default function ObjectPropertiesEditor({
           <button
             type="button"
             className="btn primary"
-            disabled={!isDirty || saveMutation.isPending}
+            disabled={!isDirty || saveMutation.isPending || (staleRemote && !forceNextSave)}
             onClick={() => saveMutation.mutate()}
           >
             Сохранить
@@ -398,7 +455,29 @@ export default function ObjectPropertiesEditor({
       </div>
 
       {saveMutation.isSuccess && <div className="banner success">Изменения сохранены</div>}
-      {saveMutation.error && (
+      {staleRemote && (
+        <div className="banner warning">
+          Объект изменился на сервере (revision {remoteRevision}). Сохранение заблокировано до перезагрузки
+          или принудительной перезаписи.
+          <button type="button" className="btn btn-sm" onClick={() => editorQuery.refetch()}>
+            Перезагрузить
+          </button>
+          {canManage && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => {
+                setForceNextSave(true);
+                saveMutation.mutate();
+              }}
+            >
+              Перезаписать
+            </button>
+          )}
+        </div>
+      )}
+      {conflictMessage && <div className="banner error">{conflictMessage}</div>}
+      {saveMutation.error && !conflictMessage && (
         <div className="banner error">{(saveMutation.error as Error).message}</div>
       )}
 
@@ -426,6 +505,10 @@ export default function ObjectPropertiesEditor({
             <label>
               Модель
               <input value={ctx.templateId ?? "—"} readOnly className="readonly" />
+            </label>
+            <label>
+              Revision
+              <input value={String(revision)} readOnly className="readonly" />
             </label>
             <label className="full">
               Описание
@@ -588,6 +671,46 @@ export default function ObjectPropertiesEditor({
                       <td>{fn.description || "—"}</td>
                       <td className="mono small">{fn.inputSchema.name}</td>
                       <td className="mono small">{fn.outputSchema.name}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="editor-section">
+        <button type="button" className="section-toggle" onClick={() => toggleSection("history")}>
+          <span>{openSections.history ? "▾" : "▸"}</span> История изменений
+        </button>
+        {openSections.history && (
+          <div className="section-body">
+            {auditQuery.isLoading && <p className="hint">Загрузка…</p>}
+            {auditQuery.data && auditQuery.data.length === 0 && (
+              <p className="hint">Записей пока нет</p>
+            )}
+            {auditQuery.data && auditQuery.data.length > 0 && (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Время</th>
+                    <th>Тип</th>
+                    <th>Поле</th>
+                    <th>Актор</th>
+                    <th>Rev</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditQuery.data.map((entry) => (
+                    <tr key={entry.id}>
+                      <td className="mono small">{entry.occurredAt}</td>
+                      <td>{entry.changeType}</td>
+                      <td>{entry.field || "—"}</td>
+                      <td>{entry.actor || "—"}</td>
+                      <td className="mono small">
+                        {entry.revisionBefore}→{entry.revisionAfter}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

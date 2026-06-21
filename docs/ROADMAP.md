@@ -98,6 +98,17 @@
 |---|------|--------|
 | 10.1 | Persistent binding state (`@bindingState`, hysteresis/deadband/movingAvg/counterRate) | Done (v0.6.0) |
 
+## Phase 11 — Multi-user collaboration
+
+| # | Тема | Статус |
+|---|------|--------|
+| 11.1 | Object revision (If-Match) + config audit + stale editor UI | Done |
+| 11.2 | WS presence + subtree leases + model merge preview | Done |
+| 11.3 | Subtree ownership ACL (OWNER/EDITOR/VIEWER) | Done |
+| 11.4 | Change-sets + preview/apply promotion pipeline | Done |
+
+См. [COLLABORATION.md](COLLABORATION.md).
+
 ## Platform baseline
 
 | # | Тема | Статус |

@@ -130,3 +130,22 @@ export function fetchModelDiff(modelId: string, objectPath: string): Promise<Mod
   const params = new URLSearchParams({ objectPath });
   return request(`/api/v1/models/${encodeURIComponent(modelId)}/diff?${params}`);
 }
+
+export interface ModelMergePreviewResult {
+  objectPath: string;
+  baseModelId: string;
+  theirsModelId: string;
+  variableConflicts: Array<{ name: string; baseSchema: string; theirsSchema: string; onObject: boolean }>;
+  conflictCount: number;
+}
+
+export function fetchModelMergePreview(
+  baseModelId: string,
+  theirsModelId: string,
+  objectPath: string
+): Promise<ModelMergePreviewResult> {
+  return request("/api/v1/models/merge-preview", {
+    method: "POST",
+    body: JSON.stringify({ baseModelId, theirsModelId, objectPath }),
+  });
+}

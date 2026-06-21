@@ -45,6 +45,15 @@ public class ObjectNodeEntity {
     @Column(name = "functions_json", columnDefinition = "TEXT")
     private String functionsJson;
 
+    @Column(nullable = false)
+    private long revision;
+
+    @Column(name = "last_changed_by", length = 128)
+    private String lastChangedBy;
+
+    @Column(name = "last_changed_at")
+    private Instant lastChangedAt;
+
     public String getId() {
         return id;
     }
@@ -123,5 +132,29 @@ public class ObjectNodeEntity {
 
     public void setFunctionsJson(String functionsJson) {
         this.functionsJson = functionsJson;
+    }
+
+    public long getRevision() {
+        return revision;
+    }
+
+    public void setRevision(long revision) {
+        this.revision = revision;
+    }
+
+    public String getLastChangedBy() {
+        return lastChangedBy;
+    }
+
+    public void setLastChangedBy(String lastChangedBy) {
+        this.lastChangedBy = lastChangedBy;
+    }
+
+    public Instant getLastChangedAt() {
+        return lastChangedAt;
+    }
+
+    public void setLastChangedAt(Instant lastChangedAt) {
+        this.lastChangedAt = lastChangedAt;
     }
 }

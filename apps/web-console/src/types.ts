@@ -2,6 +2,7 @@ export interface PlatformInfo {
   name: string;
   shortName: string;
   version: string;
+  environment?: string;
   timestamp: string;
   javaVersion?: string;
   springBootVersion?: string;
@@ -59,6 +60,9 @@ export interface ObjectSummary {
   iconId?: string | null;
   createdAt: string;
   sortOrder: number;
+  revision?: number;
+  lastChangedBy?: string | null;
+  lastChangedAt?: string | null;
   variableNames: string[];
   eventNames: string[];
   federated?: boolean;

@@ -43,6 +43,19 @@ public class ObjectAccessService {
         }
     }
 
+    public void requireAdmin(Authentication authentication) {
+        if (!isAdmin(authentication)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
+        }
+    }
+
+    public void requireGrantAcl(String objectPath, Authentication authentication) {
+        if (isAdmin(authentication) || canGrant(objectPath, authentication)) {
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "ACL grant denied for " + objectPath);
+    }
+
     public void requireInvoke(String objectPath, Authentication authentication) {
         if (!canInvoke(objectPath, authentication)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invoke access denied for " + objectPath);
@@ -61,6 +74,10 @@ public class ObjectAccessService {
         return hasPermission(objectPath, "INVOKE", authentication);
     }
 
+    public boolean canGrant(String objectPath, Authentication authentication) {
+        return isAdmin(authentication) || hasPermission(objectPath, "OWNER", authentication);
+    }
+
     private boolean hasPermission(String objectPath, String permission, Authentication authentication) {
         if (isAdmin(authentication)) {
             return true;
@@ -72,7 +89,7 @@ public class ObjectAccessService {
         Set<String> roles = extractRoles(authentication);
         String username = authentication != null ? authentication.getName() : null;
         for (ObjectAclStore.ObjectAclEntry entry : entries) {
-            if (!permission.equalsIgnoreCase(entry.permission())) {
+            if (!matchesPermission(entry.permission(), permission)) {
                 continue;
             }
             if ("ROLE".equalsIgnoreCase(entry.principalType()) && roles.contains(entry.principalId())) {
@@ -85,6 +102,23 @@ public class ObjectAccessService {
             }
         }
         return false;
+    }
+
+    private static boolean matchesPermission(String granted, String required) {
+        if (granted == null || required == null) {
+            return false;
+        }
+        String normalizedGranted = granted.toUpperCase();
+        String normalizedRequired = required.toUpperCase();
+        if (normalizedGranted.equals(normalizedRequired)) {
+            return true;
+        }
+        return switch (normalizedGranted) {
+            case "OWNER" -> Set.of("READ", "WRITE", "INVOKE", "EDITOR", "VIEWER", "OWNER").contains(normalizedRequired);
+            case "EDITOR" -> Set.of("READ", "WRITE", "INVOKE", "EDITOR", "VIEWER").contains(normalizedRequired);
+            case "VIEWER" -> Set.of("READ", "VIEWER").contains(normalizedRequired);
+            default -> false;
+        };
     }
 
     private static boolean isAdmin(Authentication authentication) {
@@ -111,8 +145,11 @@ public class ObjectAccessService {
         if (!Set.of("ROLE", "USER").contains(draft.principalType().toUpperCase())) {
             throw new IllegalArgumentException("principalType must be ROLE or USER");
         }
-        if (!Set.of("READ", "WRITE", "INVOKE").contains(draft.permission().toUpperCase())) {
-            throw new IllegalArgumentException("permission must be READ, WRITE, or INVOKE");
+        if (!Set.of("READ", "WRITE", "INVOKE", "OWNER", "EDITOR", "VIEWER")
+                .contains(draft.permission().toUpperCase())) {
+            throw new IllegalArgumentException(
+                    "permission must be READ, WRITE, INVOKE, OWNER, EDITOR, or VIEWER"
+            );
         }
         if (draft.principalId() == null || draft.principalId().isBlank()) {
             throw new IllegalArgumentException("principalId is required");

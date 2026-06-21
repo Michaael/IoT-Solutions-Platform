@@ -14,17 +14,34 @@ public record ObjectChangeEvent(
         ObjectChangeType type,
         String path,
         String variableName,
-        Instant timestamp
+        Instant timestamp,
+        Long revision,
+        String changedBy
 ) {
     public static ObjectChangeEvent of(ObjectChangeType type, String path) {
-        return new ObjectChangeEvent(type, path, null, Instant.now());
+        return new ObjectChangeEvent(type, path, null, Instant.now(), null, null);
+    }
+
+    public static ObjectChangeEvent of(ObjectChangeType type, String path, long revision, String changedBy) {
+        return new ObjectChangeEvent(type, path, null, Instant.now(), revision, changedBy);
     }
 
     public static ObjectChangeEvent variableUpdated(String path, String variableName) {
-        return new ObjectChangeEvent(ObjectChangeType.VARIABLE_UPDATED, path, variableName, Instant.now());
+        return new ObjectChangeEvent(ObjectChangeType.VARIABLE_UPDATED, path, variableName, Instant.now(), null, null);
+    }
+
+    public static ObjectChangeEvent variableUpdated(String path, String variableName, long revision, String changedBy) {
+        return new ObjectChangeEvent(
+                ObjectChangeType.VARIABLE_UPDATED,
+                path,
+                variableName,
+                Instant.now(),
+                revision,
+                changedBy
+        );
     }
 
     public static ObjectChangeEvent eventFired(String path, String eventName) {
-        return new ObjectChangeEvent(ObjectChangeType.EVENT_FIRED, path, eventName, Instant.now());
+        return new ObjectChangeEvent(ObjectChangeType.EVENT_FIRED, path, eventName, Instant.now(), null, null);
     }
 }

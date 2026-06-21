@@ -8,6 +8,7 @@ import {
   fetchModelByName,
   fetchModelInstances,
   fetchModelDiff,
+  fetchModelMergePreview,
   fetchModels,
   instantiateModel,
   updateModel,
@@ -56,6 +57,7 @@ function ModelDetail({
   const [description, setDescription] = useState(model.description);
   const [suitability, setSuitability] = useState(model.suitabilityExpression);
   const [applyPath, setApplyPath] = useState("");
+  const [theirsModelId, setTheirsModelId] = useState("");
   const [parentPath, setParentPath] = useState("root.platform.devices");
   const [instanceName, setInstanceName] = useState("");
   const [variables, setVariables] = useState(model.variables);
@@ -125,6 +127,12 @@ function ModelDetail({
     queryKey: ["model-diff", model.id, applyPath],
     queryFn: () => fetchModelDiff(model.id, applyPath.trim()),
     enabled: Boolean(applyPath.trim()),
+  });
+
+  const mergePreviewQuery = useQuery({
+    queryKey: ["model-merge-preview", model.id, theirsModelId, applyPath],
+    queryFn: () => fetchModelMergePreview(model.id, theirsModelId.trim(), applyPath.trim()),
+    enabled: Boolean(applyPath.trim() && theirsModelId.trim()),
   });
 
   const upgradeOneMutation = useMutation({
@@ -674,6 +682,28 @@ function ModelDetail({
                   </li>
                 ))}
               </ul>
+            )}
+            {applyPath.trim() && (
+              <label className="full">
+                Merge preview — theirs model ID
+                <input
+                  value={theirsModelId}
+                  onChange={(e) => setTheirsModelId(e.target.value)}
+                  placeholder="UUID vendor extension model"
+                />
+              </label>
+            )}
+            {mergePreviewQuery.data && mergePreviewQuery.data.conflictCount > 0 && (
+              <div className="model-diff-preview hint">
+                <strong>Merge conflicts</strong> ({mergePreviewQuery.data.conflictCount})
+                <ul>
+                  {mergePreviewQuery.data.variableConflicts.map((c) => (
+                    <li key={c.name}>
+                      <code>{c.name}</code>: {c.baseSchema} vs {c.theirsSchema}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             {applyPath.trim() && diffQuery.data && (
               <div className="model-diff-preview hint">

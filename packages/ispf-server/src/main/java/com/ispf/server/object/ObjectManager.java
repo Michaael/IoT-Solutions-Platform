@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 /**
@@ -54,6 +55,7 @@ public class ObjectManager {
     private final ApplicationEventPublisher eventPublisher;
     private final BindingEvaluator bindingEvaluator;
     private final BindingEvaluationContext bindingEvaluationContext;
+    private final ObjectConfigAuditService configAuditService;
     private volatile boolean initialized;
 
     private static final int MAX_BINDING_PROPAGATION_DEPTH = 8;
@@ -69,7 +71,8 @@ public class ObjectManager {
             ObjectProvider<ModelPersistenceService> modelPersistence,
             ApplicationEventPublisher eventPublisher,
             BindingEvaluator bindingEvaluator,
-            BindingEvaluationContext bindingEvaluationContext
+            BindingEvaluationContext bindingEvaluationContext,
+            ObjectConfigAuditService configAuditService
     ) {
         this.nodeRepository = nodeRepository;
         this.variableRepository = variableRepository;
@@ -81,6 +84,7 @@ public class ObjectManager {
         this.eventPublisher = eventPublisher;
         this.bindingEvaluator = bindingEvaluator;
         this.bindingEvaluationContext = bindingEvaluationContext;
+        this.configAuditService = configAuditService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -135,8 +139,11 @@ public class ObjectManager {
                 nextSortOrder(parentPath)
         );
         objectTree.register(node);
+        node.setRevision(1L);
+        node.setLastChangedBy(ObjectRevisionContext.actor());
+        node.setLastChangedAt(Instant.now());
         persistNode(node);
-        publish(ObjectChangeEvent.of(ObjectChangeType.CREATED, fullPath));
+        publish(ObjectChangeEvent.of(ObjectChangeType.CREATED, fullPath, node.revision(), node.lastChangedBy()));
         return node;
     }
 
@@ -180,10 +187,12 @@ public class ObjectManager {
 
     @Transactional
     public PlatformObject updateInfo(String path, String displayName, String description) {
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
+        long revisionBefore = node.revision();
         node.updateInfo(displayName, description);
-        persistNode(node);
-        publish(ObjectChangeEvent.of(ObjectChangeType.UPDATED, path));
+        persistNodeConfig(node, "UPDATE_INFO", "metadata", null);
+        publishConfigChange(ObjectChangeType.UPDATED, path, revisionBefore);
         return node;
     }
 
@@ -218,11 +227,15 @@ public class ObjectManager {
     @Transactional
     public Variable setVariableValue(String path, String name, DataRecord value) {
         assertUserVariable(name);
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
+        long revisionBefore = node.revision();
         node.setVariableValue(name, value);
         Variable variable = node.getVariable(name).orElseThrow();
         persistVariable(path, variable);
-        publish(ObjectChangeEvent.variableUpdated(path, name));
+        bumpRevision(node);
+        recordAudit(path, "SET_VARIABLE_VALUE", name, revisionBefore, node.revision(), null);
+        publishConfigChange(ObjectChangeEvent.variableUpdated(path, name), node);
         propagateBindings(path);
         return variable;
     }
@@ -230,13 +243,17 @@ public class ObjectManager {
     @Transactional
     public void deleteVariable(String path, String name) {
         assertUserVariable(name);
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
         if (node.getVariable(name).isEmpty()) {
             return;
         }
+        long revisionBefore = node.revision();
         node.removeVariable(name);
         variableRepository.deleteByObjectPathAndName(path, name);
-        publish(ObjectChangeEvent.variableUpdated(path, name));
+        bumpRevision(node);
+        recordAudit(path, "DELETE_VARIABLE", name, revisionBefore, node.revision(), null);
+        publishConfigChange(ObjectChangeEvent.variableUpdated(path, name), node);
     }
 
     @Transactional
@@ -261,6 +278,8 @@ public class ObjectManager {
         if (node.getVariable(name).isPresent()) {
             throw new IllegalArgumentException("Variable already exists: " + name);
         }
+        assertExpectedRevision(path);
+        long revisionBefore = node.revision();
         String binding = normalizeBinding(bindingExpression);
         Variable variable = new Variable(
                 name,
@@ -274,7 +293,9 @@ public class ObjectManager {
         );
         node.addVariable(variable);
         persistVariable(path, variable);
-        publish(ObjectChangeEvent.variableUpdated(path, name));
+        bumpRevision(node);
+        recordAudit(path, "CREATE_VARIABLE", name, revisionBefore, node.revision(), null);
+        publishConfigChange(ObjectChangeEvent.variableUpdated(path, name), node);
         if (binding != null) {
             propagateBindings(path);
         }
@@ -289,7 +310,9 @@ public class ObjectManager {
             Boolean readable,
             Boolean writable
     ) {
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
+        long revisionBefore = node.revision();
         Variable variable = node.getVariable(name)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown variable: " + name));
         if (ObjectUiIconService.UI_ICON_VARIABLE.equals(name) || BindingStateVariables.isReserved(name)) {
@@ -309,7 +332,9 @@ public class ObjectManager {
         );
         node.addVariable(updated);
         persistVariable(path, updated);
-        publish(ObjectChangeEvent.variableUpdated(path, name));
+        bumpRevision(node);
+        recordAudit(path, "UPDATE_VARIABLE", name, revisionBefore, node.revision(), null);
+        publishConfigChange(ObjectChangeEvent.variableUpdated(path, name), node);
         propagateBindings(path);
         return updated;
     }
@@ -319,22 +344,26 @@ public class ObjectManager {
         if (function == null || function.name() == null || function.name().isBlank()) {
             throw new IllegalArgumentException("Function name is required");
         }
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
+        long revisionBefore = node.revision();
         node.addFunction(function);
-        persistNode(node);
-        publish(ObjectChangeEvent.of(ObjectChangeType.UPDATED, path));
+        persistNodeConfig(node, "UPSERT_FUNCTION", function.name(), null);
+        publishConfigChange(ObjectChangeType.UPDATED, path, revisionBefore);
         return function;
     }
 
     @Transactional
     public void deleteFunction(String path, String name) {
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
         if (!node.functions().containsKey(name)) {
             return;
         }
+        long revisionBefore = node.revision();
         node.removeFunction(name);
-        persistNode(node);
-        publish(ObjectChangeEvent.of(ObjectChangeType.UPDATED, path));
+        persistNodeConfig(node, "DELETE_FUNCTION", name, null);
+        publishConfigChange(ObjectChangeType.UPDATED, path, revisionBefore);
     }
 
     @Transactional
@@ -342,22 +371,26 @@ public class ObjectManager {
         if (event == null || event.name() == null || event.name().isBlank()) {
             throw new IllegalArgumentException("Event name is required");
         }
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
+        long revisionBefore = node.revision();
         node.addEvent(event);
-        persistNode(node);
-        publish(ObjectChangeEvent.of(ObjectChangeType.UPDATED, path));
+        persistNodeConfig(node, "UPSERT_EVENT", event.name(), null);
+        publishConfigChange(ObjectChangeType.UPDATED, path, revisionBefore);
         return event;
     }
 
     @Transactional
     public void deleteEvent(String path, String name) {
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
         if (!node.events().containsKey(name)) {
             return;
         }
+        long revisionBefore = node.revision();
         node.removeEvent(name);
-        persistNode(node);
-        publish(ObjectChangeEvent.of(ObjectChangeType.UPDATED, path));
+        persistNodeConfig(node, "DELETE_EVENT", name, null);
+        publishConfigChange(ObjectChangeType.UPDATED, path, revisionBefore);
     }
 
     private static String normalizeBinding(String bindingExpression) {
@@ -374,13 +407,17 @@ public class ObjectManager {
             boolean historyEnabled,
             Integer historyRetentionDays
     ) {
+        assertExpectedRevision(path);
         PlatformObject node = objectTree.require(path);
+        long revisionBefore = node.revision();
         Variable variable = node.getVariable(name)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown variable: " + name));
         Variable updated = variable.withHistorySettings(historyEnabled, historyRetentionDays);
         node.addVariable(updated);
         persistVariable(path, updated);
-        publish(ObjectChangeEvent.variableUpdated(path, name));
+        bumpRevision(node);
+        recordAudit(path, "UPDATE_VARIABLE_HISTORY", name, revisionBefore, node.revision(), null);
+        publishConfigChange(ObjectChangeEvent.variableUpdated(path, name), node);
         return updated;
     }
 
@@ -534,7 +571,10 @@ public class ObjectManager {
                     entity.getDisplayName(),
                     entity.getDescription(),
                     entity.getTemplateId(),
-                    entity.getSortOrder()
+                    entity.getSortOrder(),
+                    entity.getRevision(),
+                    entity.getLastChangedBy(),
+                    entity.getLastChangedAt()
             );
             for (EventDescriptor event : mapper.readEvents(entity.getEventsJson())) {
                 node.addEvent(event);
@@ -596,6 +636,79 @@ public class ObjectManager {
 
     private void publish(ObjectChangeEvent event) {
         eventPublisher.publishEvent(event);
+    }
+
+    private void assertExpectedRevision(String path) {
+        ObjectRevisionContext.RevisionExpectation expectation = ObjectRevisionContext.expectation();
+        if (expectation == null || expectation.forceOverwrite()) {
+            return;
+        }
+        Long expected = expectation.expectedRevision();
+        if (expected == null) {
+            return;
+        }
+        PlatformObject node = objectTree.require(path);
+        if (node.revision() != expected) {
+            throw new ObjectRevisionConflictException(
+                    path,
+                    expected,
+                    node.revision(),
+                    node.lastChangedBy(),
+                    node.lastChangedAt()
+            );
+        }
+    }
+
+    private void bumpRevision(PlatformObject node) {
+        node.setRevision(node.revision() + 1);
+        node.setLastChangedBy(ObjectRevisionContext.actor());
+        node.setLastChangedAt(Instant.now());
+        persistNode(node);
+    }
+
+    private void persistNodeConfig(PlatformObject node, String changeType, String field, String summaryJson) {
+        long revisionBefore = node.revision();
+        bumpRevision(node);
+        recordAudit(node.path(), changeType, field, revisionBefore, node.revision(), summaryJson);
+    }
+
+    private void recordAudit(
+            String path,
+            String changeType,
+            String field,
+            long revisionBefore,
+            long revisionAfter,
+            String summaryJson
+    ) {
+        configAuditService.record(
+                path,
+                changeType,
+                field,
+                ObjectRevisionContext.actor(),
+                revisionBefore,
+                revisionAfter,
+                summaryJson
+        );
+    }
+
+    private void publishConfigChange(ObjectChangeType type, String path, long revisionBefore) {
+        PlatformObject node = objectTree.require(path);
+        publish(ObjectChangeEvent.of(type, path, node.revision(), node.lastChangedBy()));
+    }
+
+    private void publishConfigChange(ObjectChangeEvent template, PlatformObject node) {
+        publish(new ObjectChangeEvent(
+                template.type(),
+                template.path(),
+                template.variableName(),
+                Instant.now(),
+                node.revision(),
+                node.lastChangedBy()
+        ));
+    }
+
+    public List<ObjectConfigAuditService.AuditEntry> configAudit(String path, int limit) {
+        return configAuditService.list(path, limit);
     }
 
     private static void assertUserVariable(String name) {
