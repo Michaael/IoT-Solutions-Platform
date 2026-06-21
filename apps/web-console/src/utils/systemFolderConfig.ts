@@ -44,6 +44,7 @@ const EXACT_CATALOG_PATHS: ReadonlySet<string> = new Set([
   "root.platform.devices",
   MODELS_ROOT,
   "root.platform.dashboards",
+  "root.platform.reports",
   "root.platform.workflows",
   "root.platform.alert-rules",
   "root.platform.correlators",
@@ -74,7 +75,7 @@ const META_BY_TYPE: Partial<Record<ObjectType, SystemFolderListMeta>> = {
   DASHBOARDS: {
     title: "Дашборды",
     description:
-      "HMI-дашборды в root.platform.dashboards. Откройте объект в редакторе для настройки виджетов.",
+      "HMI-дашборды в root.platform.dashboards. Двойной щелчок в дереве, «Открыть» в списке или кнопка «Открыть в редакторе».",
     idColumnLabel: "ID",
   },
   WORKFLOWS: {
@@ -118,7 +119,8 @@ const META_BY_TYPE: Partial<Record<ObjectType, SystemFolderListMeta>> = {
   },
   REPORTS: {
     title: "Отчёты",
-    description: "SQL-отчёты приложения.",
+    description:
+      "SQL-отчёты в root.platform.reports. Двойной щелчок в дереве, «Открыть» в списке или кнопка «Открыть в редакторе».",
     idColumnLabel: "ID",
   },
   SCHEDULES: {
@@ -169,6 +171,7 @@ function resolveCatalogType(path: string, objectType?: ObjectType): ObjectType |
       "root.platform": "PLATFORM",
       "root.platform.devices": "DEVICES",
       "root.platform.dashboards": "DASHBOARDS",
+      "root.platform.reports": "REPORTS",
       "root.platform.workflows": "WORKFLOWS",
       "root.platform.alert-rules": "ALERT_RULES",
       "root.platform.correlators": "CORRELATORS",

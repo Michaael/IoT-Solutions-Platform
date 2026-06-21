@@ -2,8 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthSession } from "../../auth/session";
 import { useOperatorUi } from "../../hooks/useOperatorUi";
 import { useObjectWebSocket } from "../../hooks/useObjectWebSocket";
-import { resolveOperatorDashboard, type OperatorUi } from "../../types/operatorUi";
+import {
+  resolveOperatorDashboard,
+  resolveOperatorReport,
+  type OperatorUi,
+} from "../../types/operatorUi";
 import DashboardBuilder from "../dashboard/DashboardBuilder";
+import ReportBuilder from "../report/ReportBuilder";
 import OperatorSidebar from "./OperatorSidebar";
 
 interface OperatorDashboardAppProps {
@@ -14,8 +19,18 @@ interface OperatorDashboardAppProps {
   onLogout?: () => void;
 }
 
+type OperatorViewKind = "dashboard" | "report";
+
 function resolveDashboardFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("dashboard");
+}
+
+function resolveReportFromUrl(): string | null {
+  return new URLSearchParams(window.location.search).get("report");
+}
+
+function resolveViewKindFromUrl(): OperatorViewKind {
+  return new URLSearchParams(window.location.search).get("report") ? "report" : "dashboard";
 }
 
 export default function OperatorDashboardApp({
@@ -27,22 +42,45 @@ export default function OperatorDashboardApp({
 }: OperatorDashboardAppProps) {
   useObjectWebSocket();
   const uiQuery = useOperatorUi(appId);
+  const [viewKind, setViewKind] = useState<OperatorViewKind>(resolveViewKindFromUrl);
   const [dashboardPath, setDashboardPath] = useState<string | null>(resolveDashboardFromUrl);
+  const [reportPath, setReportPath] = useState<string | null>(resolveReportFromUrl);
   const [selection, setSelection] = useState<Record<string, string>>({});
 
   const ui = uiQuery.data;
-  const activePath = useMemo(
+  const activeDashboardPath = useMemo(
     () => (ui ? resolveOperatorDashboard(ui, dashboardPath) : ""),
     [ui, dashboardPath]
+  );
+  const activeReportPath = useMemo(
+    () => (ui ? resolveOperatorReport(ui, reportPath) : ""),
+    [ui, reportPath]
   );
 
   const navigateDashboard = useCallback(
     (path: string) => {
+      setViewKind("dashboard");
       setDashboardPath(path);
       const url = new URL(window.location.href);
       url.searchParams.set("mode", "operator");
       url.searchParams.set("app", appId);
       url.searchParams.set("dashboard", path);
+      url.searchParams.delete("report");
+      url.searchParams.delete("screen");
+      window.history.replaceState({}, "", url.toString());
+    },
+    [appId]
+  );
+
+  const navigateReport = useCallback(
+    (path: string) => {
+      setViewKind("report");
+      setReportPath(path);
+      const url = new URL(window.location.href);
+      url.searchParams.set("mode", "operator");
+      url.searchParams.set("app", appId);
+      url.searchParams.set("report", path);
+      url.searchParams.delete("dashboard");
       url.searchParams.delete("screen");
       window.history.replaceState({}, "", url.toString());
     },
@@ -53,18 +91,28 @@ export default function OperatorDashboardApp({
     if (!ui) {
       return;
     }
-    const resolved = resolveOperatorDashboard(ui, dashboardPath);
-    if (!resolved || resolved === dashboardPath) {
+    if (viewKind === "report") {
+      const resolved = resolveOperatorReport(ui, reportPath);
+      if (resolved && resolved !== reportPath) {
+        navigateReport(resolved);
+      }
       return;
     }
-    navigateDashboard(resolved);
-  }, [ui, dashboardPath, navigateDashboard]);
+    const resolved = resolveOperatorDashboard(ui, dashboardPath);
+    if (resolved && resolved !== dashboardPath) {
+      navigateDashboard(resolved);
+    }
+  }, [ui, viewKind, dashboardPath, reportPath, navigateDashboard, navigateReport]);
 
   if (uiQuery.isLoading) {
     return <div className="operator-shell op-loading">Загрузка operator UI…</div>;
   }
 
-  if (uiQuery.error || !ui || !activePath) {
+  const hasDashboards = Boolean(ui?.dashboards?.length);
+  const hasReports = Boolean(ui?.reports?.length);
+  const activePath = viewKind === "report" ? activeReportPath : activeDashboardPath;
+
+  if (uiQuery.error || !ui || (!hasDashboards && !hasReports)) {
     return (
       <div className="operator-shell op-loading">
         {uiQuery.error
@@ -74,27 +122,41 @@ export default function OperatorDashboardApp({
     );
   }
 
+  if (!activePath) {
+    return (
+      <div className="operator-shell op-loading">
+        {`Operator UI для «${appId}» не содержит дашбордов или отчётов.`}
+      </div>
+    );
+  }
+
   return (
     <div className="operator-shell">
       <OperatorDashboardChrome
         ui={ui}
+        viewKind={viewKind}
         activePath={activePath}
         appId={appId}
         session={session}
         onSwitchAdmin={onSwitchAdmin}
         onLogout={onLogout}
         onSelectDashboard={navigateDashboard}
+        onSelectReport={navigateReport}
       />
       <div className="operator-layout operator-dashboard-layout">
         <main className="operator-dashboard operator-dashboard-shell-host">
-          <DashboardBuilder
-            key={activePath}
-            path={activePath}
-            operatorMode
-            selection={selection}
-            onSelectionChange={setSelection}
-            onNavigateDashboard={navigateDashboard}
-          />
+          {viewKind === "report" ? (
+            <ReportBuilder key={activeReportPath} path={activeReportPath} operatorMode />
+          ) : (
+            <DashboardBuilder
+              key={activeDashboardPath}
+              path={activeDashboardPath}
+              operatorMode
+              selection={selection}
+              onSelectionChange={setSelection}
+              onNavigateDashboard={navigateDashboard}
+            />
+          )}
         </main>
         <aside className="operator-sidebar">
           <OperatorSidebar operatorId={operatorId} ui={ui} />
@@ -106,23 +168,29 @@ export default function OperatorDashboardApp({
 
 function OperatorDashboardChrome({
   ui,
+  viewKind,
   activePath,
   appId,
   session,
   onSwitchAdmin,
   onLogout,
   onSelectDashboard,
+  onSelectReport,
 }: {
   ui: OperatorUi;
+  viewKind: OperatorViewKind;
   activePath: string;
   appId: string;
   session?: AuthSession;
   onSwitchAdmin?: () => void;
   onLogout?: () => void;
   onSelectDashboard: (path: string) => void;
+  onSelectReport: (path: string) => void;
 }) {
   const activeTitle =
-    ui.dashboards.find((item) => item.path === activePath)?.title ?? activePath;
+    viewKind === "report"
+      ? (ui.reports?.find((item) => item.path === activePath)?.title ?? activePath)
+      : (ui.dashboards.find((item) => item.path === activePath)?.title ?? activePath);
 
   return (
     <>
@@ -152,10 +220,20 @@ function OperatorDashboardChrome({
           <button
             key={dashboard.path}
             type="button"
-            className={`btn small ${dashboard.path === activePath ? "primary" : ""}`}
+            className={`btn small ${viewKind === "dashboard" && dashboard.path === activePath ? "primary" : ""}`}
             onClick={() => onSelectDashboard(dashboard.path)}
           >
             {dashboard.title}
+          </button>
+        ))}
+        {(ui.reports ?? []).map((report) => (
+          <button
+            key={report.path}
+            type="button"
+            className={`btn small ${viewKind === "report" && report.path === activePath ? "primary" : ""}`}
+            onClick={() => onSelectReport(report.path)}
+          >
+            {report.title}
           </button>
         ))}
       </nav>

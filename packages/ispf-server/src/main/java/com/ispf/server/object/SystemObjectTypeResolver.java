@@ -11,6 +11,7 @@ public final class SystemObjectTypeResolver {
             Map.entry("root.platform", ObjectType.PLATFORM),
             Map.entry("root.platform.devices", ObjectType.DEVICES),
             Map.entry("root.platform.dashboards", ObjectType.DASHBOARDS),
+            Map.entry("root.platform.reports", ObjectType.REPORTS),
             Map.entry("root.platform.workflows", ObjectType.WORKFLOWS),
             Map.entry("root.platform.alert-rules", ObjectType.ALERT_RULES),
             Map.entry("root.platform.correlators", ObjectType.CORRELATORS),
@@ -27,7 +28,8 @@ public final class SystemObjectTypeResolver {
             "application-schedule-v1", ObjectType.SCHEDULE,
             "application-binding-v1", ObjectType.BINDING,
             "application-migration-v1", ObjectType.MIGRATION,
-            "operator-screen-v1", ObjectType.SCREEN
+            "operator-screen-v1", ObjectType.SCREEN,
+            "report-v1", ObjectType.REPORT
     );
 
     private SystemObjectTypeResolver() {

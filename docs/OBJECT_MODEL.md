@@ -15,6 +15,8 @@ root
     ├── root.platform.models
     ├── root.platform.dashboards
     │   └── root.platform.dashboards.demo-sensor
+    ├── root.platform.reports
+    │   └── root.platform.reports.ready-items
     ├── root.platform.security
     │   ├── root.platform.security.users
     │   │   ├── root.platform.security.users.admin
@@ -58,7 +60,7 @@ root
 | `USERS` / `USER` | Пользователи |
 | `ROLES` / `ROLE` | Роли |
 | `FUNCTIONS` / `FUNCTION` | Функции приложения |
-| `REPORTS` / `REPORT` | SQL-отчёты |
+| `REPORTS` / `REPORT` | Каталог `root.platform.reports` и SQL-отчёты (`report-v1`) |
 | `AGENT` | Edge agent |
 | `CUSTOM` | Произвольный контейнер (fallback для неизвестных узлов) |
 

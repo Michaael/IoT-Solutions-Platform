@@ -21,6 +21,7 @@ import {
 import AlertRuleInspector from "./automation/AlertRuleInspector";
 import CorrelatorInspector from "./automation/CorrelatorInspector";
 import { canCreateChildAt, createActionLabel } from "../utils/createObjectMode";
+import { isSpecializedEditorObject } from "../utils/editorObject";
 import { isSystemCatalogFolder } from "../utils/systemFolderConfig";
 import { isFederationRoot } from "../utils/federationPath";
 import { isTenantsRoot } from "../utils/tenantPath";
@@ -58,6 +59,10 @@ export default function ExplorerView({
   const isFederation = isFederationRoot(selectedPath);
   const isTenants = isTenantsRoot(selectedPath);
   const isCatalogFolder = isSystemCatalogFolder(selectedPath, selectedObject?.type);
+  const opensInEditor = Boolean(
+    selectedObject
+    && isSpecializedEditorObject(selectedPath, selectedObject.type, selectedObject.templateId),
+  );
   const showCreateButton =
     isAdmin
     && canCreateChildAt(selectedPath, selectedObject?.type)
@@ -92,7 +97,9 @@ export default function ExplorerView({
           <span className="hint">
             {isModelsPath(selectedPath)
               ? "Полное определение модели — в редакторе (кнопка выше или двойной щелчок)"
-              : "Двойной щелчок по узлу также открывает редактор"}
+              : opensInEditor
+                ? "Дашборд / отчёт / workflow — двойной щелчок в дереве или «Открыть в редакторе»"
+                : "Двойной щелчок по узлу также открывает редактор"}
           </span>
         </div>
       )}
@@ -125,6 +132,7 @@ export default function ExplorerView({
           createLabel={showCreateButton ? createActionLabel(selectedPath) : undefined}
           onCreateChild={showCreateButton ? onCreateChild : undefined}
           onSelectPath={onSelectPath}
+          onOpenEditor={onOpenEditor}
         />
       ) : (
         <ObjectInspector path={selectedPath} onDeleted={onDeleted} canManage={isAdmin} />

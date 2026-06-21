@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createObject } from "../api";
 import { registerApplication } from "../api/applications";
+import { saveReportDefinition } from "../api/reports";
 import { createOperatorApp } from "../api/operatorApps";
 import { fetchDrivers } from "../api/drivers";
 import { formatDriverConfigJson } from "../utils/driverDefaults";
 import DriverMaturityBadge, { formatDriverOptionLabel } from "./DriverMaturityBadge";
 import {
   applicationObjectPath,
+  defaultObjectTypeForParent,
   operatorAppObjectPath,
   resolveCreateDialogMode,
 } from "../utils/createObjectMode";
@@ -18,6 +20,7 @@ const OBJECT_TYPES: ObjectType[] = [
   "DEVICE",
   "MODEL",
   "DASHBOARD",
+  "REPORT",
   "WORKFLOW",
   "ALERT",
   "AGENT",
@@ -43,10 +46,15 @@ export default function CreateObjectDialog({
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<ObjectType>("CUSTOM");
+  const [type, setType] = useState<ObjectType>(() => defaultObjectTypeForParent(parentPath));
+
+  useEffect(() => {
+    setType(defaultObjectTypeForParent(parentPath));
+  }, [parentPath]);
   const [driverId, setDriverId] = useState("virtual");
   const [pollIntervalMs, setPollIntervalMs] = useState(DEFAULT_POLL_INTERVAL_MS);
   const [configPreview, setConfigPreview] = useState("{}");
+  const [reportAppId, setReportAppId] = useState("demo");
 
   const dialogTitle = useMemo(() => {
     switch (mode) {
@@ -58,6 +66,8 @@ export default function CreateObjectDialog({
         return "Новое правило алерта";
       case "correlator":
         return "Новый коррелятор";
+      case "report":
+        return "Новый отчёт";
       default:
         return "Новый объект";
     }
@@ -116,6 +126,27 @@ export default function CreateObjectDialog({
         });
         return obj.path;
       }
+      if (mode === "report") {
+        const obj = await createObject({
+          parentPath,
+          name,
+          type: "REPORT",
+          displayName: displayName || name,
+          description,
+          templateId: "report-v1",
+        });
+        const appId = reportAppId.trim();
+        if (appId) {
+          await saveReportDefinition(obj.path, {
+            title: displayName || name,
+            appId,
+            query: "SELECT 1 AS value",
+            parameters: [],
+            columns: [{ field: "value", label: "Value" }],
+          });
+        }
+        return obj.path;
+      }
       const obj = await createObject({
         parentPath,
         name,
@@ -125,9 +156,11 @@ export default function CreateObjectDialog({
         templateId:
           type === "DASHBOARD"
             ? "dashboard-v1"
-            : type === "WORKFLOW"
-              ? "workflow-v1"
-              : undefined,
+            : type === "REPORT"
+              ? "report-v1"
+              : type === "WORKFLOW"
+                ? "workflow-v1"
+                : undefined,
         driverId: type === "DEVICE" ? driverId : undefined,
         driverPollIntervalMs: type === "DEVICE" ? pollIntervalMs : undefined,
         autoStartDriver: false,
@@ -172,6 +205,22 @@ export default function CreateObjectDialog({
             <p className="hint">
               После создания настройте параметры в панели свойств выбранного объекта.
             </p>
+          )}
+          {mode === "report" && (
+            <>
+              <p className="hint">
+                SQL-отчёт в <code>{parentPath}</code>. После создания откроется редактор с preview и CSV.
+              </p>
+              <label>
+                appId deploy-приложения *
+                <input
+                  value={reportAppId}
+                  onChange={(e) => setReportAppId(e.target.value)}
+                  placeholder="demo"
+                  required
+                />
+              </label>
+            </>
           )}
           <form
             className="form-grid"

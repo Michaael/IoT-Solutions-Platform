@@ -21,6 +21,7 @@ import com.ispf.server.application.function.ApplicationFunctionStore;
 import com.ispf.server.application.report.ApplicationReportService;
 import com.ispf.server.application.schedule.PlatformSchedulerService;
 import com.ispf.server.application.tree.ApplicationObjectTreeService;
+import com.ispf.server.report.ReportService;
 import com.ispf.server.plugin.model.ModelPersistenceService;
 import org.springframework.stereotype.Service;
 
@@ -302,7 +303,8 @@ public class ApplicationBundleDeployService {
 
     private static boolean hasOperatorUiManifest(BundleManifest manifest) {
         return (manifest.operatorUi() != null && !manifest.operatorUi().isEmpty())
-                || (manifest.dashboards() != null && !manifest.dashboards().isEmpty());
+                || (manifest.dashboards() != null && !manifest.dashboards().isEmpty())
+                || (manifest.reports() != null && !manifest.reports().isEmpty());
     }
 
     public Map<String, Object> operatorUi(String appId) throws Exception {
@@ -313,31 +315,60 @@ public class ApplicationBundleDeployService {
             return manifest.operatorUi();
         }
         if (manifest.dashboards() != null && !manifest.dashboards().isEmpty()) {
-            return buildOperatorUiFromDashboards(appId, manifest);
+            return buildOperatorUiFromBundle(appId, manifest);
+        }
+        if (manifest.reports() != null && !manifest.reports().isEmpty()) {
+            return buildOperatorUiFromBundle(appId, manifest);
         }
         throw new IllegalArgumentException(
                 "Operator UI not defined: set operatorUi or dashboards[] in bundle for app: " + appId
         );
     }
 
-    private Map<String, Object> buildOperatorUiFromDashboards(String appId, BundleManifest manifest) {
+    private Map<String, Object> buildOperatorUiFromBundle(String appId, BundleManifest manifest) {
         List<Map<String, Object>> dashboards = new ArrayList<>();
-        String defaultPath = null;
-        for (BundleDashboard dashboard : manifest.dashboards()) {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("path", dashboard.path());
-            entry.put("title", dashboard.title() != null ? dashboard.title() : dashboard.path());
-            dashboards.add(entry);
-            if (defaultPath == null) {
-                defaultPath = dashboard.path();
+        String defaultDashboard = null;
+        if (manifest.dashboards() != null) {
+            for (BundleDashboard dashboard : manifest.dashboards()) {
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("path", dashboard.path());
+                entry.put("title", dashboard.title() != null ? dashboard.title() : dashboard.path());
+                dashboards.add(entry);
+                if (defaultDashboard == null) {
+                    defaultDashboard = dashboard.path();
+                }
             }
         }
+
+        List<Map<String, Object>> reports = new ArrayList<>();
+        String defaultReport = null;
+        if (manifest.reports() != null) {
+            for (BundleReport report : manifest.reports()) {
+                Map<String, Object> entry = new LinkedHashMap<>();
+                String path = ReportService.reportPath(report.reportId());
+                entry.put("path", path);
+                entry.put("title", report.title() != null ? report.title() : report.reportId());
+                reports.add(entry);
+                if (defaultReport == null) {
+                    defaultReport = path;
+                }
+            }
+        }
+
         Map<String, Object> ui = new LinkedHashMap<>();
         ui.put("appId", appId);
         ui.put("title", manifest.displayName() != null ? manifest.displayName() : appId);
-        ui.put("defaultDashboard", defaultPath);
+        ui.put("defaultDashboard", defaultDashboard != null ? defaultDashboard : "");
         ui.put("dashboards", dashboards);
+        if (!reports.isEmpty()) {
+            ui.put("reports", reports);
+            ui.put("defaultReport", defaultReport);
+        }
         return ui;
+    }
+
+    private Map<String, Object> buildOperatorUiFromDashboards(String appId, BundleManifest manifest) {
+        return buildOperatorUiFromBundle(appId, manifest);
     }
 
     private void deployFunction(String appId, BundleFunction function) throws Exception {

@@ -688,6 +688,105 @@ public class ModelBootstrap {
 
         modelEngine.createModel(dashboard);
 
+        ModelDefinition report = new ModelDefinition(
+                UUID.randomUUID().toString(),
+                "report-v1",
+                "SQL report definition stored on object tree (REQ-PF-12)",
+                ModelType.RELATIVE,
+                ObjectType.REPORT,
+                "",
+                List.of(
+                        ModelVariableDefinition.of(
+                                "title",
+                                "Report title",
+                                "info",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "Report"))
+                        ),
+                        ModelVariableDefinition.of(
+                                "appId",
+                                "Application id — SQL runs in app schema",
+                                "config",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", ""))
+                        ),
+                        ModelVariableDefinition.of(
+                                "query",
+                                "SELECT/WITH SQL query (? placeholders)",
+                                "config",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", ""))
+                        ),
+                        ModelVariableDefinition.of(
+                                "parameters",
+                                "JSON array of SQL parameter names",
+                                "config",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "[]"))
+                        ),
+                        ModelVariableDefinition.of(
+                                "columns",
+                                "JSON array of {field, label}",
+                                "config",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "[]"))
+                        ),
+                        ModelVariableDefinition.of(
+                                "defaultParameters",
+                                "JSON object of default parameter values for preview",
+                                "config",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "{}"))
+                        ),
+                        ModelVariableDefinition.of(
+                                "maxRows",
+                                "Maximum rows returned",
+                                "config",
+                                INTEGER_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(INTEGER_VALUE_SCHEMA, Map.of("value", 1000))
+                        ),
+                        ModelVariableDefinition.of(
+                                "refreshIntervalMs",
+                                "Auto-refresh interval in view mode",
+                                "config",
+                                INTEGER_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(INTEGER_VALUE_SCHEMA, Map.of("value", 30000))
+                        )
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                Map.of(),
+                Instant.now(),
+                Instant.now()
+        );
+
+        modelEngine.createModel(report);
+
         ModelDefinition workflow = new ModelDefinition(
                 UUID.randomUUID().toString(),
                 "workflow-v1",

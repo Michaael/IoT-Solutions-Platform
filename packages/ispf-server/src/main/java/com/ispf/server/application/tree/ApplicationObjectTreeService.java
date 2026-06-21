@@ -9,7 +9,6 @@ import com.ispf.server.application.bundle.ApplicationBundleSnapshotStore;
 import com.ispf.server.application.data.ApplicationDataStore;
 import com.ispf.server.application.function.ApplicationFunctionHandler;
 import com.ispf.server.application.function.ApplicationFunctionStore;
-import com.ispf.server.application.report.ApplicationReportStore;
 import com.ispf.server.application.schedule.PlatformSchedulerService;
 import com.ispf.server.object.ObjectManager;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,6 @@ public class ApplicationObjectTreeService {
 
     private final ObjectManager objectManager;
     private final ApplicationDataStore dataStore;
-    private final ApplicationReportStore reportStore;
     private final ApplicationFunctionStore functionStore;
     private final ApplicationSqlBindingStore bindingStore;
     private final PlatformSchedulerService schedulerService;
@@ -37,7 +35,6 @@ public class ApplicationObjectTreeService {
     public ApplicationObjectTreeService(
             ObjectManager objectManager,
             ApplicationDataStore dataStore,
-            ApplicationReportStore reportStore,
             ApplicationFunctionStore functionStore,
             ApplicationSqlBindingStore bindingStore,
             PlatformSchedulerService schedulerService,
@@ -46,7 +43,6 @@ public class ApplicationObjectTreeService {
     ) {
         this.objectManager = objectManager;
         this.dataStore = dataStore;
-        this.reportStore = reportStore;
         this.functionStore = functionStore;
         this.bindingStore = bindingStore;
         this.schedulerService = schedulerService;
@@ -79,7 +75,6 @@ public class ApplicationObjectTreeService {
                 "application-v1"
         );
 
-        syncReports(appId, appPath);
         syncFunctions(appId, appPath);
         syncSchedules(appId, appPath);
         syncBindings(appId, appPath);
@@ -95,24 +90,6 @@ public class ApplicationObjectTreeService {
                 "Deployed application bundles",
                 "app-folder-v1"
         );
-    }
-
-    private void syncReports(String appId, String appPath) {
-        String folderPath = appPath + ".reports";
-        ensureFolder(folderPath, "Reports", "SQL reports (REQ-PF-12)");
-        Set<String> expected = new HashSet<>();
-        for (ApplicationReportStore.DeployedReport report : reportStore.listByApp(appId)) {
-            String nodeName = sanitizeNodeName(report.reportId());
-            expected.add(nodeName);
-            ensureNode(
-                    folderPath + "." + nodeName,
-                    ObjectType.REPORT,
-                    report.title(),
-                    report.description() != null ? report.description() : "reportId=" + report.reportId(),
-                    "application-report-v1"
-            );
-        }
-        pruneChildren(folderPath, expected);
     }
 
     private void syncFunctions(String appId, String appPath) {

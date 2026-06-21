@@ -13,7 +13,8 @@ export type WidgetType =
   | "status-badge"
   | "gauge"
   | "card-grid"
-  | "dashboard-link";
+  | "dashboard-link"
+  | "report";
 
 export type DashboardOpenMode = "navigate" | "modal";
 
@@ -194,6 +195,12 @@ export interface DashboardLinkWidget extends DashboardWidgetBase {
   confirmMessage?: string;
 }
 
+export interface ReportWidget extends DashboardWidgetBase {
+  type: "report";
+  reportPath: string;
+  emptyMessage?: string;
+}
+
 export type DashboardWidget =
   | ValueWidget
   | ToggleWidget
@@ -209,7 +216,8 @@ export type DashboardWidget =
   | StatusBadgeWidget
   | GaugeWidget
   | CardGridWidget
-  | DashboardLinkWidget;
+  | DashboardLinkWidget
+  | ReportWidget;
 
 export interface DashboardLayout {
   columns: number;
@@ -243,6 +251,7 @@ export const WIDGET_TYPES: Array<{ type: WidgetType; label: string }> = [
   { type: "gauge", label: "Шкала / gauge" },
   { type: "card-grid", label: "Карточки объектов" },
   { type: "dashboard-link", label: "Переход / модальный дашборд" },
+  { type: "report", label: "SQL-отчёт" },
 ];
 
 export function emptyLayout(): DashboardLayout {
@@ -407,6 +416,15 @@ export function newWidget(type: WidgetType, index: number): DashboardWidget {
         targetDashboardPath: "",
         openMode: "navigate",
         buttonLabel: "Открыть дашборд",
+      };
+    case "report":
+      return {
+        ...base,
+        type: "report",
+        w: 6,
+        h: 4,
+        reportPath: "",
+        emptyMessage: "Нет строк",
       };
     default:
       return { ...base, type: "value", decimals: 1 };

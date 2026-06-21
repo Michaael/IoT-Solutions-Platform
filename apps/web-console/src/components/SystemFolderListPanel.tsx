@@ -7,6 +7,7 @@ import {
   type SystemFolderListMeta,
 } from "../utils/systemFolderConfig";
 import type { ObjectType } from "../types";
+import { isSpecializedEditorObject } from "../utils/editorObject";
 
 interface SystemFolderListPanelProps {
   folderPath: string;
@@ -17,6 +18,7 @@ interface SystemFolderListPanelProps {
   createLabel?: string;
   onCreateChild?: () => void;
   onSelectPath: (path: string) => void;
+  onOpenEditor?: (path: string) => void;
 }
 
 function sortChildren(items: ObjectSummary[]): ObjectSummary[] {
@@ -37,6 +39,7 @@ export default function SystemFolderListPanel({
   createLabel,
   onCreateChild,
   onSelectPath,
+  onOpenEditor,
 }: SystemFolderListPanelProps) {
   const meta: SystemFolderListMeta = getSystemFolderListMeta(
     folderPath,
@@ -87,11 +90,24 @@ export default function SystemFolderListPanel({
               <th>Тип</th>
               <th>Шаблон</th>
               <th>Описание</th>
+              {onOpenEditor && <th>Действия</th>}
             </tr>
           </thead>
           <tbody>
-            {children.map((child) => (
-              <tr key={child.path}>
+            {children.map((child) => {
+              const canOpenEditor = Boolean(
+                onOpenEditor && isSpecializedEditorObject(child.path, child.type, child.templateId),
+              );
+              return (
+              <tr
+                key={child.path}
+                className={canOpenEditor ? "catalog-row-openable" : undefined}
+                onDoubleClick={() => {
+                  if (canOpenEditor) {
+                    onOpenEditor?.(child.path);
+                  }
+                }}
+              >
                 <td>
                   <button
                     type="button"
@@ -107,8 +123,24 @@ export default function SystemFolderListPanel({
                 </td>
                 <td>{child.templateId ? <code>{child.templateId}</code> : "—"}</td>
                 <td>{child.description || "—"}</td>
+                {onOpenEditor && (
+                  <td>
+                    {canOpenEditor ? (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => onOpenEditor(child.path)}
+                      >
+                        Открыть
+                      </button>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                )}
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       )}

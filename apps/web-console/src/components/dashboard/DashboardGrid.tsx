@@ -15,6 +15,7 @@ import GaugeWidgetView from "./widgets/GaugeWidgetView";
 import CardGridWidgetView from "./widgets/CardGridWidgetView";
 import FunctionWidgetView from "./widgets/FunctionWidgetView";
 import DashboardLinkWidgetView from "./widgets/DashboardLinkWidgetView";
+import ReportWidgetView from "./widgets/ReportWidgetView";
 
 const GRID_MARGIN: [number, number] = [12, 12];
 const DRAG_CANCEL_SELECTOR =
@@ -363,6 +364,14 @@ function WidgetRenderer({
       );
     case "dashboard-link":
       return <DashboardLinkWidgetView widget={widget} editable={editable} />;
+    case "report":
+      return (
+        <ReportWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
     default:
       return <div className="dash-widget">Неизвестный виджет</div>;
   }

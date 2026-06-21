@@ -8,8 +8,34 @@ import {
 import type { ObjectType } from "../types";
 
 export const APPLICATIONS_ROOT = "root.platform.applications";
+export const REPORTS_ROOT = "root.platform.reports";
 
-export type CreateDialogMode = "object" | "application" | "operator-app" | "alert-rule" | "correlator";
+export type CreateDialogMode =
+  | "object"
+  | "application"
+  | "operator-app"
+  | "alert-rule"
+  | "correlator"
+  | "report";
+
+function isPlatformReportsFolder(path: string): boolean {
+  return path === REPORTS_ROOT || (path.endsWith(".reports") && !path.startsWith(`${APPLICATIONS_ROOT}.`));
+}
+
+function isPlatformCatalogContainer(path: string): boolean {
+  if (path === "root" || path === "root.platform") {
+    return true;
+  }
+  return (
+    path.endsWith(".devices")
+    || path.endsWith(".models")
+    || path.endsWith(".dashboards")
+    || isPlatformReportsFolder(path)
+    || path.endsWith(".workflows")
+    || path.endsWith(".alert-rules")
+    || path.endsWith(".correlators")
+  );
+}
 
 export function resolveCreateDialogMode(parentPath: string): CreateDialogMode {
   if (parentPath === APPLICATIONS_ROOT) {
@@ -24,6 +50,9 @@ export function resolveCreateDialogMode(parentPath: string): CreateDialogMode {
   if (parentPath === CORRELATORS_ROOT) {
     return "correlator";
   }
+  if (isPlatformReportsFolder(parentPath)) {
+    return "report";
+  }
   return "object";
 }
 
@@ -37,6 +66,8 @@ export function createActionLabel(parentPath: string): string {
       return "+ Правило алерта";
     case "correlator":
       return "+ Коррелятор";
+    case "report":
+      return "+ Отчёт";
     default:
       return "+ Объект";
   }
@@ -70,6 +101,9 @@ export function canCreateChildAt(path: string, objectType: ObjectType | undefine
   if (path.startsWith("root.platform.security")) {
     return false;
   }
+  if (isPlatformCatalogContainer(path)) {
+    return true;
+  }
 
   const containerTypes: ObjectType[] = [
     "ROOT",
@@ -77,6 +111,7 @@ export function canCreateChildAt(path: string, objectType: ObjectType | undefine
     "PLATFORM",
     "DEVICES",
     "DASHBOARDS",
+    "REPORTS",
     "WORKFLOWS",
     "ALERT_RULES",
     "CORRELATORS",
@@ -97,10 +132,24 @@ export function canCreateChildAt(path: string, objectType: ObjectType | undefine
     path.endsWith(".devices")
     || path.endsWith(".models")
     || path.endsWith(".dashboards")
+    || path.endsWith(".reports")
     || path.endsWith(".workflows")
     || path.endsWith(".alert-rules")
     || path.endsWith(".correlators")
   );
+}
+
+export function defaultObjectTypeForParent(parentPath: string): ObjectType {
+  if (parentPath.endsWith(".dashboards")) {
+    return "DASHBOARD";
+  }
+  if (parentPath.endsWith(".reports")) {
+    return "REPORT";
+  }
+  if (parentPath.endsWith(".workflows")) {
+    return "WORKFLOW";
+  }
+  return "CUSTOM";
 }
 
 /** Tree node name for app id (same rules as server sanitizeNodeName). */

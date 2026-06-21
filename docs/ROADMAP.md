@@ -109,6 +109,17 @@
 
 См. [COLLABORATION.md](COLLABORATION.md).
 
+## Phase 12 — Reports tree-first
+
+| # | Тема | Статус |
+|---|------|--------|
+| 12.1 | `report-v1` model + `root.platform.reports` catalog | Done |
+| 12.2 | `ReportService` + `/api/v1/reports/by-path` API | Done |
+| 12.3 | Report Builder in Web Console + legacy app API facade | Done |
+| 12.4 | Dashboard `report` widget + operatorUi `reports[]` | Done |
+
+См. [REPORTS.md](REPORTS.md).
+
 ## Platform baseline
 
 | # | Тема | Статус |

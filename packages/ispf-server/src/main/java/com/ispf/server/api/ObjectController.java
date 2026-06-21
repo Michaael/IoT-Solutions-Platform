@@ -24,6 +24,7 @@ import com.ispf.server.api.support.ObjectCollaborationSupport;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectUiIconService;
 import com.ispf.server.dashboard.DashboardService;
+import com.ispf.server.report.ReportService;
 import com.ispf.server.driver.DeviceProvisioningService;
 import com.ispf.server.automation.AutomationTreeService;
 import com.ispf.server.security.PlatformRoleService;
@@ -61,6 +62,7 @@ public class ObjectController {
 
     private final ObjectManager objectManager;
     private final DashboardService dashboardService;
+    private final ReportService reportService;
     private final WorkflowService workflowService;
     private final PlatformUserService platformUserService;
     private final PlatformRoleService platformRoleService;
@@ -77,6 +79,7 @@ public class ObjectController {
     public ObjectController(
             ObjectManager objectManager,
             DashboardService dashboardService,
+            ReportService reportService,
             WorkflowService workflowService,
             PlatformUserService platformUserService,
             PlatformRoleService platformRoleService,
@@ -92,6 +95,7 @@ public class ObjectController {
     ) {
         this.objectManager = objectManager;
         this.dashboardService = dashboardService;
+        this.reportService = reportService;
         this.workflowService = workflowService;
         this.platformUserService = platformUserService;
         this.platformRoleService = platformRoleService;
@@ -242,6 +246,9 @@ public class ObjectController {
         );
         if (request.type() == ObjectType.DASHBOARD) {
             dashboardService.ensureDashboardStructure(node.path());
+        }
+        if (request.type() == ObjectType.REPORT) {
+            reportService.ensureReportStructure(node.path());
         }
         if (request.type() == ObjectType.WORKFLOW) {
             workflowService.ensureWorkflowStructure(node.path());

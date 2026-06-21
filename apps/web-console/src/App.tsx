@@ -16,6 +16,7 @@ import {
   shouldOpenOperatorShell,
 } from "./auth/routing";
 import type { EditorTab } from "./types";
+import { resolveEditorObjectType } from "./utils/editorObject";
 import { buildObjectTree } from "./utils/tree";
 import { readSelectedPath, writeSelectedPath } from "./utils/treeExpanded";
 import {
@@ -28,6 +29,7 @@ import ObjectPropertiesEditor from "./components/ObjectPropertiesEditor";
 import ObjectTree from "./components/ObjectTree";
 import CreateObjectDialog from "./components/CreateObjectDialog";
 import DashboardBuilder from "./components/dashboard/DashboardBuilder";
+import ReportBuilder from "./components/report/ReportBuilder";
 import ExplorerView from "./components/ExplorerView";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
 import OperatorView from "./components/operator/OperatorView";
@@ -210,7 +212,7 @@ export default function App() {
       id: `editor-${tabCounter++}`,
       path,
       title: ctx?.displayName ?? path.split(".").pop() ?? path,
-      objectType: ctx?.type,
+      objectType: resolveEditorObjectType(path, ctx?.type, ctx?.templateId),
     };
     setEditorTabs((tabs) => [...tabs, tab]);
     setWorkspaceTab(tab.id);
@@ -230,6 +232,7 @@ export default function App() {
   const activeEditor = editorTabs.find((t) => t.id === workspaceTab);
   const isSpecializedEditor =
     activeEditor?.objectType === "DASHBOARD"
+    || activeEditor?.objectType === "REPORT"
     || activeEditor?.objectType === "WORKFLOW"
     || activeEditor?.objectType === "MODEL"
     || (activeEditor != null && isModelsPath(activeEditor.path));
@@ -450,6 +453,12 @@ export default function App() {
                 onClose={() => closeEditor(activeEditor.id)}
                 onOpenProperties={() => setPropertiesTabPath(activeEditor.path)}
                 onNavigateDashboard={openEditor}
+              />
+            ) : activeEditor.objectType === "REPORT" ? (
+              <ReportBuilder
+                path={activeEditor.path}
+                onClose={() => closeEditor(activeEditor.id)}
+                onOpenProperties={() => setPropertiesTabPath(activeEditor.path)}
               />
             ) : activeEditor.objectType === "WORKFLOW" ? (
               <WorkflowBuilder

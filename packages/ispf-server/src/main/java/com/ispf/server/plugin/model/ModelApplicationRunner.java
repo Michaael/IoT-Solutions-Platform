@@ -151,6 +151,7 @@ public class ModelApplicationRunner {
         ensureNode("root.platform.dashboards", ObjectType.DASHBOARDS, "Dashboards", "HMI dashboards");
         ensureNode("root.platform.dashboards.demo-sensor", ObjectType.DASHBOARD, "Demo Sensor Dashboard", "Live HMI for demo MQTT temperature sensor", "dashboard-v1");
         ensureNode("root.platform.dashboards.snmp-host-monitoring", ObjectType.DASHBOARD, "SNMP Host Monitoring", "System monitoring dashboard for SNMP agents (Windows/Linux)", "dashboard-v1");
+        ensureNode("root.platform.reports", ObjectType.REPORTS, "Reports", "SQL reports (REQ-PF-12)");
         ensureNode("root.platform.workflows", ObjectType.WORKFLOWS, "Workflows", "BPMN automation workflows");
         ensureNode("root.platform.workflows.demo-alarm-handler", ObjectType.WORKFLOW, "Demo Alarm Handler", "Triggers when demo sensor alarm becomes active", "workflow-v1");
         ensureNode("root.platform.alert-rules", ObjectType.ALERT_RULES, "Alert Rules", "CEL rules that publish events on variable changes");

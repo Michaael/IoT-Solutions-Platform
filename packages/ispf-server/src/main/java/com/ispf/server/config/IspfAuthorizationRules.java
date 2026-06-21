@@ -85,6 +85,9 @@ public final class IspfAuthorizationRules {
         auth.requestMatchers(HttpMethod.POST, "/api/v1/applications/*/reports/*/run")
                 .hasAnyRole(IspfRoles.OPERATOR, IspfRoles.ADMIN);
 
+        auth.requestMatchers(HttpMethod.POST, "/api/v1/reports/by-path/run")
+                .hasAnyRole(IspfRoles.OPERATOR, IspfRoles.ADMIN);
+
         auth.requestMatchers("/api/v1/**").hasRole(IspfRoles.ADMIN);
     }
 }

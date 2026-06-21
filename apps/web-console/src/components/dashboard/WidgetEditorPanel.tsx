@@ -494,6 +494,25 @@ export default function WidgetEditorPanel({
             </label>
           </>
         )}
+        {widget.type === "report" && (
+          <>
+            <label className="full">
+              Путь отчёта (reportPath)
+              <input
+                value={widget.reportPath}
+                onChange={(e) => update({ reportPath: e.target.value })}
+                placeholder="root.platform.reports.ready-items"
+              />
+            </label>
+            <label>
+              Пустое сообщение
+              <input
+                value={widget.emptyMessage ?? ""}
+                onChange={(e) => update({ emptyMessage: e.target.value })}
+              />
+            </label>
+          </>
+        )}
         <label className="full">
           Стили элементов (stylesJson)
           <textarea

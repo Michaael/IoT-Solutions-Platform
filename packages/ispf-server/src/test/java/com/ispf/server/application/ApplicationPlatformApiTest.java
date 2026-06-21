@@ -1241,6 +1241,10 @@ class ApplicationPlatformApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.applied", hasItem("report:ready-items")));
 
+        mockMvc.perform(get("/api/v1/objects"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].path", hasItem("root.platform.reports.ready-items")));
+
         mockMvc.perform(get("/api/v1/applications/%s/reports".formatted(APP_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].reportId").value("ready-items"));
@@ -1300,7 +1304,7 @@ class ApplicationPlatformApiTest {
         mockMvc.perform(get("/api/v1/objects"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].path", hasItem("root.platform.applications.platform-test")))
-                .andExpect(jsonPath("$[*].path", hasItem("root.platform.applications.platform-test.reports.tree-report")))
+                .andExpect(jsonPath("$[*].path", hasItem("root.platform.reports.tree-report")))
                 .andExpect(jsonPath("$[*].path", hasItem("root.platform.applications.platform-test.migrations.tree_items")))
                 .andExpect(jsonPath("$[*].path", hasItem("root.platform.applications.platform-test.screens.main")));
     }

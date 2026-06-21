@@ -135,7 +135,7 @@ REQ-PF и bundle deploy — способ **загрузить** declarative-ко
 | **PF-09** | Integration Simulator SPI    | **Готово**       | — (virtual profiles bundle + acceptance v0.3.0) | P2  |
 | **PF-10** | Workflow cancel + signal     | **Готово**       | —                                               | P1  |
 | **PF-11** | Function rollback / versions | **Готово**       | — (API + Web Console deploy tab v0.3.0)         | P2  |
-| **PF-12** | Application SQL reports      | **Да**           | PDF export (out of scope)                       | P2  |
+| **PF-12** | Application SQL reports      | **Готово**       | Tree-first `root.platform.reports` + Report Builder (Phase 12); PDF out of scope | P2  |
 | **PF-14** | Device driver catalog        | **Готово**       | 58 `driverId` в `main` (§10)                    | P3+ |
 
 
@@ -711,7 +711,7 @@ Platform **не** содержит отраслевую бизнес-логик�
 
 | Дата       | Изменение                                                                   |
 | ---------- | --------------------------------------------------------------------------- |
-| 2026-06-21 | Phase 10.1 v0.6.0: persistent binding state (`@bindingState`); federation unbind snapshot restore |
+| 2026-06-21 | Phase 12: tree-first reports (`root.platform.reports`, `report-v1`, Report Builder) |
 | 2026-06-21 | Phase 6 kickoff v0.3.0: PF-03 deprecation docs, ROADMAP §6, doc sync       |
 | 2026-06-21 | Phase 5 closure v0.2.0: acceptance §8.1, doc sync, bulk model upgrade, BPMN panel |
 | 2026-06-21 | §0.1 north star: бизнес-логика в механизмах object tree; §8.1 Phase 5 priorities |

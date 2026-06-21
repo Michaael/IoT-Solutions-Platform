@@ -64,6 +64,16 @@ public class PlatformBootstrap {
         );
         tree.register(dashboards);
 
+        PlatformObject reports = new PlatformObject(
+                UUID.randomUUID().toString(),
+                "root.platform.reports",
+                ObjectType.REPORTS,
+                "Reports",
+                "SQL reports (REQ-PF-12)",
+                null
+        );
+        tree.register(reports);
+
         PlatformObject demoDevice = new PlatformObject(
                 UUID.randomUUID().toString(),
                 "root.platform.devices.demo-sensor-01",
