@@ -73,6 +73,7 @@ public class EventCorrelatorService {
                 request.windowSeconds(),
                 request.minOccurrences(),
                 request.cooldownSeconds(),
+                request.sequenceGapSeconds(),
                 request.actionType(),
                 request.actionTarget(),
                 request.enabled()
@@ -104,6 +105,7 @@ public class EventCorrelatorService {
                 request.windowSeconds(),
                 request.minOccurrences(),
                 request.cooldownSeconds(),
+                request.sequenceGapSeconds(),
                 request.actionType(),
                 request.actionTarget(),
                 request.enabled()
@@ -183,12 +185,22 @@ public class EventCorrelatorService {
         Instant since = correlator.windowSeconds() > 0
                 ? now.minusSeconds(correlator.windowSeconds())
                 : now.minusSeconds(1);
-        return hitRepository.existsByCorrelatorIdAndObjectPathAndEventNameAndOccurredAtAfter(
+        var firstHit = hitRepository.findFirstByCorrelatorIdAndObjectPathAndEventNameAndOccurredAtAfterOrderByOccurredAtAsc(
                 correlator.id(),
                 objectPath,
                 firstEvent,
                 since
         );
+        if (firstHit.isEmpty()) {
+            return false;
+        }
+        if (correlator.sequenceGapSeconds() > 0) {
+            long gap = java.time.temporal.ChronoUnit.SECONDS.between(firstHit.get().getOccurredAt(), now);
+            if (gap > correlator.sequenceGapSeconds()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean processEventChainPattern(
@@ -208,16 +220,13 @@ public class EventCorrelatorService {
         Instant since = correlator.windowSeconds() > 0
                 ? now.minusSeconds(correlator.windowSeconds())
                 : now.minusSeconds(3600);
-        List<String> observed = hitRepository
+        List<CorrelatorHitEntity> hitEntities = hitRepository
                 .findByCorrelatorIdAndObjectPathAndOccurredAtAfterOrderByOccurredAtAsc(
                         correlator.id(),
                         objectPath,
                         since
-                )
-                .stream()
-                .map(hit -> hit.getEventName())
-                .toList();
-        return matchesEventChain(chain, observed);
+                );
+        return matchesEventChainWithGap(chain, hitEntities, correlator.sequenceGapSeconds());
     }
 
     private static List<String> eventChain(EventCorrelator correlator) {
@@ -234,6 +243,38 @@ public class EventCorrelatorService {
             }
         }
         return chain;
+    }
+
+    private static boolean matchesEventChainWithGap(
+            List<String> chain,
+            List<CorrelatorHitEntity> hits,
+            int maxGapSeconds
+    ) {
+        int chainIndex = 0;
+        Instant previousTime = null;
+        for (CorrelatorHitEntity hit : hits) {
+            if (chainIndex >= chain.size()) {
+                break;
+            }
+            if (!chain.get(chainIndex).equals(hit.getEventName())) {
+                continue;
+            }
+            if (previousTime != null && maxGapSeconds > 0) {
+                long gap = java.time.temporal.ChronoUnit.SECONDS.between(previousTime, hit.getOccurredAt());
+                if (gap > maxGapSeconds) {
+                    chainIndex = 0;
+                    previousTime = null;
+                    if (chain.get(0).equals(hit.getEventName())) {
+                        chainIndex = 1;
+                        previousTime = hit.getOccurredAt();
+                    }
+                    continue;
+                }
+            }
+            previousTime = hit.getOccurredAt();
+            chainIndex++;
+        }
+        return chainIndex >= chain.size();
     }
 
     private static boolean matchesEventChain(List<String> chain, List<String> observed) {
@@ -348,6 +389,7 @@ public class EventCorrelatorService {
             int windowSeconds,
             int minOccurrences,
             int cooldownSeconds,
+            int sequenceGapSeconds,
             CorrelatorActionType actionType,
             String actionTarget,
             boolean enabled
@@ -363,6 +405,7 @@ public class EventCorrelatorService {
             Integer windowSeconds,
             Integer minOccurrences,
             Integer cooldownSeconds,
+            Integer sequenceGapSeconds,
             CorrelatorActionType actionType,
             String actionTarget,
             Boolean enabled

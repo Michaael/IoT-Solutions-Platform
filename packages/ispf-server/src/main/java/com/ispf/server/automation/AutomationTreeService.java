@@ -125,6 +125,7 @@ public class AutomationTreeService {
                         CorrelatorPatternType.valueOf(entity.getPatternType()),
                         entity.getEventName(), entity.getSecondEventName(),
                         entity.getWindowSeconds(), entity.getMinOccurrences(), entity.getCooldownSeconds(),
+                        0,
                         CorrelatorActionType.valueOf(entity.getActionType()), entity.getActionTarget(),
                         entity.isEnabled(), entity.getLastTriggeredAt());
             }
@@ -271,13 +272,14 @@ public class AutomationTreeService {
             int windowSeconds,
             int minOccurrences,
             int cooldownSeconds,
+            int sequenceGapSeconds,
             CorrelatorActionType actionType,
             String actionTarget,
             boolean enabled
     ) {
         String path = uniqueCorrelatorPath(name);
         createCorrelatorNode(path, name, targetObjectPath, patternType, eventName, secondEventName,
-                windowSeconds, minOccurrences, cooldownSeconds, actionType, actionTarget, enabled, null);
+                windowSeconds, minOccurrences, cooldownSeconds, sequenceGapSeconds, actionType, actionTarget, enabled, null);
         return getCorrelator(path);
     }
 
@@ -292,6 +294,7 @@ public class AutomationTreeService {
             Integer windowSeconds,
             Integer minOccurrences,
             Integer cooldownSeconds,
+            Integer sequenceGapSeconds,
             CorrelatorActionType actionType,
             String actionTarget,
             Boolean enabled
@@ -320,6 +323,9 @@ public class AutomationTreeService {
         }
         if (cooldownSeconds != null) {
             setInteger(path, "cooldownSeconds", cooldownSeconds);
+        }
+        if (sequenceGapSeconds != null) {
+            setInteger(path, "sequenceGapSeconds", sequenceGapSeconds);
         }
         if (actionType != null) {
             setString(path, "actionType", actionType.name());
@@ -386,6 +392,7 @@ public class AutomationTreeService {
                 0,
                 1,
                 120,
+                0,
                 CorrelatorActionType.RUN_WORKFLOW,
                 "root.platform.workflows.demo-alarm-handler",
                 true
@@ -399,6 +406,7 @@ public class AutomationTreeService {
                 300,
                 1,
                 120,
+                0,
                 CorrelatorActionType.RUN_WORKFLOW,
                 "root.platform.workflows.demo-alarm-handler",
                 false
@@ -420,6 +428,7 @@ public class AutomationTreeService {
                 300,
                 3,
                 120,
+                0,
                 CorrelatorActionType.RUN_WORKFLOW,
                 "root.platform.workflows.demo-alarm-handler",
                 true
@@ -466,6 +475,7 @@ public class AutomationTreeService {
             int windowSeconds,
             int minOccurrences,
             int cooldownSeconds,
+            int sequenceGapSeconds,
             CorrelatorActionType actionType,
             String actionTarget,
             boolean enabled,
@@ -483,6 +493,7 @@ public class AutomationTreeService {
         setInteger(path, "windowSeconds", windowSeconds);
         setInteger(path, "minOccurrences", minOccurrences);
         setInteger(path, "cooldownSeconds", cooldownSeconds);
+        setInteger(path, "sequenceGapSeconds", sequenceGapSeconds);
         setString(path, "actionType", actionType.name());
         setString(path, "actionTarget", actionTarget);
         setBoolean(path, "enabled", enabled);
@@ -539,6 +550,7 @@ public class AutomationTreeService {
                 readInteger(node, "windowSeconds").orElse(0),
                 readInteger(node, "minOccurrences").orElse(1),
                 readInteger(node, "cooldownSeconds").orElse(120),
+                readInteger(node, "sequenceGapSeconds").orElse(0),
                 CorrelatorActionType.valueOf(actionRaw),
                 readString(node, "actionTarget").orElse(""),
                 readBoolean(node, "enabled").orElse(true),

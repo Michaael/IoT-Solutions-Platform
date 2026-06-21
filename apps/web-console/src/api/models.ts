@@ -88,3 +88,30 @@ export function fetchModelAttachments(objectPath?: string): Promise<ModelAttachm
   const query = objectPath ? `?objectPath=${encodeURIComponent(objectPath)}` : "";
   return request(`/api/v1/models/attachments${query}`);
 }
+
+export function upgradeModelInstances(modelId: string): Promise<{
+  status: string;
+  modelVersion: string;
+  upgraded: string[];
+  count: number;
+}> {
+  return request(`/api/v1/models/${encodeURIComponent(modelId)}/upgrade-instances`, {
+    method: "POST",
+  });
+}
+
+export function fetchModelInstances(modelId: string): Promise<{ objectPath: string }[]> {
+  return request(`/api/v1/models/${encodeURIComponent(modelId)}/instances`);
+}
+
+export function upgradeModel(
+  modelId: string,
+  targetPath: string,
+  targetVersion?: string
+): Promise<Record<string, unknown>> {
+  const params = new URLSearchParams({ targetPath });
+  if (targetVersion) params.set("targetVersion", targetVersion);
+  return request(`/api/v1/models/${encodeURIComponent(modelId)}/upgrade?${params}`, {
+    method: "POST",
+  });
+}

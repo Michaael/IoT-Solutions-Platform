@@ -92,4 +92,102 @@ class AlertRuleApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].eventName", hasItem("thresholdExceeded")));
     }
+
+    @Test
+    void rateLimitSecondsSuppressesRepeatedFires() throws Exception {
+        String rulePath = "root.platform.alert-rules.temperature-threshold-exceeded";
+        mockMvc.perform(post("/api/v1/drivers/runtime/stop").param("devicePath", DEMO_DEVICE))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/objects/by-path/variables")
+                        .param("path", rulePath)
+                        .param("name", "rateLimitSeconds")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "schema": {
+                                    "name": "rateLimitSeconds",
+                                    "fields": [{"name": "value", "type": "INTEGER"}]
+                                  },
+                                  "rows": [{"value": 3600}]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/objects/by-path/variables")
+                        .param("path", DEMO_DEVICE)
+                        .param("name", "temperature")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "schema": {
+                                    "name": "temperature",
+                                    "fields": [
+                                      {"name": "value", "type": "DOUBLE"},
+                                      {"name": "unit", "type": "STRING"}
+                                    ]
+                                  },
+                                  "rows": [{"value": 20.0, "unit": "C"}]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/objects/by-path/variables")
+                        .param("path", DEMO_DEVICE)
+                        .param("name", "temperature")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "schema": {
+                                    "name": "temperature",
+                                    "fields": [
+                                      {"name": "value", "type": "DOUBLE"},
+                                      {"name": "unit", "type": "STRING"}
+                                    ]
+                                  },
+                                  "rows": [{"value": 95.0, "unit": "C"}]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/objects/by-path/variables")
+                        .param("path", DEMO_DEVICE)
+                        .param("name", "temperature")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "schema": {
+                                    "name": "temperature",
+                                    "fields": [
+                                      {"name": "value", "type": "DOUBLE"},
+                                      {"name": "unit", "type": "STRING"}
+                                    ]
+                                  },
+                                  "rows": [{"value": 30.0, "unit": "C"}]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/objects/by-path/variables")
+                        .param("path", DEMO_DEVICE)
+                        .param("name", "temperature")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "schema": {
+                                    "name": "temperature",
+                                    "fields": [
+                                      {"name": "value", "type": "DOUBLE"},
+                                      {"name": "unit", "type": "STRING"}
+                                    ]
+                                  },
+                                  "rows": [{"value": 95.0, "unit": "C"}]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/events").param("objectPath", DEMO_DEVICE).param("limit", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.eventName == 'thresholdExceeded')]").value(org.hamcrest.Matchers.hasSize(1)));
+    }
 }

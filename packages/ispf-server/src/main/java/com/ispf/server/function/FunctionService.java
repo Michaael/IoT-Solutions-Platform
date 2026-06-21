@@ -39,6 +39,24 @@ public class FunctionService {
     }
 
     public DataRecord invoke(String objectPath, String functionName, DataRecordPayloadRequest input) {
+        if (applicationFunctionStore.findLatestByTreeFunctionPath(objectPath).isPresent()) {
+            String appId = resolveAppId(objectPath, functionName);
+            DataRecord resolvedInput = resolveInput(input, null);
+            for (FunctionHandler handler : handlers) {
+                if (handler.supports(objectPath, functionName)) {
+                    try {
+                        DataRecord result = handler.invoke(objectPath, functionName, resolvedInput);
+                        auditService.record(appId, objectPath, functionName, true, null);
+                        return result;
+                    } catch (RuntimeException ex) {
+                        auditService.record(appId, objectPath, functionName, false, ex.getMessage());
+                        throw ex;
+                    }
+                }
+            }
+            throw new IllegalArgumentException("Unknown application function for tree path: " + objectPath);
+        }
+
         PlatformObject node = objectManager.require(objectPath);
         FunctionDescriptor descriptor = node.functions().get(functionName);
         String appId = resolveAppId(objectPath, functionName);

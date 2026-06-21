@@ -22,6 +22,7 @@ export interface CreateCorrelatorPayload {
   windowSeconds: number;
   minOccurrences: number;
   cooldownSeconds: number;
+  sequenceGapSeconds?: number;
   actionType: CorrelatorActionType;
   actionTarget: string;
   enabled: boolean;

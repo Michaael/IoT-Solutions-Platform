@@ -27,6 +27,7 @@ class EventCorrelatorSequenceTest {
                 60,
                 1,
                 0,
+                0,
                 CorrelatorActionType.RUN_WORKFLOW,
                 "root.platform.workflows.demo-alarm-handler",
                 true
@@ -53,6 +54,7 @@ class EventCorrelatorSequenceTest {
                 "beta",
                 1,
                 1,
+                0,
                 0,
                 CorrelatorActionType.RUN_WORKFLOW,
                 "root.platform.workflows.demo-alarm-handler",

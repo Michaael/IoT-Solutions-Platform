@@ -59,11 +59,11 @@
 
 | # | Механизм | Направление | Статус |
 |---|----------|-------------|--------|
-| 5.1 | **Модели** | Богаче bindings; наследование шаблонов; версионирование моделей | In progress (`extendsModelId`, `modelVersion`, upgrade API) |
-| 5.2 | **Функции** | Больше script steps (`setVar`, `when`/`if`, …); declarative SQL bindings (PF-08); меньше поводов для custom code | In progress |
-| 5.3 | **События + correlators** | Сложнее паттерны (окна, цепочки, агрегации); эскалация без Java | In progress (`EVENT_CHAIN`, N-in-window demo) |
-| 5.4 | **Workflow** | Больше `serviceTask` через platform primitives (`fire_event`, `read_variable`, `start_workflow`, …) | In progress |
-| 5.5 | **Bundle / application layer** | Bundle = упаковка объектов дерева; tree-first invoke; reconcile `objects[]` | In progress |
+| 5.1 | **Модели** | Богаче bindings; наследование шаблонов; версионирование моделей | Done (`extendsModelId`, bulk upgrade API, vendor demo) |
+| 5.2 | **Функции** | Больше script steps (`setVar`, `when`/`if`, …); declarative SQL bindings (PF-08); меньше поводов для custom code | Done |
+| 5.3 | **События + correlators** | Сложнее паттерны (окна, цепочки, агрегации); эскалация без Java | Done (`EVENT_CHAIN`, `sequenceGapSeconds`, N-in-window demo) |
+| 5.4 | **Workflow** | Больше `serviceTask` через platform primitives (`fire_event`, `read_variable`, `start_workflow`, …) | Done (BPMN properties panel + acceptance tests) |
+| 5.5 | **Bundle / application layer** | Bundle = упаковка объектов дерева; tree-first invoke; reconcile `objects[]` | Done |
 
 ## Platform baseline
 

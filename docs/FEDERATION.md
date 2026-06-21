@@ -1,6 +1,6 @@
 # Object federation (PF-13 spike)
 
-Spike реализации REQ-PF-13: реестр peer-инстансов и proxy-read объектов.
+Spike реализации REQ-PF-13: реестр peer-инстансов, proxy read/write объектов и catalog sync.
 
 Полная vision — [PLATFORM_DEVELOPER_BACKLOG.md §9](PLATFORM_DEVELOPER_BACKLOG.md#9-распределённая-архитектура-и-федерация-roadmap-p3).
 
@@ -19,9 +19,12 @@ Spike реализации REQ-PF-13: реестр peer-инстансов и pr
 | `POST /api/v1/federation/peers/{id}/sync-catalog` | Импорт remote object list в локальное дерево |
 | Proxy-узлы | AGENT с переменными `federationProxy`, `federationPeerId`, `federationRemotePath` |
 | `GET /api/v1/federation/proxy/objects/by-path` | Прямой proxy-read без catalog sync |
+| `PATCH /api/v1/federation/proxy/objects/by-path/variables/value` | Proxy-write переменной на remote peer |
+| `POST /api/v1/federation/proxy/objects/by-path/functions/invoke` | Proxy-invoke функции на remote peer |
 | `GET /api/v1/objects/by-path` | Для proxy-узлов в дереве — прозрачный read через peer |
 | `GET /api/v1/dashboards/by-path` | Proxy layout; widget paths remapped на `root.platform.federation.{peer}.*` |
 | `GET /api/v1/objects/by-path/variables/history*` | Proxy historian для federated paths |
+| `FederationWebSocketFanoutService` | Fan-out platform events к подписчикам federated paths (базовый notify) |
 
 ## Catalog sync
 
@@ -61,10 +64,12 @@ Web Console: кнопка **Sync** на панели Federation peers.
 
 Токены — обычные platform session tokens (TTL по умолчанию 12 ч, макс. 168 ч), не долгоживущие API keys. Нужен профиль `local` или `ispf.security.token-auth-enabled: true`.
 
-## Ограничения spike
+## Ограничения spike / production gaps
 
-- Read-only proxy (object + variables); write/WebSocket не проксируются.
-- Полная двусторонняя синхронизация не поддерживается — только import catalog.
+- Write proxy — variable patch и function invoke; полная двусторонняя синхронизация дерева не поддерживается.
+- Catalog sync — только import (не merge конфликтов без оператора).
+- WS fan-out — базовый notify; subscribe-by-path в Web Console — backlog.
+- Tenant scope на federation API — частично (см. §9 backlog).
 
 ## Пример
 
@@ -74,4 +79,8 @@ POST /api/v1/federation/peers
 
 GET /api/v1/federation/proxy/objects/by-path?peerId=<uuid>&path=devices.demo-sensor-01
 Authorization: Bearer <admin-token>
+
+PATCH /api/v1/federation/proxy/objects/by-path/variables/value?peerId=<uuid>&path=devices.demo-sensor-01&name=temperature
+Authorization: Bearer <admin-token>
+{ "schema": { "name": "temperature", "fields": [{"name": "value", "type": "DOUBLE"}] }, "rows": [{"value": 22.5}] }
 ```

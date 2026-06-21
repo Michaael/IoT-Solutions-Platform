@@ -372,8 +372,8 @@ public class WorkflowService {
             }
             case READ_VARIABLE -> {
                 String target = params.getOrDefault("objectPath", params.getOrDefault("targetObject", ""));
-                String variable = required(params, "sourceVariable");
-                if (variable.isBlank()) {
+                String variable = params.get("sourceVariable");
+                if (variable == null || variable.isBlank()) {
                     variable = required(params, "variable");
                 }
                 String valueField = params.getOrDefault("valueField", "value");

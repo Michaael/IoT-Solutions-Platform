@@ -32,6 +32,13 @@ public interface CorrelatorHitRepository extends JpaRepository<CorrelatorHitEnti
             Instant since
     );
 
+    java.util.Optional<CorrelatorHitEntity> findFirstByCorrelatorIdAndObjectPathAndEventNameAndOccurredAtAfterOrderByOccurredAtAsc(
+            String correlatorId,
+            String objectPath,
+            String eventName,
+            Instant since
+    );
+
     @Modifying
     @Query("DELETE FROM CorrelatorHitEntity h WHERE h.correlatorId = :correlatorId")
     void deleteByCorrelatorId(@Param("correlatorId") String correlatorId);

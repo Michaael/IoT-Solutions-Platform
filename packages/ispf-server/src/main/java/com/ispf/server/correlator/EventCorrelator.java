@@ -12,6 +12,7 @@ public record EventCorrelator(
         int windowSeconds,
         int minOccurrences,
         int cooldownSeconds,
+        int sequenceGapSeconds,
         CorrelatorActionType actionType,
         String actionTarget,
         boolean enabled,

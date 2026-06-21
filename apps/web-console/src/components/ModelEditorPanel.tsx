@@ -6,9 +6,12 @@ import {
   createModelFromObject,
   deleteModel,
   fetchModelByName,
+  fetchModelInstances,
   fetchModels,
   instantiateModel,
   updateModel,
+  upgradeModel,
+  upgradeModelInstances,
 } from "../api/models";
 import type { EventDescriptor, FunctionDescriptor, ObjectType } from "../types";
 import {
@@ -109,6 +112,29 @@ function ModelDetail({
       if (applyPath.trim() && onSelectPath) {
         onSelectPath(applyPath.trim());
       }
+    },
+  });
+
+  const instancesQuery = useQuery({
+    queryKey: ["model-instances", model.id],
+    queryFn: () => fetchModelInstances(model.id),
+  });
+
+  const upgradeOneMutation = useMutation({
+    mutationFn: () => upgradeModel(model.id, applyPath.trim(), model.parameters.modelVersion),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["objects"] });
+      queryClient.invalidateQueries({ queryKey: ["variables"] });
+      queryClient.invalidateQueries({ queryKey: ["model-instances", model.id] });
+    },
+  });
+
+  const upgradeAllMutation = useMutation({
+    mutationFn: () => upgradeModelInstances(model.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["objects"] });
+      queryClient.invalidateQueries({ queryKey: ["variables"] });
+      queryClient.invalidateQueries({ queryKey: ["model-instances", model.id] });
     },
   });
 
@@ -251,6 +277,18 @@ function ModelDetail({
           <span className="model-meta-label">Встроенная</span>
           <span>{isBuiltin ? "да" : "нет"}</span>
         </div>
+        {model.parameters.modelVersion && (
+          <div>
+            <span className="model-meta-label">modelVersion</span>
+            <code>{model.parameters.modelVersion}</code>
+          </div>
+        )}
+        {model.parameters.extendsModelId && (
+          <div>
+            <span className="model-meta-label">extendsModelId</span>
+            <code>{model.parameters.extendsModelId}</code>
+          </div>
+        )}
       </div>
 
       {canManage && (
@@ -613,6 +651,50 @@ function ModelDetail({
             </div>
             {applyMutation.error && (
               <p className="hint error">{String(applyMutation.error)}</p>
+            )}
+          </div>
+
+          <div className="model-action-block">
+            <p className="hint">
+              <strong>Upgrade</strong> — пере-применить текущую версию модели к экземплярам (
+              {model.parameters.modelVersion ? `v${model.parameters.modelVersion}` : "без version tag"}).
+            </p>
+            {instancesQuery.data && instancesQuery.data.length > 0 && (
+              <ul className="model-instance-list">
+                {instancesQuery.data.map((row) => (
+                  <li key={row.objectPath}>
+                    <code>{row.objectPath}</code>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="model-action-row">
+              <button
+                type="button"
+                className="btn"
+                disabled={!applyPath.trim() || upgradeOneMutation.isPending}
+                onClick={() => upgradeOneMutation.mutate()}
+              >
+                Upgrade path
+              </button>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={upgradeAllMutation.isPending || (instancesQuery.data?.length ?? 0) === 0}
+                onClick={() => upgradeAllMutation.mutate()}
+              >
+                Upgrade all ({instancesQuery.data?.length ?? 0})
+              </button>
+            </div>
+            {(upgradeOneMutation.error || upgradeAllMutation.error) && (
+              <p className="hint error">
+                {String(upgradeOneMutation.error ?? upgradeAllMutation.error)}
+              </p>
+            )}
+            {upgradeAllMutation.data && (
+              <p className="hint">
+                Обновлено экземпляров: {upgradeAllMutation.data.count}
+              </p>
             )}
           </div>
 

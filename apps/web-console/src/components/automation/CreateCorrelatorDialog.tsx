@@ -17,6 +17,7 @@ const DEFAULT: CreateCorrelatorPayload = {
   windowSeconds: 0,
   minOccurrences: 1,
   cooldownSeconds: 120,
+  sequenceGapSeconds: 0,
   actionType: "RUN_WORKFLOW",
   actionTarget: "root.platform.workflows.demo-alarm-handler",
   enabled: true,
@@ -133,6 +134,17 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
               onChange={(e) => setForm((f) => ({ ...f, cooldownSeconds: Number(e.target.value) }))}
             />
           </label>
+          {needsSecondEvent && (
+            <label>
+              Max gap между событиями (сек)
+              <input
+                type="number"
+                min={0}
+                value={form.sequenceGapSeconds ?? 0}
+                onChange={(e) => setForm((f) => ({ ...f, sequenceGapSeconds: Number(e.target.value) }))}
+              />
+            </label>
+          )}
           <label>
             Действие
             <select

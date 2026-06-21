@@ -133,6 +133,16 @@ public class ModelApplicationRunner {
             );
             objectManager.persistNodeTree(path);
         });
+
+        modelRegistry.findByName("vendor-sensor-ext-v1").ifPresent(model -> {
+            String path = "root.platform.devices.vendor-sensor-demo";
+            if (objectManager.tree().findByPath(path).isEmpty()) {
+                modelEngine.instantiateModel(model.id(), "root.platform.devices", "vendor-sensor-demo", Map.of());
+            } else {
+                modelEngine.applyModel(model.id(), path);
+            }
+            objectManager.persistNodeTree(path);
+        });
     }
 
     private void ensurePlatformDemoNodes() {

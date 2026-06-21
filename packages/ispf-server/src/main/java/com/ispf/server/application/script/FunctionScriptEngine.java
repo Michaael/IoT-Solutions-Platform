@@ -221,6 +221,29 @@ public class FunctionScriptEngine {
             String expected = step.path("equals").asText();
             return Objects.equals(String.valueOf(actual), expected);
         }
+        if (step.has("notEquals")) {
+            Object actual = resolvePath(vars, step.path("var").asText());
+            String expected = step.path("notEquals").asText();
+            return !Objects.equals(String.valueOf(actual), expected);
+        }
+        if (step.has("gt") || step.has("lt") || step.has("gte") || step.has("lte")) {
+            Object actual = resolvePath(vars, step.path("var").asText());
+            double left = toNumber(actual);
+            double right = toNumber(step.has("gt") ? step.path("gt").asText()
+                    : step.has("lt") ? step.path("lt").asText()
+                    : step.has("gte") ? step.path("gte").asText()
+                    : step.path("lte").asText());
+            if (step.has("gt")) {
+                return left > right;
+            }
+            if (step.has("lt")) {
+                return left < right;
+            }
+            if (step.has("gte")) {
+                return left >= right;
+            }
+            return left <= right;
+        }
         if (step.has("var")) {
             Object value = resolvePath(vars, step.path("var").asText());
             if (value instanceof Boolean bool) {
@@ -421,16 +444,44 @@ public class FunctionScriptEngine {
     }
 
     private static final Pattern ADD_EXPRESSION = Pattern.compile("^(.+?)\\s*\\+\\s*(.+)$");
+    private static final Pattern COMPARE_EXPRESSION = Pattern.compile("^(.+?)\\s*(==|!=|<=|>=|<|>)\\s*(.+)$");
 
     private Object evaluateSetVarExpression(String expression, Map<String, Object> vars) {
         String trimmed = expression.trim();
+        Matcher compare = COMPARE_EXPRESSION.matcher(trimmed);
+        if (compare.matches()) {
+            Object left = resolveExpressionOperand(compare.group(1).trim(), vars);
+            Object right = resolveExpressionOperand(compare.group(3).trim(), vars);
+            return evaluateComparison(left, right, compare.group(2));
+        }
         Matcher add = ADD_EXPRESSION.matcher(trimmed);
         if (add.matches()) {
-            double left = toNumber(resolveExpressionOperand(add.group(1).trim(), vars));
-            double right = toNumber(resolveExpressionOperand(add.group(2).trim(), vars));
-            return left + right;
+            Object left = resolveExpressionOperand(add.group(1).trim(), vars);
+            Object right = resolveExpressionOperand(add.group(2).trim(), vars);
+            if (left instanceof String || right instanceof String) {
+                return String.valueOf(left) + String.valueOf(right);
+            }
+            return toNumber(left) + toNumber(right);
         }
         return resolveValue(trimmed, vars);
+    }
+
+    private static boolean evaluateComparison(Object left, Object right, String operator) {
+        if ("==".equals(operator)) {
+            return Objects.equals(String.valueOf(left), String.valueOf(right));
+        }
+        if ("!=".equals(operator)) {
+            return !Objects.equals(String.valueOf(left), String.valueOf(right));
+        }
+        double leftNum = toNumber(left);
+        double rightNum = toNumber(right);
+        return switch (operator) {
+            case "<" -> leftNum < rightNum;
+            case ">" -> leftNum > rightNum;
+            case "<=" -> leftNum <= rightNum;
+            case ">=" -> leftNum >= rightNum;
+            default -> false;
+        };
     }
 
     private Object resolveExpressionOperand(String token, Map<String, Object> vars) {

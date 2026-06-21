@@ -31,6 +31,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -215,6 +217,77 @@ public class ModelController {
         } catch (ModelException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+    }
+
+    @PostMapping("/{id}/upgrade-instances")
+    public Map<String, Object> upgradeInstances(@PathVariable String id) {
+        try {
+            ModelDefinition model = modelRegistry.requireById(id);
+            LinkedHashSet<String> targets = new LinkedHashSet<>();
+            for (ModelAttachment attachment : modelEngine.attachments()) {
+                if (id.equals(attachment.modelId())) {
+                    targets.add(attachment.objectPath());
+                }
+            }
+            for (com.ispf.core.object.PlatformObject node : objectManager.tree().all()) {
+                if (node.path().startsWith(modelEngine.modelsRoot() + ".")
+                        || node.path().equals(modelEngine.modelsRoot())) {
+                    continue;
+                }
+                if (model.type() == com.ispf.plugin.model.ModelType.INSTANCE
+                        && node.type() != model.targetObjectType()) {
+                    continue;
+                }
+                node.templateId().ifPresent(templateId -> {
+                    if (id.equals(templateId) || model.name().equals(templateId)) {
+                        targets.add(node.path());
+                    }
+                });
+            }
+            List<String> upgraded = new ArrayList<>();
+            for (String targetPath : targets) {
+                modelEngine.applyModel(id, targetPath);
+                objectManager.persistNodeTree(targetPath);
+                upgraded.add(targetPath);
+            }
+            return Map.of(
+                    "status", "OK",
+                    "modelVersion", model.modelVersion(),
+                    "upgraded", upgraded,
+                    "count", upgraded.size()
+            );
+        } catch (ModelException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/instances")
+    public List<Map<String, String>> listInstances(@PathVariable String id) {
+        ModelDefinition model = modelRegistry.requireById(id);
+        LinkedHashSet<String> paths = new LinkedHashSet<>();
+        for (ModelAttachment attachment : modelEngine.attachments()) {
+            if (id.equals(attachment.modelId())) {
+                paths.add(attachment.objectPath());
+            }
+        }
+        for (com.ispf.core.object.PlatformObject node : objectManager.tree().all()) {
+            if (node.path().startsWith(modelEngine.modelsRoot() + ".")
+                    || node.path().equals(modelEngine.modelsRoot())) {
+                continue;
+            }
+            if (model.type() == com.ispf.plugin.model.ModelType.INSTANCE
+                    && node.type() != model.targetObjectType()) {
+                continue;
+            }
+            node.templateId().ifPresent(templateId -> {
+                if (id.equals(templateId) || model.name().equals(templateId)) {
+                    paths.add(node.path());
+                }
+            });
+        }
+        return paths.stream()
+                .map(path -> Map.of("objectPath", path))
+                .toList();
     }
 
     public record CreateModelRequest(

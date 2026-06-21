@@ -567,6 +567,50 @@ class ApplicationPlatformApiTest {
     }
 
     @Test
+    void setVarExpressionSupportsConcatAndComparison() throws Exception {
+        mockMvc.perform(post("/api/v1/applications/%s/functions/deploy".formatted(APP_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "objectPath": "%s",
+                                  "functionName": "expr_probe",
+                                  "version": "1",
+                                  "descriptor": {
+                                    "inputSchema": { "name": "in", "fields": [] },
+                                    "outputSchema": {
+                                      "name": "out",
+                                      "fields": [
+                                        {"name": "error_code", "type": "STRING"},
+                                        {"name": "error_message", "type": "STRING"},
+                                        {"name": "label", "type": "STRING"},
+                                        {"name": "hot", "type": "BOOLEAN"}
+                                      ]
+                                    }
+                                  },
+                                  "source": {
+                                    "type": "script",
+                                    "body": "{\\"steps\\":[{\\"type\\":\\"setVar\\",\\"var\\":\\"hot\\",\\"expression\\":\\"95 > 80\\"},{\\"type\\":\\"setVar\\",\\"var\\":\\"label\\",\\"value\\":\\"WH-1\\"},{\\"type\\":\\"return\\",\\"fields\\":{\\"error_code\\":\\"OK\\",\\"error_message\\":\\"\\",\\"label\\":\\"${label}\\",\\"hot\\":\\"${hot}\\"}}]}"
+                                  }
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/bff/invoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "objectPath": "%s",
+                                  "functionName": "expr_probe",
+                                  "input": { "schema": { "name": "in", "fields": [] }, "rows": [{}] }
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.error_code").value("OK"))
+                .andExpect(jsonPath("$.result.label").value("WH-1"))
+                .andExpect(jsonPath("$.result.hot").value(true));
+    }
+
+    @Test
     void deploysBundleMetadataObjectsDashboardsAndWorkflows() throws Exception {
         String minimalBpmn = """
                 <?xml version="1.0" encoding="UTF-8"?>

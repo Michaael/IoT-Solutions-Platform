@@ -418,6 +418,16 @@ public class ModelBootstrap {
                                 DataRecord.single(INTEGER_VALUE_SCHEMA, Map.of("value", 120))
                         ),
                         ModelVariableDefinition.of(
+                                "sequenceGapSeconds",
+                                "Max seconds between consecutive events (SEQUENCE / EVENT_CHAIN; 0 = no limit)",
+                                "config",
+                                INTEGER_VALUE_SCHEMA,
+                                true,
+                                true,
+                                null,
+                                DataRecord.single(INTEGER_VALUE_SCHEMA, Map.of("value", 0))
+                        ),
+                        ModelVariableDefinition.of(
                                 "actionType",
                                 "Action on match (RUN_WORKFLOW)",
                                 "config",
@@ -616,7 +626,7 @@ public class ModelBootstrap {
                 )),
                 List.of(new ModelBindingDefinition(
                         "alarmActive",
-                        "self.temperature.value > self.threshold.value"
+                        "hysteresis(temperature, 35, 33)"
                 )),
                 Map.of("unit", "C"),
                 Instant.now(),

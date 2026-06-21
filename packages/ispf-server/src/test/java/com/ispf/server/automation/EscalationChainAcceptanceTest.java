@@ -9,6 +9,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -62,5 +63,38 @@ class EscalationChainAcceptanceTest {
         mockMvc.perform(get("/api/v1/work-queue"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].title", hasItem("Подтвердите тревогу")));
+    }
+
+    @Test
+    void minOccurrencesNotMetDoesNotFireActionEvent() throws Exception {
+        mockMvc.perform(post("/api/v1/correlators")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Min occurrences gate",
+                                  "objectPath": "%s",
+                                  "patternType": "COUNT",
+                                  "eventName": "thresholdExceeded",
+                                  "windowSeconds": 300,
+                                  "minOccurrences": 5,
+                                  "cooldownSeconds": 0,
+                                  "sequenceGapSeconds": 0,
+                                  "actionType": "FIRE_EVENT",
+                                  "actionTarget": "probeMinOccFired",
+                                  "enabled": true
+                                }
+                                """.formatted(DEMO_DEVICE)))
+                .andExpect(status().isOk());
+
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(post("/api/v1/events/fire")
+                            .param("objectPath", DEMO_DEVICE)
+                            .param("eventName", "thresholdExceeded"))
+                    .andExpect(status().isOk());
+        }
+
+        mockMvc.perform(get("/api/v1/events").param("objectPath", DEMO_DEVICE).param("limit", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].eventName", org.hamcrest.Matchers.not(hasItem("probeMinOccFired"))));
     }
 }

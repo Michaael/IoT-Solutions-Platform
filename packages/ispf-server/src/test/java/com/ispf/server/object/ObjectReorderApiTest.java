@@ -35,17 +35,29 @@ class ObjectReorderApiTest {
 
         var children = tools.jackson.databind.json.JsonMapper.builder().build()
                 .readTree(first);
-        String pathA = children.get(0).get("path").asText();
-        String pathB = children.get(1).get("path").asText();
+        java.util.List<String> paths = new java.util.ArrayList<>();
+        for (var child : children) {
+            paths.add(child.get("path").asText());
+        }
+        if (paths.size() < 2) {
+            throw new IllegalStateException("Expected at least two device children for reorder test");
+        }
+        String pathA = paths.get(0);
+        String pathB = paths.get(1);
+        java.util.List<String> reordered = new java.util.ArrayList<>(paths);
+        reordered.set(0, pathB);
+        reordered.set(1, pathA);
+        String orderedJson = tools.jackson.databind.json.JsonMapper.builder().build()
+                .writeValueAsString(reordered);
 
         mockMvc.perform(put("/api/v1/objects/reorder")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "parentPath": "%s",
-                                  "orderedPaths": ["%s", "%s"]
+                                  "orderedPaths": %s
                                 }
-                                """.formatted(PARENT, pathB, pathA)))
+                                """.formatted(PARENT, orderedJson)))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/v1/objects").param("parent", PARENT))
