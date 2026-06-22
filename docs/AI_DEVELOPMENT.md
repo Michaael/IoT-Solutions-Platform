@@ -133,7 +133,7 @@ ispf:
     agent-max-history-turns: 50
 ```
 
-`max-tokens` (default **262144**, env `ISPF_AI_MAX_TOKENS`) — лимит ответа LLM на один вызов. Для vLLM/Qwen с окном **256k** задайте тот же лимит в env на VPS.
+`max-tokens` (default **16384**, env `ISPF_AI_MAX_TOKENS`) — лимит **ответа** на один вызов (`max_tokens` в API), не размер всего окна. У Qwen/vLLM окно **~256k** суммарно (промпт + ответ); не ставьте `max_tokens` равным 262144 — иначе под промпт не останется места.
 
 Sessions are **in-memory** on the server (TTL default 24h). JVM restart or TTL expiry drops server state; the Web Console keeps a chat index in `localStorage` and shows “session expired” when `GET session` returns 404.
 
@@ -152,7 +152,7 @@ ispf:
     model: gpt-4o-mini
     api-key-env: OPENAI_API_KEY
     timeout-seconds: 60
-    max-tokens: 262144
+    max-tokens: 16384
     temperature: 0.2
 ```
 

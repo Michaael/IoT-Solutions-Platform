@@ -14,7 +14,7 @@ public class AiProperties {
     private String apiKey = "";
     private String apiKeyEnv = "OPENAI_API_KEY";
     private int timeoutSeconds = 60;
-    private int maxTokens = 262144;
+    private int maxTokens = 16384;
     private double temperature = 0.2;
     private String contextPackClasspath = "classpath:ai/context-pack.json";
     private int agentMaxSteps = 18;

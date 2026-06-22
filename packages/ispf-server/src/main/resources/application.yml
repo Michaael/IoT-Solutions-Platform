@@ -87,7 +87,7 @@ ispf:
     api-key: ${ISPF_AI_API_KEY:}
     api-key-env: ${ISPF_AI_API_KEY_ENV:OPENAI_API_KEY}
     timeout-seconds: ${ISPF_AI_TIMEOUT_SECONDS:60}
-    max-tokens: ${ISPF_AI_MAX_TOKENS:262144}
+    max-tokens: ${ISPF_AI_MAX_TOKENS:16384}
     temperature: ${ISPF_AI_TEMPERATURE:0.2}
     context-pack-classpath: classpath:ai/context-pack.json
     agent-max-steps: ${ISPF_AI_AGENT_MAX_STEPS:18}
