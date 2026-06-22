@@ -39,7 +39,7 @@ Write-Host "=== Git tag + GitHub release v$Version ==="
 git add -A
 $status = git status --porcelain
 if ($status) {
-    git commit -m "Release v$Version: AI Studio agent chat fixes and LLM key detection."
+    git commit -m "Release v${Version}: AI Studio agent chat fixes and LLM key detection."
 }
 git tag -f "v$Version"
 git push origin main
