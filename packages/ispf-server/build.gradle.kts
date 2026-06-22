@@ -67,6 +67,9 @@ dependencies {
     implementation(project(":packages:ispf-driver-wmi"))
     implementation(project(":packages:ispf-plugin-model"))
     implementation(project(":packages:ispf-plugin-workflow"))
+    implementation(project(":packages:ispf-ai-api"))
+    implementation(project(":packages:ispf-ai-openai-compatible"))
+    implementation(project(":packages:ispf-ai-ollama"))
 
     implementation("io.nats:jnats:2.20.5")
 

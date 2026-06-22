@@ -37,6 +37,18 @@ Commercial bundle с секцией `license` — см. [COMMERCIAL_LICENSING.md
 
 Плагин **не коммитится** в `packages/ispf-server/` и **не** вливается в `main` без отдельного решения о open-source.
 
+## LLM providers (AI Layer, FW-40)
+
+Как и device drivers, LLM adapters живут **вне** `ispf-server` core:
+
+| Модуль | Назначение |
+|--------|------------|
+| `packages/ispf-ai-api` | SPI `LlmProvider` |
+| `packages/ispf-ai-openai-compatible` | OpenAI-compatible HTTP API |
+| `packages/ispf-ai-ollama` | Ollama local API |
+
+`ispf-server` содержит только registry, ToolRegistry, audit и admin REST. Конфигурация — Spring profile/env (`ispf.ai.*`). См. [AI_DEVELOPMENT.md](AI_DEVELOPMENT.md), [ADR-0011](decisions/0011-ai-artifact-generation-gates.md).
+
 ## Чеклист перед PR в `main`
 
 - [ ] Нет отраслевого Java и industry-specific BFF routes

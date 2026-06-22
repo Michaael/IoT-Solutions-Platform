@@ -23,6 +23,7 @@
 | Event catalog | `events[]` в bundle, `GET .../events` | Роли для WS subscribe (FW-31) |
 | Bundle dependencies | `requires[]` в bundle | minVersion другого appId (FW-12) |
 | Drivers | SPI `DeviceDriver` в отдельном JAR | [DRIVERS.md](DRIVERS.md) |
+| AI tools (platform admin) | `POST /api/v1/ai/tools/*`, Studio | [AI_DEVELOPMENT.md](AI_DEVELOPMENT.md) — не меняет stable bundle contract |
 
 ## Запрещено
 
@@ -58,5 +59,6 @@
 
 - [APPLICATIONS.md](APPLICATIONS.md) — полный deploy API
 - [MESSAGING.md](MESSAGING.md) — async vs sync, NATS subjects, WS events
+- [AI_DEVELOPMENT.md](AI_DEVELOPMENT.md) — AI Layer (FW-40…43), admin tools
 - [API.md](API.md) — REST справочник
 - [PLUGINS.md](PLUGINS.md) — границы `main`

@@ -61,6 +61,20 @@ public class CommercialBundleLicenseVerifier {
         }
     }
 
+    public void verifyForValidation(String appId, Object manifest) {
+        Map<String, Object> root = objectMapper.convertValue(manifest, Map.class);
+        Object licenseRaw = root.get("license");
+        if (licenseRaw == null) {
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        BundleLicenseClaims claims = BundleLicenseClaims.fromMap((Map<String, Object>) licenseRaw);
+        if (claims == null) {
+            return;
+        }
+        verify(appId, manifest, claims);
+    }
+
     void verify(String appId, Object manifest, BundleLicenseClaims claims) {
         requireField(claims.bundleId(), "bundleId");
         requireField(claims.minPlatformVersion(), "minPlatformVersion");

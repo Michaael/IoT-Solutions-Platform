@@ -33,13 +33,13 @@ class BundleDependencyDeployApiTest {
         manifest.put("version", "1.0.0");
         manifest.put("displayName", "Dependent App");
         manifest.put("schemaName", "app_dependent_missing");
-        manifest.put("requires", List.of(Map.of("appId", "warehouse", "minVersion", "1.0.0")));
+        manifest.put("requires", List.of(Map.of("appId", "missing-dep-never-deployed", "minVersion", "1.0.0")));
 
         mockMvc.perform(post("/api/v1/applications/dependent-missing/deploy")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(asJson(manifest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail", containsString("warehouse")));
+                .andExpect(jsonPath("$.detail", containsString("missing-dep-never-deployed")));
     }
 
     @Test

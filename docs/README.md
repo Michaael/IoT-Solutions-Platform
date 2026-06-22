@@ -25,7 +25,7 @@
 | [Приложения (REQ-PF)](APPLICATIONS.md) | Deploy функций, миграций, bundle, BFF, scheduler |
 | [Отчёты (REQ-PF-12)](REPORTS.md) | SQL reports, CSV export, operator manifest |
 | [Backlog разработчика platform](PLATFORM_DEVELOPER_BACKLOG.md) | Статус REQ-PF, REQ-FW (§12), [gap registry](GAP_REGISTRY.md), sprint roadmap |
-| [ADR (архитектурные решения)](decisions/README.md) | ADR-0008…0010 |
+| [ADR (архитектурные решения)](decisions/README.md) | ADR-0008…0011 |
 | [Roadmap](ROADMAP.md) | Единый roadmap platform + production ops; **Phase 5** — усиление механизмов |
 | [WebSocket](API.md#websocket) | Live-обновления объектов |
 | [Модели (Models)](MODELS.md) | Шаблоны объектов, типы, встроенные модели |
@@ -34,6 +34,7 @@
 | [Lab Training (18 заданий)](LAB_TRAINING.md) | Virtual lab device, bundle import, упражнения Phase 15 |
 | [MES reference walkthrough](REFERENCE_MES_WALKTHROUGH.md) | Сквозной MES demo (`examples/mes-reference/`) |
 | [Messaging contract](MESSAGING.md) | NATS, WebSocket, sync RPC |
+| [AI Development Layer](AI_DEVELOPMENT.md) | LlmProvider, ContextPack, ToolRegistry, Studio (FW-40…43) |
 | [Commercial bundle licensing](COMMERCIAL_LICENSING.md) | RSA license при deploy commercial bundle |
 | [Workflow / BPMN](WORKFLOWS.md) | Движок, ISPF-расширения, work queue |
 | [Автоматизация](AUTOMATION.md) | События, alert rules, correlators |
@@ -69,6 +70,9 @@ packages/
   ispf-core/              # Домен: ObjectTree, DataRecord, PlatformObject
   ispf-expression/        # Google CEL, BindingEvaluator
   ispf-driver-api/        # SPI DeviceDriver
+  ispf-ai-api/            # SPI LlmProvider (FW-40)
+  ispf-ai-openai-compatible/  # OpenAI-compatible adapter
+  ispf-ai-ollama/         # Ollama adapter
   ispf-driver-*/          # 58 protocol drivers (см. DRIVERS.md)
   ispf-plugin-model/      # Models plugin
   ispf-plugin-workflow/   # BPMN workflow engine (library)

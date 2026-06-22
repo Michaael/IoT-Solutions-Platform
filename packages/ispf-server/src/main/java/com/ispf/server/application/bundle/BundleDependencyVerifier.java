@@ -14,7 +14,7 @@ public class BundleDependencyVerifier {
         this.snapshotStore = snapshotStore;
     }
 
-    void verify(String appId, List<ApplicationBundleDeployService.BundleDependency> requires) {
+    public void verify(String appId, List<ApplicationBundleDeployService.BundleDependency> requires) {
         if (requires == null || requires.isEmpty()) {
             return;
         }

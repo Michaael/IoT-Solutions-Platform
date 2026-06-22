@@ -1,0 +1,80 @@
+package com.ispf.ai.ollama;
+
+import com.ispf.ai.LlmException;
+import com.ispf.ai.LlmModelInfo;
+import com.ispf.ai.LlmProvider;
+import com.ispf.ai.LlmRequest;
+import com.ispf.ai.LlmResponse;
+import com.ispf.ai.http.LlmHttpSupport;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
+import java.util.List;
+
+public class OllamaLlmProvider implements LlmProvider {
+
+    private final String baseUrl;
+    private final String defaultModel;
+    private final Duration timeout;
+    private final HttpClient httpClient;
+
+    public OllamaLlmProvider(String baseUrl, String defaultModel, Duration timeout) {
+        this.baseUrl = trimTrailingSlash(baseUrl);
+        this.defaultModel = defaultModel;
+        this.timeout = timeout;
+        this.httpClient = LlmHttpSupport.client(timeout);
+    }
+
+    @Override
+    public String providerId() {
+        return "ollama";
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return baseUrl != null && !baseUrl.isBlank();
+    }
+
+    @Override
+    public List<LlmModelInfo> listModels() throws LlmException {
+        if (!isAvailable()) {
+            throw new LlmException("Ollama provider is not configured");
+        }
+        String json = LlmHttpSupport.getJson(
+                httpClient,
+                timeout,
+                baseUrl + "/api/tags",
+                null
+        );
+        return LlmHttpSupport.parseOllamaModels(json);
+    }
+
+    @Override
+    public LlmResponse complete(LlmRequest request) throws LlmException {
+        if (!isAvailable()) {
+            throw new LlmException("Ollama provider is not configured");
+        }
+        String model = request.model() != null && !request.model().isBlank() ? request.model() : defaultModel;
+        var body = LlmHttpSupport.ollamaChatBody(new LlmRequest(
+                model,
+                request.messages(),
+                request.maxTokens(),
+                request.temperature()
+        ));
+        String json = LlmHttpSupport.postJson(
+                httpClient,
+                timeout,
+                baseUrl + "/api/chat",
+                null,
+                body
+        );
+        return LlmHttpSupport.parseOllamaChat(json, model);
+    }
+
+    private static String trimTrailingSlash(String url) {
+        if (url == null) {
+            return "";
+        }
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+    }
+}

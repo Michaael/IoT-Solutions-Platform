@@ -30,7 +30,7 @@
 | Solution public API doc | ~100% | semver policy для bundle schema | [SOLUTION_DEVELOPER_PUBLIC_API.md](SOLUTION_DEVELOPER_PUBLIC_API.md) |
 | Event catalog (declarative) | ~100% | payload schema validation at fire-time | FW-31, [MESSAGING.md](MESSAGING.md) |
 | Messaging contract doc | ~100% | external NATS consumers guide | FW-32, [MESSAGING.md](MESSAGING.md) |
-| AI Development Layer | 0% | vision only | FW-40…43 |
+| AI Development Layer | ~100% | optional live tenant context in ContextPack | FW-40…43, [AI_DEVELOPMENT.md](AI_DEVELOPMENT.md) |
 | Licensed driver packs | 0% | все drivers in-tree | FW-50 |
 | Scale (load test) | ~70% | p99 `list_devices` при 150 concurrent | ROADMAP Phase 6+ |
 
@@ -38,4 +38,5 @@
 
 | Дата | Изменение |
 |------|-----------|
+| 2026-06-22 | Sprint G (FW-40…43): AI Layer — LlmProvider SPI, ContextPack, ToolRegistry, Studio |
 | 2026-06-22 | Sprint F (FW-12,31,32): events catalog, requires[], MESSAGING.md |

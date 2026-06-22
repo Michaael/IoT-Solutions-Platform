@@ -69,4 +69,7 @@ include(
     "packages:ispf-driver-wmi",
     "packages:ispf-plugin-model",
     "packages:ispf-plugin-workflow",
+    "packages:ispf-ai-api",
+    "packages:ispf-ai-openai-compatible",
+    "packages:ispf-ai-ollama",
 )

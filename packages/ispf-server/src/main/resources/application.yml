@@ -79,6 +79,16 @@ ispf:
     data-dir: ${ISPF_DATA_DIR:./data}
     public-key-pem: ${ISPF_LICENSE_PUBLIC_KEY_PEM:}
     enforce: ${ISPF_LICENSE_ENFORCE:false}
+  ai:
+    enabled: ${ISPF_AI_ENABLED:true}
+    provider: ${ISPF_AI_PROVIDER:noop}
+    base-url: ${ISPF_AI_BASE_URL:}
+    model: ${ISPF_AI_MODEL:gpt-4o-mini}
+    api-key-env: ${ISPF_AI_API_KEY_ENV:OPENAI_API_KEY}
+    timeout-seconds: ${ISPF_AI_TIMEOUT_SECONDS:60}
+    max-tokens: ${ISPF_AI_MAX_TOKENS:4096}
+    temperature: ${ISPF_AI_TEMPERATURE:0.2}
+    context-pack-classpath: classpath:ai/context-pack.json
 
 logging:
   level:

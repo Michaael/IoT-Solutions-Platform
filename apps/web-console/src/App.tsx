@@ -35,6 +35,7 @@ import ExplorerView from "./components/ExplorerView";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
 import OperatorView from "./components/operator/OperatorView";
 import SystemView from "./components/SystemView";
+import AiStudioPanel from "./components/AiStudioPanel";
 import LoginView from "./components/LoginView";
 import PlatformUpdateBanner from "./components/PlatformUpdateBanner";
 import ModelEditorPanel from "./components/ModelEditorPanel";
@@ -373,6 +374,15 @@ export default function App() {
             Система
           </button>
         )}
+        {isAdmin && (
+          <button
+            type="button"
+            className={workspaceTab === "ai-studio" ? "active" : ""}
+            onClick={() => setWorkspaceTab("ai-studio")}
+          >
+            AI Studio
+          </button>
+        )}
         {editorTabs.map((tab) => (
           <button
             key={tab.id}
@@ -395,7 +405,7 @@ export default function App() {
       </nav>
 
       <div className="workspace">
-        {workspaceTab !== "system" && (
+        {workspaceTab !== "system" && workspaceTab !== "ai-studio" && (
           <aside className="sidebar">
             <div className="sidebar-head">
               <h3>Дерево объектов</h3>
@@ -441,6 +451,12 @@ export default function App() {
         )}
 
         {workspaceTab === "system" && isAdmin && <SystemView />}
+
+        {workspaceTab === "ai-studio" && isAdmin && (
+          <main className="main ai-studio-main">
+            <AiStudioPanel />
+          </main>
+        )}
 
         {activeEditor && workspaceTab === activeEditor.id && !showPropertiesEditor && (
           <main className="main editor-main dashboard-main">

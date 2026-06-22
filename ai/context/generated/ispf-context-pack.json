@@ -1,0 +1,829 @@
+{
+  "contextPackVersion": "ispf-0.1.0-SNAPSHOT",
+  "generatedAt": "2026-06-22T02:34:29.767002+00:00",
+  "platformVersion": "0.1.0-SNAPSHOT",
+  "bundleManifest": {
+    "fields": [
+      "version",
+      "displayName",
+      "tablePrefix",
+      "schemaName",
+      "objects",
+      "dashboards",
+      "workflows",
+      "models",
+      "migrations",
+      "functions",
+      "bindings",
+      "reports",
+      "alertRules",
+      "correlators",
+      "schedules",
+      "events",
+      "requires",
+      "license",
+      "metadata",
+      "operatorUi",
+      "operatorManifest"
+    ],
+    "rules": [
+      "Output declarative bundle JSON only; no Java or React in platform main.",
+      "Use operatorUi and dashboards[] for new operator screens.",
+      "App SQL via migrations[]; never platform Flyway.",
+      "Optional metadata may include generatedBy, promptId, contextPackVersion."
+    ]
+  },
+  "scriptSteps": [
+    "selectOne",
+    "selectMany",
+    "exec",
+    "setVar",
+    "buildRecord",
+    "map",
+    "when",
+    "if",
+    "invoke_function",
+    "cancel_workflows",
+    "failIfNull",
+    "failIfNotEquals",
+    "return"
+  ],
+  "widgetTypes": [
+    "value",
+    "indicator",
+    "chart",
+    "sparkline",
+    "progress",
+    "gauge",
+    "status-badge",
+    "function",
+    "function-form",
+    "pie-chart",
+    "history-table",
+    "variable-editor",
+    "svg-widget",
+    "composite-widget",
+    "dashboard-link",
+    "event-feed"
+  ],
+  "apiSlice": {
+    "publicApiDoc": "# Public API для разработчика решений\n\nСтабильная граница между **platform** (ISPF core) и **solution** (ваш bundle). Подробный workflow — [SOLUTION_DEVELOPER_GUIDE.md](SOLUTION_DEVELOPER_GUIDE.md). Архитектурные границы — [ADR-0008](decisions/0008-app-platform-boundary.md).\n\n---\n\n## Разрешено (stable contract)\n\n| Область | API / артефакт | Примечание |\n|---------|----------------|------------|\n| Регистрация app | `POST /api/v1/applications` | `appId`, `schemaName`, `tablePrefix` |\n| SQL schema app | `POST .../data/migrate`, `.../data/seed` | Не Flyway platform |\n| Bundle deploy | `POST .../deploy`, `POST /api/v1/platform/packages/import` | Один manifest JSON |\n| Script functions | `POST .../functions/deploy`, tree path `{appId}.functions.*` | JSON script steps |\n| Invoke | `POST .../functions/invoke`, `POST /api/v1/bff/invoke` | Operator wire profile |\n| Object tree | `GET/POST/PATCH /api/v1/objects/**` | CRUD, variables, functions |\n| Models | `POST /api/v1/models`, apply to device | Blueprint |\n| Dashboards / workflows | Object tree + REST | Layout JSON, BPMN XML |\n| Automation | Alert rules, correlators в дереве | CEL, correlator patterns |\n| Operator UI | `operatorUi` / `dashboards[]` в bundle | `GET .../operator-ui` |\n| Reports | Tree-first `root.platform.reports.*` | SQL + optional YARG |\n| WebSocket | `/ws/objects` — `subscribe`, `subscribe_events` | Token query param; см. [MESSAGING.md](MESSAGING.md) |\n| Event catalog | `events[]` в bundle, `GET .../events` | Роли для WS subscribe (FW-31) |\n| Bundle dependencies | `requires[]` в bundle | minVersion другого appId (FW-12) |\n| Drivers | SPI `DeviceDriver` в отдельном JAR | [DRIVERS.md](DRIVERS.md) |\n\n## Запрещено\n\n| Действие | Почему |\n|----------|--------|\n| Java в `packages/ispf-server/` | [ADR-0008](decisions/0008-app-platform-boundary.md) |\n| Flyway миграции app tables в platform | App schema только через migrate API |\n| Отраслевые BFF routes | Только `/api/v1/bff/invoke` |\n| Fork platform server для одного заказчика | Bundle deploy + config |\n\n## Bundle manifest (semver)\n\n| Поле | Стабильность |\n|------|--------------|\n| `version` | Semver bundle; история deploy |\n| `schemaName`, `migrations`, `functions` | Stable |\n| `objects`, `dashboards`, `workflows`, `models` | Stable (Phase 5 tree-first) |\n| `alertRules`, `correlators`, `operatorUi` | Stable |\n| `events[]` | Stable — id, roles, optional payloadSchema |\n| `requires[]` | Stable — appId, minVersion |\n| `license` | Optional; commercial — [COMMERCIAL_LICENSING.md](COMMERCIAL_LICENSING.md) |\n\n## Версия platform\n\n- `GET /api/v1/info` → `version` — для `minPlatformVersion` в license.\n- Совместимость: platform ≥ `minPlatformVersion` в commercial license.\n\n## Commercial bundle\n\nСекция `license` в manifest — см. [ADR-0010](decisions/0010-commercial-bundle-licensing.md). Apache reference bundles (`warehouse`, `lab-training`, `mes-reference`) — без `license`.\n\n## Связанные документы\n\n- [APPLICATIONS.md](APPLICATIONS.md) — полный deploy API\n- [MESSAGING.md](MESSAGING.md) — async vs sync, NATS subjects, WS events\n- [API.md](API.md) — REST справочник\n- [PLUGINS.md](PLUGINS.md) — границы `main`\n",
+    "applicationsDoc": "# Приложения на платформе (REQ-PF)\n\nПлатформенный слой для развёртывания прикладных решений **без Java-кода отрасли в `ispf-server`**. Соответствует [ADR-0008](decisions/0008-app-platform-boundary.md) и требованиям REQ-PF.\n\n**Полный backlog и gap-анализ:** [PLATFORM_DEVELOPER_BACKLOG.md](PLATFORM_DEVELOPER_BACKLOG.md).\n\n## Обзор\n\n| REQ-PF | Capability | API / компонент |\n|--------|------------|-----------------|\n| 01 | Application Function Runtime | `POST /applications/{appId}/functions/deploy`, JSON script engine |\n| 02 | Application Data Layer | `POST /applications/{appId}/data/migrate` |\n| 03 | Application Package Deploy | `POST /applications/{appId}/deploy` |\n| 04 | BPMN `invoke_function` | `WorkflowActionType.INVOKE_FUNCTION` |\n| 05 | Platform Scheduler | `GET/POST /schedules` |\n| 06 | BFF Wire Gateway | `POST /bff/invoke` |\n| 07 | Model Registry Persistence | `model_definitions` + автосохранение при CRUD моделей |\n| 10 | Workflow Cancel | `POST /workflows/instances/{id}/cancel` |\n\n## Регистрация приложения\n\n```http\nPOST /api/v1/applications\nContent-Type: application/json\n\n{\n  \"appId\": \"myapp\",\n  \"displayName\": \"My Application\",\n  \"tablePrefix\": \"myapp_\",\n  \"schemaName\": \"myapp\"\n}\n```\n\n## Миграции данных (REQ-PF-02)\n\nSQL-скрипты приложения **не** попадают в Flyway платформы. Деплой через API в **изолированной schema** (`schemaName`, по умолчанию `app_{appId}`):\n\n```http\nPOST /api/v1/applications/myapp/data/migrate\nContent-Type: application/json\n\n{\n  \"version\": \"1.0.0\",\n  \"scripts\": [\n    { \"id\": \"items\", \"sql\": \"CREATE TABLE IF NOT EXISTS demo_item (...);\" }\n  ]\n}\n```\n\nПовторный вызов с тем же `version` + `id` — **идемпотентен** (скрипт пропускается).\n\n**Guard:** DDL не может создавать platform-таблицы (`applications`, `workflow_*`, …). При непустом `tablePrefix` имена таблиц должны начинаться с префикса.\n\n```http\nGET /api/v1/applications/myapp/data/status\n```\n\n### Seed (smoke)\n\n```http\nPOST /api/v1/applications/myapp/data/seed\nContent-Type: application/json\n\n{ \"profile\": \"smoke-demo\" }\n```\n\nВстроенный профиль `smoke-demo` — идемпотентные INSERT в generic-таблицы (`demo_category`, `demo_item`, `demo_metric`). Повторный вызов пропускает уже применённые seed-блоки.\n\n```http\nGET /api/v1/applications/myapp/data/status\n```\n\n## Деплой функций (REQ-PF-01)\n\nФункции — JSON **script** с шагами:\n\n| Шаг | Назначение |\n|-----|------------|\n| `selectOne` | Одна строка SQL → var (`Map`) |\n| `selectMany` | Список строк SQL → var (`List<Map>`) |\n| `exec` | DML/DDL с `params` |\n| `setVar` | Присвоение литерала или `${path}` |\n| `buildRecord` | Сборка `Map` в var из `fields` (field mapping) |\n| `map` | Преобразование списка: `source` + `fields` с контекстом `${item.*}` |\n| `invoke_function` | Вызов другой deploy-функции; propagate `error_code` |\n| `cancel_workflows` | Отмена workflow instances по `workflowPath` + `statusIn` |\n| `failIfNull` | Выход с `error_code` / `error_message` |\n| `failIfNotEquals` | Проверка значения var |\n| `return` | Сборка output (`fields`); массивы через `${var}` |\n\nОдин invoke = одна JDBC-транзакция (rollback при необработанном exception). Вложенные `invoke_function` — до 8 уровней. Невалидный script → **400** на deploy.\n\n```http\nPOST /api/v1/applications/myapp/functions/deploy\nContent-Type: application/json\n\n{\n  \"objectPath\": \"root.platform.devices.demo-sensor-01\",\n  \"functionName\": \"myapp_ping\",\n  \"version\": \"1\",\n  \"descriptor\": {\n    \"inputSchema\": { \"name\": \"in\", \"fields\": [{\"name\": \"orderId\", \"type\": \"STRING\"}] },\n    \"outputSchema\": {\n      \"name\": \"out\",\n      \"fields\": [\n        {\"name\": \"error_code\", \"type\": \"STRING\"},\n        {\"name\": \"error_message\", \"type\": \"STRING\"}\n      ]\n    }\n  },\n  \"source\": {\n    \"type\": \"script\",\n    \"body\": \"{ \\\"steps\\\": [ ... ] }\"\n  }\n}\n```\n\nПри первом вызове дескриптор функции автоматически добавляется на объект.\n\nПараметры в SQL: `\"${input.orderId}\"` или `\"$input.orderId\"`.\n\n## Bundle deploy (REQ-PF-03)\n\nОдин запрос — регистрация, metadata, миграции, функции, расписания:\n\n```http\nPOST /api/v1/applications/myapp/deploy\nContent-Type: application/json\n\n{\n  \"version\": \"1.0.0\",\n  \"displayName\": \"My Application\",\n  \"tablePrefix\": \"\",\n  \"schemaName\": \"myapp\",\n  \"objects\": [\n    {\n      \"parentPath\": \"root.platform\",\n      \"name\": \"myapp\",\n      \"type\": \"CUSTOM\",\n      \"displayName\": \"My Application\"\n    }\n  ],\n  \"dashboards\": [\n    {\n      \"path\": \"root.platform.myapp.ops\",\n      \"title\": \"Operator Board\",\n      \"layoutJson\": \"{ \\\"columns\\\": 12, \\\"rowHeight\\\": 72, \\\"widgets\\\": [] }\"\n    }\n  ],\n  \"workflows\": [\n    {\n      \"path\": \"root.platform.myapp.workflows.main\",\n      \"bpmnXml\": \"<definitions ...>...</definitions>\",\n      \"status\": \"ACTIVE\"\n    }\n  ],\n  \"models\": [\n    {\n      \"name\": \"my-device-v1\",\n      \"description\": \"Custom device template\",\n      \"type\": \"DEVICE\",\n      \"targetObjectType\": \"DEVICE\",\n      \"variables\": []\n    }\n  ],\n  \"migrations\": [ { \"id\": \"...\", \"sql\": \"...\" } ],\n  \"functions\": [ ... ],\n  \"schedules\": [\n    {\n      \"scheduleId\": \"import-job\",\n      \"enabled\": true,\n      \"intervalMs\": 60000,\n      \"actionType\": \"invoke_function\",\n      \"action\": {\n        \"objectPath\": \"root.platform.myapp.integration\",\n        \"functionName\": \"myapp_importRecords\"\n      }\n    }\n  ]\n}\n```\n\nОтвет: `{ \"status\": \"OK\", \"applied\": [...], \"skipped\": [...], \"errors\": [] }`.\n\n## BFF (REQ-PF-06)\n\nУниверсальный шлюз для Operator UI:\n\n```http\nPOST /api/v1/bff/invoke\nContent-Type: application/json\n\n{\n  \"objectPath\": \"root.platform.devices.demo-sensor-01\",\n  \"functionName\": \"myapp_processRecord\",\n  \"input\": {\n    \"schema\": { \"name\": \"in\", \"fields\": [{\"name\": \"orderId\", \"type\": \"STRING\"}] },\n    \"rows\": [{ \"orderId\": \"...\" }]\n  },\n  \"wireProfile\": \"anima-operator-v1\"\n}\n```\n\n### Wire profile `anima-operator-v1`\n\n| Правило | Поведение |\n|---------|-----------|\n| Успех | `error_code === \"OK\"`, `error_message === \"\"` |\n| Ошибка | `result` отсутствует |\n| Таблица | `result` = массив строк (unwrap поля `rows`) |\n| Подписи | `result_field_labels`: `description` поля output schema → profile map `anima-operator-v1` → имя поля |\n\nОтвет (scalar): `{ \"error_code\": \"OK\", \"error_message\": \"\", \"result\": { ... }, \"result_field_labels\": {...}, \"wireProfile\": \"anima-operator-v1\" }`.\n\nОтвет (таблица): `{ \"error_code\": \"OK\", \"result\": [ {...}, ... ], \"result_field_labels\": {...} }`.\n\n## Расписания (REQ-PF-05)\n\n```http\nGET /api/v1/schedules\nPOST /api/v1/schedules\n```\n\nТик каждые 5 с; действие `invoke_function` с JSON `{ objectPath, functionName, input? }`.\n\n## BPMN invoke_function (REQ-PF-04)\n\nВ BPMN service task:\n\n```xml\n<ispf:serviceTask action=\"invoke_function\"\n  objectPath=\"root.platform.devices.demo-sensor-01\"\n  functionName=\"myapp_acknowledge\"\n  inputMap=\"deviceId=${workflow.deviceId}\"\n  outputMap=\"ackResult=result\" />\n```\n\n## Отмена workflow (REQ-PF-10)\n\n```http\nPOST /api/v1/workflows/instances/{instanceId}/cancel\nContent-Type: application/json\n\n{\n  \"reason\": \"incident\",\n  \"detailJson\": \"{\\\"incidentId\\\":\\\"...\\\"}\",\n  \"cancelledBy\": \"operator-1\"\n}\n```\n\n## Модели (REQ-PF-07)\n\nПользовательские модели сохраняются в `model_definitions` и восстанавливаются при старте.\n\n## Права доступа\n\n| Endpoint | Роль |\n|----------|------|\n| `/applications/**`, `/schedules/**` (POST/PUT) | `admin` |\n| `/applications/*/operator-ui`, `/applications/*/hmi-ui`, `/applications/*/operator-manifest` (GET) | `operator`, `admin` |\n| `/bff/invoke`, `/workflows/instances/*/cancel`, `/applications/*/reports/*/run` | `operator`, `admin` |\n\n## SQL bindings (REQ-PF-08)\n\nДекларативная синхронизация object variable ← SQL в app schema:\n\n```http\nPOST /api/v1/applications/{appId}/bindings/deploy\n{\n  \"objectPath\": \"root.platform.devices.demo-sensor-01\",\n  \"variable\": \"readyCount\",\n  \"query\": \"SELECT COUNT(*) AS value FROM demo_item WHERE status = 'ready'\",\n  \"refresh\": \"on_schedule\",\n  \"refreshIntervalMs\": 30000,\n  \"valueField\": \"value\"\n}\n```\n\n| `refresh` | Поведение |\n|-----------|-----------|\n| `on_schedule` | Периодический poll (`ApplicationSqlBindingSche",
+    "messagingDoc": "# Messaging contract (ISPF)\n\nКонтракт шин и синхронных вызовов platform ↔ solution. REQ-FW-32.\n\n## Принцип\n\n| Канал | Семантика | Когда использовать |\n|-------|-----------|-------------------|\n| **REST / BFF invoke** | Sync request/response | CRUD, функции приложения, deploy, отчёты |\n| **WebSocket `/ws/objects`** | Push object tree changes | Live HMI, explorer, variable updates |\n| **Event journal (DB)** | Durable async log | Operator event feed, audit, correlators |\n| **NATS** | Async pub/sub между репликами | Replica fan-out, workflow side-effects |\n\nНе смешивать sync RPC и async bus в одном «универсальном» канале.\n\n## WebSocket object tree\n\n| Endpoint | Назначение |\n|----------|------------|\n| `GET /ws/objects?token=...` | Subscribe paths, presence, **event catalog** |\n\n### Сообщения клиента\n\n```json\n{ \"type\": \"subscribe\", \"paths\": [\"root.platform.devices.demo-sensor-01\"] }\n```\n\n```json\n{ \"type\": \"subscribe_events\", \"appId\": \"mes-reference\", \"events\": [\"mesRackOverTemp\"] }\n```\n\nОтвет `subscribe_events_result`: `accepted[]`, `rejected[]` (роли из bundle `events[]` — FW-31).\n\n### Object change push\n\n```json\n{\n  \"type\": \"VARIABLE_UPDATED\",\n  \"path\": \"root.platform.devices.demo-sensor-01\",\n  \"variableName\": \"temperature\",\n  \"timestamp\": \"2026-06-22T12:00:00Z\"\n}\n```\n\n## NATS subjects (production, `ispf.nats.enabled=true`)\n\n| Subject pattern | Publisher | Consumer | Payload |\n|-----------------|-----------|----------|---------|\n| `ispf.object.{path}.{changeType}` | `NatsEventBridge` | external integrators | path, type, variableName, timestamp, source |\n| `ispf.events.{changeType}` | `NatsEventBridge` (replica fan-out) | `NatsObjectChangeSubscriber` | same |\n| `ispf.workflow.{workflowPath}.{event}` | `WorkflowService` | external / analytics | workflowPath, event, payload |\n| BPMN `publish_nats` task | workflow engine | custom | task-defined subject + message |\n\nКонфигурация: `ispf.nats.url`, `ispf.nats.replica-id`, `ispf.nats.replica-events-enabled`.\n\n## Sync RPC (primary API)\n\n| API | Примеры |\n|-----|---------|\n| `POST /api/v1/applications/{appId}/deploy` | Bundle deploy |\n| `POST /api/v1/bff/invoke` | Application functions |\n| `POST /api/v1/objects/by-path/functions/invoke` | Tree functions |\n| Federation proxy | `GET /api/v1/federation/proxy/...` |\n\nFederation proxy — sync read через HTTP; не замена event bus.\n\n## Event catalog в bundle (FW-31)\n\nСекция `events[]` в manifest:\n\n```json\n\"events\": [\n  { \"id\": \"mesRackOverTemp\", \"roles\": [\"admin\"] },\n  { \"id\": \"mesOrderUpdated\", \"roles\": [\"operator\", \"admin\"] }\n]\n```\n\n- Deploy загружает каталог в `application_event_catalog`\n- `GET /api/v1/applications/{appId}/events` — список для solution developers\n- WS `subscribe_events` проверяет роли (admin bypass)\n\n## Bundle dependencies (FW-12)\n\n```json\n\"requires\": [\n  { \"appId\": \"warehouse\", \"minVersion\": \"1.0.0\" }\n]\n```\n\nDeploy проверяет активную версию зависимого bundle до apply.\n\n## Связанные документы\n\n- [SOLUTION_DEVELOPER_PUBLIC_API.md](SOLUTION_DEVELOPER_PUBLIC_API.md)\n- [AUTOMATION.md](AUTOMATION.md)\n- [FEDERATION.md](FEDERATION.md)\n- [APPLICATIONS.md](APPLICATIONS.md)\n",
+    "dashboardsDoc": "# Дашборды и виджеты\n\n## Обзор\n\nДашборд — объект типа `DASHBOARD` с моделью `dashboard-v1`. Layout хранится в переменной `layout` (JSON string).\n\nПеременные модели:\n\n| Имя | Описание |\n|-----|----------|\n| `title` | Заголовок экрана |\n| `layout` | JSON сетки виджетов |\n| `refreshIntervalMs` | Интервал опроса (мс), по умолчанию 5000 |\n\nДемо:\n\n| Дашборд | Назначение |\n|---------|------------|\n| `root.platform.dashboards.demo-sensor` | один объект, статический `objectPath` |\n| `root.platform.dashboards.snmp-host-monitoring` | таблица устройств + `selectionKey: \"device\"` |\n\nLayout по умолчанию: `packages/ispf-server/.../DashboardLayouts.java`.\n\n## Привязка к объектам: `objectPath` и `selectionKey`\n\nВиджеты (`value`, `indicator`, `chart`, …) читают переменные **конкретного** объекта платформы (`DEVICE`, `CUSTOM`, …). Путь к этому объекту задаётся двумя способами.\n\n### Откуда берётся `objectPath`\n\n`objectPath` — **поле в JSON виджета** внутри переменной `layout` объекта `DASHBOARD`. Его не передаёт родительский React-компонент в runtime.\n\n| Источник | Когда |\n|----------|--------|\n| Bootstrap | `DashboardLayouts.java` записывает layout при первом запуске |\n| Dashboard Builder | админ выбирает объект в поле «Объект» (`WidgetEditorPanel`) → `PUT .../layout` |\n| Ручное редактирование | правка JSON layout |\n\nПример статической привязки (один датчик):\n\n```json\n{\n  \"type\": \"value\",\n  \"objectPath\": \"root.platform.devices.demo-sensor-01\",\n  \"variableName\": \"temperature\",\n  \"valueField\": \"value\"\n}\n```\n\n### Что такое `selectionKey`\n\n`selectionKey` — **имя слота** в общем состоянии дашборда (`DashboardContext`), а не замена поля `objectPath`.\n\n```typescript\nselection: Record<string, string>\n// { \"device\": \"root.platform.devices.snmp-localhost\" }\n```\n\nПри отрисовке виджета путь вычисляется так (`resolveWidgetPath` в `dashboardUtils.ts`):\n\n1. Если задан `selectionKey` **и** `selection[selectionKey]` не пуст → используется **выбранный путь**.\n2. Иначе → используется **статический** `objectPath` из layout.\n3. Если оба пусты → виджет показывает подсказку «Выберите …» / «—».\n\n`objectPath` не «перезаписывается» ключом: ключ лишь указывает, из какого слота контекста взять путь, когда пользователь что-то выбрал.\n\n### Publish / subscribe внутри дашборда\n\nСвязка **не** «виджет A → виджет B». Связка по **совпадению строки** `selectionKey`:\n\n| Роль | Тип виджета | Поле | Действие |\n|------|-------------|------|----------|\n| **Источник выбора** | `object-table` | `selectionKey`, `parentPath` | при клике по строке: `setSelection(key, child.path)` |\n| **Потребитель** | `value`, `indicator`, `chart`, `sparkline`, `progress`, `gauge`, `status-badge`, `function`, `function-form` | тот же `selectionKey` | читает `selection[key]` как `objectPath` |\n\nВсе виджеты с **одинаковым** `selectionKey` показывают данные **одного и того же** выбранного объекта — это нормально (детализация выбора).\n\nДля **нескольких независимых выборов** на одном экране используйте **разные имена** слотов, например `\"device\"` и `\"order\"`.\n\n### Пример: SNMP Host Monitoring\n\nДашборд `root.platform.dashboards.snmp-host-monitoring`:\n\n```json\n{\n  \"id\": \"device-table\",\n  \"type\": \"object-table\",\n  \"parentPath\": \"root.platform.devices\",\n  \"selectionKey\": \"device\",\n  \"columnsJson\": \"[{\\\"variable\\\":\\\"sysName\\\",\\\"label\\\":\\\"Имя хоста\\\"},{\\\"variable\\\":\\\"driverStatus\\\",\\\"label\\\":\\\"Драйвер\\\"}]\"\n}\n```\n\nГрафики **net ↓ / net ↑** ссылаются на переменные объекта `ifInOctetsRate` / `ifOutOctetsRate` (B/s). Они вычисляются platform binding `counterRate(ifInOctets)` / `counterRate(ifOutOctets)` в модели `snmp-agent-v1` при каждом poll SNMP; сырые Counter32 остаются в `ifInOctets` / `ifOutOctets`. Подробнее: [BINDINGS.md](BINDINGS.md#counterrate).\n\n```json\n{\n  \"id\": \"hostname-value\",\n  \"type\": \"value\",\n  \"selectionKey\": \"device\",\n  \"variableName\": \"sysName\",\n  \"valueField\": \"value\"\n}\n```\n\n- Таблица загружает детей `parentPath`, в колонках — переменные **каждой** строки.\n- Клик по строке публикует путь в `selection.device`.\n- Виджеты с `selectionKey: \"device\"` опрашивают переменные **только выбранного** `DEVICE`.\n\nСтатический `objectPath` у потребителей в этом layout **не задан** — путь полностью из выбора.\n\n### Откуда значения переменных (данные на экране)\n\nДашборд **не** опрашивает протоколы (SNMP, Modbus, …) напрямую.\n\n```text\nДрайвер (poll) → переменные DEVICE на сервере\n       ↓\nGET /api/v1/objects/by-path/variables?path=...\n       ↓\nВиджет: variableName + valueField → отображение\n```\n\nДля SNMP-устройства нужны: модель с переменными (`snmp-agent-v1`), запущенный драйвер и `driverPointMappingsJson`. Имена в `columnsJson` / `variableName` должны **совпадать** с именами переменных объекта.\n\nОбновление UI: polling по `refreshIntervalMs` + WebSocket `/ws/objects` (`VARIABLE_UPDATED` инвалидирует кэш `variables`).\n\n### Типичные ошибки конфигурации\n\n| Ситуация | Результат |\n|----------|-----------|\n| Таблица `selectionKey: \"device\"`, виджет `selectionKey: \"device\"` | Работает |\n| Таблица `\"device\"`, виджет `\"order\"` | Не связаны |\n| Две таблицы с одним `selectionKey` | Один слот; побеждает последний клик |\n| `selectionKey` без таблицы-источника | Пустой слот → fallback на `objectPath` или «—» |\n| Заданы и `objectPath`, и `selectionKey` | При непустом выборе **приоритет у selection** |\n| В колонке имя переменной не совпадает с моделью | Ячейка «—» |\n\nВ редакторе виджета: поле **«Ключ выбора (selectionKey)»** (`WidgetEditorPanel`). Пустая строка отключает привязку к контексту.\n\n## Навигация между дашбордами\n\nВиджеты могут открывать другой дашборд **переходом** (`navigate`) или **модальным окном** (`modal`).\n\n| Механизм | type | Поля |\n|----------|------|------|\n| Кнопка | `dashboard-link` | `targetDashboardPath`, `openMode`, `buttonLabel`, `modalTitle` |\n| Клик по строке таблицы | `object-table` | `rowTargetDashboard`, `rowOpenMode` (+ `selectionKey` для передачи выбора) |\n| Клик по карточке | `card-grid` | `cardTargetDashboard`, `cardOpenMode`, `cardSelectionKey` |\n\nКонтекст выбо"
+  },
+  "examples": [
+    {
+      "appId": "Demo Application",
+      "packageId": "demo",
+      "path": "examples/demo-app/bundle.json",
+      "version": "1.0.0",
+      "sections": [
+        "displayName",
+        "migrations",
+        "operatorManifest",
+        "reports",
+        "schemaName",
+        "version"
+      ],
+      "manifest": {
+        "version": "1.0.0",
+        "displayName": "Demo Application",
+        "tablePrefix": "",
+        "schemaName": "app_demo",
+        "migrations": [
+          {
+            "id": "schema_and_seed",
+            "sql": "CREATE TABLE IF NOT EXISTS demo_category (id UUID PRIMARY KEY, category_code VARCHAR(64) NOT NULL, status VARCHAR(32) NOT NULL);\nCREATE TABLE IF NOT EXISTS demo_item (id UUID PRIMARY KEY, item_code VARCHAR(64) NOT NULL, status VARCHAR(32) NOT NULL, category_id UUID);\nCREATE TABLE IF NOT EXISTS demo_metric (metric_key VARCHAR(64) PRIMARY KEY, metric_value BIGINT, status VARCHAR(32));\nINSERT INTO demo_category (id, category_code, status) SELECT '11111111-1111-1111-1111-111111111111', 'CAT-A', 'open' WHERE NOT EXISTS (SELECT 1 FROM demo_category WHERE category_code = 'CAT-A');\nINSERT INTO demo_item (id, item_code, status, category_id) SELECT '22222222-2222-2222-2222-222222222201', 'ITEM-001', 'ready', '11111111-1111-1111-1111-111111111111' WHERE NOT EXISTS (SELECT 1 FROM demo_item WHERE item_code = 'ITEM-001');\nINSERT INTO demo_item (id, item_code, status, category_id) SELECT '22222222-2222-2222-2222-222222222202', 'ITEM-002', 'assigned', '11111111-1111-1111-1111-111111111111' WHERE NOT EXISTS (SELECT 1 FROM demo_item WHERE item_code = 'ITEM-002');\nINSERT INTO demo_item (id, item_code, status, category_id) SELECT '22222222-2222-2222-2222-222222222203', 'ITEM-003', 'ready', '11111111-1111-1111-1111-111111111111' WHERE NOT EXISTS (SELECT 1 FROM demo_item WHERE item_code = 'ITEM-003');\nINSERT INTO demo_metric (metric_key, metric_value, status) SELECT 'throughput', 42, 'ok' WHERE NOT EXISTS (SELECT 1 FROM demo_metric WHERE metric_key = 'throughput');"
+          }
+        ],
+        "reports": [
+          {
+            "reportId": "ready-items",
+            "title": "Готовые позиции",
+            "description": "Позиции с заданным статусом (параметр status)",
+            "query": "SELECT item_code, status FROM demo_item WHERE status = ? ORDER BY item_code",
+            "parameters": [
+              "status"
+            ],
+            "columns": [
+              {
+                "field": "item_code",
+                "label": "Код"
+              },
+              {
+                "field": "status",
+                "label": "Статус"
+              }
+            ],
+            "maxRows": 500
+          },
+          {
+            "reportId": "items-summary",
+            "title": "Сводка по статусам",
+            "description": "Количество позиций в каждом статусе",
+            "query": "SELECT status, COUNT(*) AS cnt FROM demo_item GROUP BY status ORDER BY status",
+            "parameters": [],
+            "columns": [
+              {
+                "field": "status",
+                "label": "Статус"
+              },
+              {
+                "field": "cnt",
+                "label": "Кол-во"
+              }
+            ],
+            "maxRows": 100
+          },
+          {
+            "reportId": "items-by-category",
+            "title": "Позиции по категории",
+            "description": "JOIN demo_item и demo_category",
+            "query": "SELECT i.item_code, i.status, c.category_code FROM demo_item i JOIN demo_category c ON c.id = i.category_id ORDER BY c.category_code, i.item_code",
+            "parameters": [],
+            "columns": [
+              {
+                "field": "category_code",
+                "label": "Категория"
+              },
+              {
+                "field": "item_code",
+                "label": "Код"
+              },
+              {
+                "field": "status",
+                "label": "Статус"
+              }
+            ],
+            "maxRows": 500
+          }
+        ],
+        "operatorManifest": {
+          "appId": "demo",
+          "title": "Demo Application",
+          "wireProfile": "anima-operator-v1",
+          "defaultScreen": "ready-items-report",
+          "screens": [
+            {
+              "id": "ready-items-report",
+              "title": "Готовые позиции",
+              "description": "Отчёт ready-items: позиции со статусом ready",
+              "report": {
+                "reportId": "ready-items",
+                "parameters": {
+                  "status": "ready"
+                },
+                "refreshIntervalMs": 30000,
+                "emptyMessage": "Нет готовых позиций"
+              }
+            },
+            {
+              "id": "items-summary-report",
+              "title": "Сводка по статусам",
+              "description": "Отчёт items-summary без параметров",
+              "report": {
+                "reportId": "items-summary",
+                "refreshIntervalMs": 60000,
+                "emptyMessage": "Нет данных"
+              }
+            },
+            {
+              "id": "items-by-category-report",
+              "title": "По категориям",
+              "description": "Отчёт items-by-category с JOIN",
+              "report": {
+                "reportId": "items-by-category",
+                "emptyMessage": "Нет позиций"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "appId": "Lab Training",
+      "packageId": "lab_training",
+      "path": "examples/lab-training/bundle.json",
+      "version": "2.0.0",
+      "sections": [
+        "alertRules",
+        "correlators",
+        "dashboards",
+        "displayName",
+        "metadata",
+        "operatorUi",
+        "reports",
+        "schemaName",
+        "version"
+      ],
+      "manifest": {
+        "version": "2.0.0",
+        "displayName": "Lab Training",
+        "tablePrefix": "",
+        "schemaName": "app_lab_training",
+        "metadata": {
+          "usersNote": "Training users lab-user-a / lab-user-b and cross-device ACL are seeded by LabSecurityBootstrap on server start."
+        },
+        "alertRules": [
+          {
+            "name": "Lab sum range sustained alert",
+            "objectPath": "root.platform.devices.lab-userA-01",
+            "watchVariable": "sumIntFloat",
+            "conditionExpr": "self.sumIntFloat[\"value\"] >= 50 && self.sumIntFloat[\"value\"] <= 100",
+            "eventName": "labSumRangeAlarm",
+            "payloadVariable": "sumIntFloat",
+            "enabled": true,
+            "edgeTrigger": false,
+            "delaySeconds": 10,
+            "sustainWhileTrue": true
+          },
+          {
+            "name": "Lab table sum threshold",
+            "objectPath": "root.platform.devices.lab-userA-01",
+            "watchVariable": "tableIntSum",
+            "conditionExpr": "self.tableIntSum[\"value\"] > 100",
+            "eventName": "labTableSumExceeded",
+            "payloadVariable": "tableIntSum",
+            "enabled": true,
+            "edgeTrigger": true,
+            "delaySeconds": 0,
+            "sustainWhileTrue": false
+          }
+        ],
+        "correlators": [
+          {
+            "name": "Lab event1 latch on",
+            "objectPath": "root.platform.devices.lab-userA-01",
+            "patternType": "COUNT",
+            "eventName": "event1",
+            "windowSeconds": 0,
+            "minOccurrences": 1,
+            "cooldownSeconds": 0,
+            "sequenceGapSeconds": 0,
+            "actionType": "SET_VARIABLE",
+            "actionTarget": "alarmLatched=true",
+            "enabled": true
+          },
+          {
+            "name": "Lab event2 unlatch",
+            "objectPath": "root.platform.devices.lab-userA-01",
+            "patternType": "COUNT",
+            "eventName": "event2",
+            "windowSeconds": 0,
+            "minOccurrences": 1,
+            "cooldownSeconds": 0,
+            "sequenceGapSeconds": 0,
+            "actionType": "SET_VARIABLE",
+            "actionTarget": "alarmLatched=false",
+            "payloadFilterExpr": "payload[\"int\"] > 20",
+            "enabled": true
+          },
+          {
+            "name": "Lab open corrective report",
+            "objectPath": "root.platform.devices.lab-userA-01",
+            "patternType": "COUNT",
+            "eventName": "labTableSumExceeded",
+            "windowSeconds": 0,
+            "minOccurrences": 1,
+            "cooldownSeconds": 0,
+            "sequenceGapSeconds": 0,
+            "actionType": "OPEN_OPERATOR_REPORT",
+            "actionTarget": "root.platform.reports.lab-table-corrective",
+            "enabled": true
+          }
+        ],
+        "reports": [
+          {
+            "reportId": "lab-all-devices-table",
+            "title": "All lab devices table",
+            "description": "Tree-variables report: table rows from all lab virtual devices",
+            "reportType": "tree-variables",
+            "devicePathPattern": "root.platform.devices.lab-*",
+            "variableName": "table",
+            "columns": [
+              {
+                "field": "devicepath",
+                "label": "Device path"
+              },
+              {
+                "field": "int",
+                "label": "Int"
+              },
+              {
+                "field": "string",
+                "label": "String"
+              }
+            ],
+            "maxRows": 1000
+          },
+          {
+            "reportId": "lab-table-corrective",
+            "title": "Corrective table report",
+            "description": "Opened when table int sum exceeds 100 (Task 4)",
+            "reportType": "tree-variables",
+            "devicePathPattern": "root.platform.devices.lab-*",
+            "variableName": "table",
+            "columns": [
+              {
+                "field": "devicepath",
+                "label": "Device path"
+              },
+              {
+                "field": "int",
+                "label": "Int"
+              },
+              {
+                "field": "string",
+                "label": "String"
+              }
+            ],
+            "maxRows": 500
+          }
+        ],
+        "dashboards": [
+          {
+            "path": "root.platform.dashboards.lab-form-grid",
+            "title": "Lab form grid",
+            "refreshIntervalMs": 5000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"append-row\",\"type\":\"function-form\",\"title\":\"Append table row\",\"x\":0,\"y\":0,\"w\":6,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"functionName\":\"appendTableRow\",\"buttonLabel\":\"Append\",\"fieldsJson\":\"[{\\\"name\\\":\\\"int\\\",\\\"label\\\":\\\"Int\\\",\\\"type\\\":\\\"number\\\"},{\\\"name\\\":\\\"string\\\",\\\"label\\\":\\\"String\\\",\\\"type\\\":\\\"text\\\"}]\"}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-calculator",
+            "title": "Lab calculator",
+            "refreshIntervalMs": 5000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"calc-form\",\"type\":\"function-form\",\"title\":\"Calculator\",\"x\":0,\"y\":0,\"w\":5,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"functionName\":\"calculate\",\"buttonLabel\":\"Calculate\",\"fieldsJson\":\"[{\\\"name\\\":\\\"inputA\\\",\\\"label\\\":\\\"A\\\",\\\"type\\\":\\\"number\\\"},{\\\"name\\\":\\\"inputB\\\",\\\"label\\\":\\\"B\\\",\\\"type\\\":\\\"number\\\"}]\"},{\"id\":\"calc-result\",\"type\":\"value\",\"title\":\"Result\",\"x\":5,\"y\":0,\"w\":3,\"h\":2,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"sumIntFloat\",\"valueField\":\"value\",\"decimals\":2}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-event-gen",
+            "title": "Lab event generator",
+            "refreshIntervalMs": 3000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"fire-event1\",\"type\":\"function-form\",\"title\":\"Fire event 1\",\"x\":0,\"y\":0,\"w\":4,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"functionName\":\"fireEvent1\",\"buttonLabel\":\"Fire event1\",\"fieldsJson\":\"[{\\\"name\\\":\\\"int\\\",\\\"label\\\":\\\"Int\\\",\\\"type\\\":\\\"number\\\"},{\\\"name\\\":\\\"string\\\",\\\"label\\\":\\\"String\\\",\\\"type\\\":\\\"text\\\"}]\"},{\"id\":\"fire-event2\",\"type\":\"function-form\",\"title\":\"Fire event 2\",\"x\":4,\"y\":0,\"w\":4,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"functionName\":\"fireEvent2\",\"buttonLabel\":\"Fire event2\",\"fieldsJson\":\"[{\\\"name\\\":\\\"int\\\",\\\"label\\\":\\\"Int\\\",\\\"type\\\":\\\"number\\\"},{\\\"name\\\":\\\"string\\\",\\\"label\\\":\\\"String\\\",\\\"type\\\":\\\"text\\\"}]\"},{\"id\":\"event1-feed\",\"type\":\"event-feed\",\"title\":\"Event 1 log\",\"x\":0,\"y\":4,\"w\":6,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"eventNamesJson\":\"[\\\"event1\\\"]\",\"maxItems\":20},{\"id\":\"event2-feed\",\"type\":\"event-feed\",\"title\":\"Event 2 log (filtered)\",\"x\":6,\"y\":4,\"w\":6,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"eventNamesJson\":\"[\\\"event2\\\"]\",\"payloadFilterExpr\":\"int > 10 || string contains abc\",\"maxItems\":20}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-charts",
+            "title": "Lab charts",
+            "refreshIntervalMs": 1000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"sine-chart\",\"type\":\"chart\",\"title\":\"Sine wave\",\"x\":0,\"y\":0,\"w\":6,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"sineWave\",\"valueField\":\"value\",\"chartStyle\":\"line\",\"maxPoints\":120,\"historyRange\":\"live\",\"color\":\"#2f81f7\",\"decimals\":2},{\"id\":\"saw-chart\",\"type\":\"chart\",\"title\":\"Sawtooth wave\",\"x\":6,\"y\":0,\"w\":6,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"sawtoothWave\",\"valueField\":\"value\",\"chartStyle\":\"line\",\"maxPoints\":120,\"historyRange\":\"live\",\"color\":\"#3fb950\",\"decimals\":2}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-pie",
+            "title": "Lab pie chart",
+            "refreshIntervalMs": 10000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"table-pie\",\"type\":\"pie-chart\",\"title\":\"Table int distribution\",\"x\":0,\"y\":0,\"w\":12,\"h\":5,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"table\",\"labelField\":\"string\",\"valueField\":\"int\",\"decimals\":0}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-modal",
+            "title": "Lab modal link",
+            "refreshIntervalMs": 5000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"open-charts\",\"type\":\"dashboard-link\",\"title\":\"Open charts\",\"x\":0,\"y\":0,\"w\":4,\"h\":2,\"targetDashboardPath\":\"root.platform.dashboards.lab-charts\",\"openMode\":\"modal\",\"buttonLabel\":\"Open charts modal\",\"modalTitle\":\"Lab charts\"}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-history",
+            "title": "Lab sine history",
+            "refreshIntervalMs": 5000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"sine-history-table\",\"type\":\"history-table\",\"title\":\"Sine history (5 min)\",\"x\":0,\"y\":0,\"w\":12,\"h\":5,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"sineWave\",\"valueField\":\"value\",\"decimals\":2}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-fan-composite",
+            "title": "Lab fan composite",
+            "refreshIntervalMs": 2000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"fan-composite\",\"type\":\"composite-widget\",\"title\":\"Fan control\",\"x\":0,\"y\":0,\"w\":6,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"childrenJson\":\"[{\\\"id\\\":\\\"fan-button\\\",\\\"type\\\":\\\"svg-widget\\\",\\\"title\\\":\\\"Start fan\\\",\\\"svgUrl\\\":\\\"/lab-assets/button.svg\\\",\\\"clickAction\\\":\\\"toggle\\\",\\\"objectPath\\\":\\\"root.platform.devices.lab-userA-01\\\",\\\"toggleVariable\\\":\\\"fanRunning\\\",\\\"valueField\\\":\\\"value\\\"},{\\\"id\\\":\\\"fan-blades\\\",\\\"type\\\":\\\"svg-widget\\\",\\\"title\\\":\\\"Fan\\\",\\\"svgUrl\\\":\\\"/lab-assets/fan.svg\\\",\\\"objectPath\\\":\\\"root.platform.devices.lab-userA-01\\\"}]\"},{\"id\":\"alarm-latched\",\"type\":\"indicator\",\"title\":\"Alarm latched\",\"x\":6,\"y\":0,\"w\":3,\"h\":2,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"alarmLatched\",\"valueField\":\"value\",\"trueLabel\":\"Latched\",\"falseLabel\":\"Clear\"}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-virtual-overview",
+            "title": "Lab virtual overview",
+            "refreshIntervalMs": 5000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"sine-value\",\"type\":\"value\",\"title\":\"Sine\",\"x\":0,\"y\":0,\"w\":3,\"h\":2,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"sineWave\",\"valueField\":\"value\",\"decimals\":2},{\"id\":\"sum-waves\",\"type\":\"value\",\"title\":\"Sum waves\",\"x\":3,\"y\":0,\"w\":3,\"h\":2,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"sumWaves\",\"valueField\":\"value\",\"decimals\":2},{\"id\":\"table-sum\",\"type\":\"value\",\"title\":\"Table int sum\",\"x\":6,\"y\":0,\"w\":3,\"h\":2,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variableName\":\"tableIntSum\",\"valueField\":\"value\"},{\"id\":\"events-feed\",\"type\":\"event-feed\",\"title\":\"Events\",\"x\":0,\"y\":2,\"w\":6,\"h\":4,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"maxItems\":15},{\"id\":\"devices-table\",\"type\":\"report\",\"title\":\"All devices table\",\"x\":6,\"y\":2,\"w\":6,\"h\":4,\"reportPath\":\"root.platform.reports.lab-all-devices-table\"}]}"
+          },
+          {
+            "path": "root.platform.dashboards.lab-variable-editor",
+            "title": "Lab variable editor",
+            "refreshIntervalMs": 5000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"editor-a\",\"type\":\"variable-editor\",\"title\":\"Lab user A variables\",\"x\":0,\"y\":0,\"w\":6,\"h\":5,\"objectPath\":\"root.platform.devices.lab-userA-01\",\"variablesJson\":\"[\\\"intValue\\\",\\\"floatValue\\\",\\\"sumIntFloat\\\"]\"},{\"id\":\"editor-b\",\"type\":\"variable-editor\",\"title\":\"Lab user B variables\",\"x\":6,\"y\":0,\"w\":6,\"h\":5,\"objectPath\":\"root.platform.devices.lab-userB-01\",\"variablesJson\":\"[\\\"intValue\\\",\\\"floatValue\\\",\\\"sumIntFloat\\\"]\"}]}"
+          }
+        ],
+        "operatorUi": {
+          "appId": "lab-training",
+          "title": "Lab Training",
+          "defaultDashboard": "root.platform.dashboards.lab-form-grid",
+          "dashboards": [
+            {
+              "path": "root.platform.dashboards.lab-form-grid",
+              "title": "Form grid"
+            },
+            {
+              "path": "root.platform.dashboards.lab-calculator",
+              "title": "Calculator"
+            },
+            {
+              "path": "root.platform.dashboards.lab-event-gen",
+              "title": "Event generator"
+            },
+            {
+              "path": "root.platform.dashboards.lab-charts",
+              "title": "Charts"
+            },
+            {
+              "path": "root.platform.dashboards.lab-pie",
+              "title": "Pie chart"
+            },
+            {
+              "path": "root.platform.dashboards.lab-modal",
+              "title": "Modal link"
+            },
+            {
+              "path": "root.platform.dashboards.lab-history",
+              "title": "History"
+            },
+            {
+              "path": "root.platform.dashboards.lab-fan-composite",
+              "title": "Fan composite"
+            },
+            {
+              "path": "root.platform.dashboards.lab-virtual-overview",
+              "title": "Virtual overview"
+            },
+            {
+              "path": "root.platform.dashboards.lab-variable-editor",
+              "title": "Variable editor"
+            }
+          ],
+          "reports": [
+            {
+              "path": "root.platform.reports.lab-all-devices-table",
+              "title": "All lab devices table"
+            },
+            {
+              "path": "root.platform.reports.lab-table-corrective",
+              "title": "Corrective table report"
+            }
+          ],
+          "defaultReport": "root.platform.reports.lab-all-devices-table"
+        }
+      }
+    },
+    {
+      "appId": "MES Reference (dispatch / tank / rack)",
+      "packageId": "mes_ref",
+      "path": "examples/mes-reference/bundle.json",
+      "version": "1.0.0",
+      "sections": [
+        "alertRules",
+        "correlators",
+        "displayName",
+        "events",
+        "functions",
+        "migrations",
+        "objects",
+        "operatorUi",
+        "schemaName",
+        "version"
+      ],
+      "manifest": {
+        "version": "1.0.0",
+        "displayName": "MES Reference (dispatch / tank / rack)",
+        "tablePrefix": "",
+        "schemaName": "app_mes_ref",
+        "migrations": [
+          {
+            "id": "mes_schema",
+            "sql": "CREATE TABLE IF NOT EXISTS mes_tank (id UUID PRIMARY KEY, tank_code VARCHAR(32) NOT NULL, level_pct INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS mes_dispatch_order (id UUID PRIMARY KEY, order_no VARCHAR(32) NOT NULL, tank_code VARCHAR(32) NOT NULL, volume_liters INTEGER NOT NULL, status VARCHAR(32) NOT NULL); INSERT INTO mes_tank (id, tank_code, level_pct) SELECT 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'T-01', 72 WHERE NOT EXISTS (SELECT 1 FROM mes_tank WHERE tank_code = 'T-01'); INSERT INTO mes_dispatch_order (id, order_no, tank_code, volume_liters, status) SELECT 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'DO-1001', 'T-01', 12000, 'pending' WHERE NOT EXISTS (SELECT 1 FROM mes_dispatch_order WHERE order_no = 'DO-1001'); INSERT INTO mes_dispatch_order (id, order_no, tank_code, volume_liters, status) SELECT 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'DO-1002', 'T-01', 8000, 'pending' WHERE NOT EXISTS (SELECT 1 FROM mes_dispatch_order WHERE order_no = 'DO-1002');"
+          }
+        ],
+        "objects": [
+          {
+            "parentPath": "root.platform.devices",
+            "name": "mes-rack-01",
+            "type": "DEVICE",
+            "displayName": "MES Loading Rack",
+            "description": "Simplified loading rack (эстакада) for MES reference"
+          }
+        ],
+        "functions": [
+          {
+            "objectPath": "root.platform.devices.demo-sensor-01",
+            "functionName": "mes_listOrders",
+            "version": "1",
+            "descriptor": {
+              "inputSchema": {
+                "name": "in",
+                "fields": []
+              },
+              "outputSchema": {
+                "name": "out",
+                "fields": [
+                  {
+                    "name": "error_code",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "error_message",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "rows",
+                    "type": "RECORD_LIST",
+                    "nestedSchema": {
+                      "name": "order_row",
+                      "fields": [
+                        {
+                          "name": "orderNo",
+                          "type": "STRING"
+                        },
+                        {
+                          "name": "tankCode",
+                          "type": "STRING"
+                        },
+                        {
+                          "name": "volumeLiters",
+                          "type": "INTEGER"
+                        },
+                        {
+                          "name": "status",
+                          "type": "STRING"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "source": {
+              "type": "script",
+              "body": "{\"steps\":[{\"type\":\"selectMany\",\"var\":\"orders\",\"sql\":\"SELECT order_no, tank_code, volume_liters, status FROM mes_dispatch_order ORDER BY order_no\"},{\"type\":\"map\",\"var\":\"rows\",\"source\":\"${orders}\",\"fields\":{\"orderNo\":\"${item.order_no}\",\"tankCode\":\"${item.tank_code}\",\"volumeLiters\":\"${item.volume_liters}\",\"status\":\"${item.status}\"}},{\"type\":\"return\",\"fields\":{\"error_code\":\"OK\",\"error_message\":\"\",\"rows\":\"${rows}\"}}]}"
+            }
+          },
+          {
+            "objectPath": "root.platform.devices.demo-sensor-01",
+            "functionName": "mes_startFilling",
+            "version": "1",
+            "descriptor": {
+              "inputSchema": {
+                "name": "in",
+                "fields": [
+                  {
+                    "name": "orderNo",
+                    "type": "STRING"
+                  }
+                ]
+              },
+              "outputSchema": {
+                "name": "out",
+                "fields": [
+                  {
+                    "name": "error_code",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "error_message",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "status",
+                    "type": "STRING"
+                  }
+                ]
+              }
+            },
+            "source": {
+              "type": "script",
+              "body": "{\"steps\":[{\"type\":\"selectOne\",\"var\":\"order\",\"sql\":\"SELECT id, status FROM mes_dispatch_order WHERE order_no = ?\",\"params\":[\"${input.orderNo}\"]},{\"type\":\"failIfNull\",\"var\":\"order\",\"message\":\"Order not found\"},{\"type\":\"failIfNotEquals\",\"var\":\"order.status\",\"equals\":\"pending\",\"message\":\"Order is not pending\"},{\"type\":\"exec\",\"sql\":\"UPDATE mes_dispatch_order SET status = 'filling' WHERE order_no = ?\",\"params\":[\"${input.orderNo}\"]},{\"type\":\"return\",\"fields\":{\"error_code\":\"OK\",\"error_message\":\"\",\"status\":\"filling\"}}]}"
+            }
+          },
+          {
+            "objectPath": "root.platform.devices.demo-sensor-01",
+            "functionName": "mes_completeFilling",
+            "version": "1",
+            "descriptor": {
+              "inputSchema": {
+                "name": "in",
+                "fields": [
+                  {
+                    "name": "orderNo",
+                    "type": "STRING"
+                  }
+                ]
+              },
+              "outputSchema": {
+                "name": "out",
+                "fields": [
+                  {
+                    "name": "error_code",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "error_message",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "status",
+                    "type": "STRING"
+                  }
+                ]
+              }
+            },
+            "source": {
+              "type": "script",
+              "body": "{\"steps\":[{\"type\":\"selectOne\",\"var\":\"order\",\"sql\":\"SELECT id, status FROM mes_dispatch_order WHERE order_no = ?\",\"params\":[\"${input.orderNo}\"]},{\"type\":\"failIfNull\",\"var\":\"order\",\"message\":\"Order not found\"},{\"type\":\"failIfNotEquals\",\"var\":\"order.status\",\"equals\":\"filling\",\"message\":\"Order is not filling\"},{\"type\":\"exec\",\"sql\":\"UPDATE mes_dispatch_order SET status = 'completed' WHERE order_no = ?\",\"params\":[\"${input.orderNo}\"]},{\"type\":\"return\",\"fields\":{\"error_code\":\"OK\",\"error_message\":\"\",\"status\":\"completed\"}}]}"
+            }
+          }
+        ],
+        "alertRules": [
+          {
+            "name": "MES rack temperature guard",
+            "objectPath": "root.platform.devices.demo-sensor-01",
+            "watchVariable": "temperature",
+            "conditionExpr": "self.temperature[\"value\"] > 85",
+            "eventName": "mesRackOverTemp",
+            "payloadVariable": "temperature",
+            "enabled": true,
+            "edgeTrigger": true,
+            "delaySeconds": 0,
+            "sustainWhileTrue": false
+          }
+        ],
+        "events": [
+          {
+            "id": "mesRackOverTemp",
+            "roles": [
+              "admin"
+            ]
+          },
+          {
+            "id": "mesOrderUpdated",
+            "roles": [
+              "operator",
+              "admin"
+            ]
+          }
+        ],
+        "correlators": [
+          {
+            "name": "MES latch alarm on rack over-temp",
+            "objectPath": "root.platform.devices.demo-sensor-01",
+            "patternType": "COUNT",
+            "eventName": "mesRackOverTemp",
+            "windowSeconds": 0,
+            "minOccurrences": 1,
+            "cooldownSeconds": 0,
+            "sequenceGapSeconds": 0,
+            "actionType": "SET_VARIABLE",
+            "actionTarget": "alarmActive=true",
+            "enabled": true
+          }
+        ],
+        "operatorUi": {
+          "appId": "mes-reference",
+          "title": "MES Reference",
+          "defaultDashboard": "",
+          "dashboards": [],
+          "eventJournalObjectPath": "root.platform.devices.demo-sensor-01"
+        }
+      }
+    },
+    {
+      "appId": "Virtual Simulator Profiles",
+      "packageId": "simulator",
+      "path": "examples/simulator-profiles/bundle.json",
+      "version": "1.0.0",
+      "sections": [
+        "displayName",
+        "objects",
+        "operatorUi",
+        "schemaName",
+        "version"
+      ],
+      "manifest": {
+        "version": "1.0.0",
+        "displayName": "Virtual Simulator Profiles",
+        "tablePrefix": "",
+        "schemaName": "app_simulator",
+        "objects": [
+          {
+            "parentPath": "root.platform.devices",
+            "name": "sim-meter-01",
+            "type": "DEVICE",
+            "displayName": "Simulator Meter",
+            "description": "PF-09 virtual driver profile: meter"
+          },
+          {
+            "parentPath": "root.platform.devices",
+            "name": "sim-weighbridge-01",
+            "type": "DEVICE",
+            "displayName": "Simulator Weighbridge",
+            "description": "PF-09 virtual driver profile: weighbridge (reads meterLiters)"
+          }
+        ],
+        "operatorUi": {
+          "appId": "simulator",
+          "title": "Simulator Profiles",
+          "defaultDashboard": "",
+          "dashboards": []
+        }
+      }
+    },
+    {
+      "appId": "Warehouse Reference App",
+      "packageId": "warehouse",
+      "path": "examples/warehouse-app/bundle.json",
+      "version": "1.0.0",
+      "sections": [
+        "displayName",
+        "functions",
+        "migrations",
+        "operatorUi",
+        "schemaName",
+        "version"
+      ],
+      "manifest": {
+        "version": "1.0.0",
+        "displayName": "Warehouse Reference App",
+        "tablePrefix": "",
+        "schemaName": "app_warehouse",
+        "migrations": [
+          {
+            "id": "wh_schema",
+            "sql": "CREATE TABLE IF NOT EXISTS wh_location (id UUID PRIMARY KEY, location_code VARCHAR(64) NOT NULL, status VARCHAR(32) NOT NULL); INSERT INTO wh_location (id, location_code, status) SELECT 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'A-01', 'ready' WHERE NOT EXISTS (SELECT 1 FROM wh_location WHERE location_code = 'A-01'); INSERT INTO wh_location (id, location_code, status) SELECT 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'B-02', 'assigned' WHERE NOT EXISTS (SELECT 1 FROM wh_location WHERE location_code = 'B-02');"
+          }
+        ],
+        "functions": [
+          {
+            "objectPath": "root.platform.devices.demo-sensor-01",
+            "functionName": "warehouse_listLocations",
+            "version": "1",
+            "descriptor": {
+              "inputSchema": {
+                "name": "in",
+                "fields": []
+              },
+              "outputSchema": {
+                "name": "out",
+                "fields": [
+                  {
+                    "name": "error_code",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "error_message",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "rows",
+                    "type": "RECORD_LIST",
+                    "nestedSchema": {
+                      "name": "location_row",
+                      "fields": [
+                        {
+                          "name": "code",
+                          "type": "STRING",
+                          "description": "Код ячейки"
+                        },
+                        {
+                          "name": "state",
+                          "type": "STRING",
+                          "description": "Статус ячейки"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "source": {
+              "type": "script",
+              "body": "{\"steps\":[{\"type\":\"selectMany\",\"var\":\"locations\",\"sql\":\"SELECT location_code, status FROM wh_location ORDER BY location_code\"},{\"type\":\"map\",\"var\":\"rows\",\"source\":\"${locations}\",\"fields\":{\"code\":\"${item.location_code}\",\"state\":\"${item.status}\"}},{\"type\":\"return\",\"fields\":{\"error_code\":\"OK\",\"error_message\":\"\",\"rows\":\"${rows}\"}}]}"
+            }
+          }
+        ],
+        "operatorUi": {
+          "appId": "warehouse",
+          "title": "Warehouse",
+          "defaultDashboard": "",
+          "dashboards": [],
+          "eventJournalObjectPath": "root.platform.devices.demo-sensor-01"
+        }
+      }
+    }
+  ],
+  "generationPolicy": {
+    "allowedArtifacts": [
+      "bundle",
+      "migrations",
+      "functions",
+      "dashboards",
+      "operatorUi",
+      "events",
+      "reports",
+      "models",
+      "workflows"
+    ],
+    "forbidden": [
+      "java in ispf-server",
+      "react in platform main",
+      "platform flyway migrations for app tables",
+      "custom bff routes"
+    ]
+  },
+  "contentSha256": "754dfb1432266d58701af1240aa211162f368e41f1e995b9758f3bb4faa6acbd"
+}

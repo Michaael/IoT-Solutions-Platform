@@ -191,11 +191,11 @@ cd apps/web-console && npm install && npm run dev
 - [x] Object tree: drag-and-drop порядок, семантические типы узлов
 - [x] Документация синхронизирована с object-tree моделью автоматизации
 - [x] CI (GitHub Actions), PF-01c map/buildRecord, models[] в bundle, leader locks, WebSocket auth
-- [x] **Phase 16 (REQ-FW Sprint E–F):** ADR, licensing, MES reference, public API, events catalog, messaging, bundle `requires[]`
+- [x] **Phase 16 (REQ-FW Sprint E–G):** ADR, licensing, MES reference, public API, events catalog, messaging, bundle `requires[]`, **AI Development Layer**
 
 ### В работе / далее
 
-- **Sprint G (REQ-FW):** AI Layer, licensed driver JAR packs
+- **Sprint G (REQ-FW):** licensed driver JAR packs (FW-50)
 - **Phase 5** — усиление механизмов object tree (модели, функции, события, workflow, bundle как упаковка дерева)
 
 См. [docs/ROADMAP.md](docs/ROADMAP.md).
