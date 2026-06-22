@@ -25,7 +25,7 @@ class AgentPromptStartupValidator {
     @PostConstruct
     void validatePromptAssembly() {
         List<Map<String, Object>> catalog = toolRegistry.toolCatalog();
-        String prompt = AgentPromptBuilder.build("root", catalog);
+        String prompt = AgentPromptBuilder.build("root", catalog, "");
         if (prompt.isBlank()) {
             throw new IllegalStateException("Agent system prompt is empty");
         }

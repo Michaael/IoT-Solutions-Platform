@@ -101,6 +101,24 @@ public class ApplicationFunctionStore {
         return List.copyOf(latest.values());
     }
 
+    public List<ApplicationFunctionHandler.DeployedFunction> listLatestByObjectPath(String objectPath) {
+        List<ApplicationFunctionHandler.DeployedFunction> rows = jdbcTemplate.query("""
+                SELECT id, app_id, object_path, function_name, version,
+                       source_type, source_body, input_schema_json, output_schema_json
+                FROM %s
+                WHERE object_path = ?
+                ORDER BY function_name, deployed_at DESC
+                """.formatted(functionsTable),
+                this::mapDeployedFunction,
+                objectPath
+        );
+        Map<String, ApplicationFunctionHandler.DeployedFunction> latest = new LinkedHashMap<>();
+        for (ApplicationFunctionHandler.DeployedFunction row : rows) {
+            latest.putIfAbsent(row.functionName(), row);
+        }
+        return List.copyOf(latest.values());
+    }
+
     public Optional<ApplicationFunctionHandler.DeployedFunction> findByVersion(
             String appId,
             String objectPath,

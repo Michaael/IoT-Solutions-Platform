@@ -7,16 +7,24 @@ import com.ispf.core.object.Variable;
 import com.ispf.server.api.dto.VariableDto;
 import com.ispf.server.driver.DriverBinding;
 import com.ispf.server.driver.DriverRuntimeService;
-import com.ispf.server.ai.context.ContextPackService;
+import com.ispf.server.ai.context.ContextPackSearchService;
 import com.ispf.server.ai.tool.AiToolRegistry;
 import com.ispf.server.ai.validation.BundleValidationResult;
 import com.ispf.server.api.dto.ObjectDto;
 import com.ispf.server.application.bundle.ApplicationBundleDeployService;
+import com.ispf.server.application.bundle.ApplicationBundleSnapshotStore;
+import com.ispf.server.application.data.ApplicationDataStore;
+import com.ispf.plugin.model.ModelRegistry;
+import com.ispf.server.application.catalog.ApplicationEventCatalogService;
+import com.ispf.server.application.function.ApplicationFunctionStore;
 import com.ispf.server.application.bundle.BundleManifestJsonSupport;
 import com.ispf.server.automation.AutomationTreeService;
 import com.ispf.server.dashboard.DashboardService;
 import com.ispf.server.driver.DeviceProvisioningService;
+import com.ispf.server.driver.DriverCatalog;
+import com.ispf.server.event.EventService;
 import com.ispf.server.federation.FederationBindService;
+import com.ispf.server.function.FunctionService;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectTemplateService;
 import com.ispf.server.object.ObjectUiIconService;
@@ -43,7 +51,15 @@ public class PlatformAgentToolRegistry {
     private final ObjectMapper objectMapper;
 
     public PlatformAgentToolRegistry(
-            ContextPackService contextPackService,
+            ContextPackSearchService contextPackSearchService,
+            DriverCatalog driverCatalog,
+            ApplicationDataStore applicationDataStore,
+            ApplicationBundleSnapshotStore bundleSnapshotStore,
+            FunctionService functionService,
+            ApplicationFunctionStore applicationFunctionStore,
+            ApplicationEventCatalogService eventCatalogService,
+            EventService eventService,
+            ModelRegistry modelRegistry,
             ObjectManager objectManager,
             ObjectAccessService objectAccessService,
             TenantScopeService tenantScopeService,
@@ -63,8 +79,32 @@ public class PlatformAgentToolRegistry {
             ObjectMapper objectMapper
     ) {
         this.objectMapper = objectMapper;
-        List<PlatformAgentTool> tools = List.of(
-                searchContextTool(contextPackService),
+        List<PlatformAgentTool> tools = new ArrayList<>();
+        tools.addAll(AgentKnowledgeTools.all(
+                contextPackSearchService,
+                driverCatalog,
+                applicationDataStore,
+                bundleSnapshotStore
+        ));
+        tools.addAll(AgentDiscoveryTools.all(
+                objectManager,
+                objectAccessService,
+                tenantScopeService,
+                applicationFunctionStore,
+                eventCatalogService,
+                objectMapper
+        ));
+        tools.addAll(AgentActionTools.all(
+                functionService,
+                applicationFunctionStore,
+                objectManager,
+                objectAccessService,
+                tenantScopeService,
+                eventService,
+                modelRegistry,
+                objectMapper
+        ));
+        tools.addAll(List.of(
                 listObjectsTool(objectManager, objectAccessService, tenantScopeService, objectUiIconService),
                 getObjectTool(objectManager, objectAccessService, tenantScopeService, objectUiIconService),
                 listVariablesTool(objectManager, objectAccessService, tenantScopeService),
@@ -98,7 +138,7 @@ public class PlatformAgentToolRegistry {
                 validateBundleTool(objectMapper, aiToolRegistry),
                 dryRunDeployTool(objectMapper, aiToolRegistry),
                 importPackageTool(objectMapper, bundleDeployService)
-        );
+        ));
         Map<String, PlatformAgentTool> index = new LinkedHashMap<>();
         for (PlatformAgentTool tool : tools) {
             index.put(tool.name(), tool);
@@ -122,112 +162,6 @@ public class PlatformAgentToolRegistry {
             throw new IllegalArgumentException("Unknown tool: " + toolName);
         }
         return tool.execute(arguments != null ? arguments : Map.of(), context);
-    }
-
-    private static PlatformAgentTool searchContextTool(ContextPackService contextPackService) {
-        return new PlatformAgentTool() {
-            @Override
-            public String name() {
-                return "search_context";
-            }
-
-            @Override
-            public String description() {
-                return "Search ISPF ContextPack (docs slices, bundle examples, script steps, widget types). "
-                        + "Args: query (string).";
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Map<String, Object> execute(Map<String, Object> arguments, AgentContext context) {
-                String query = stringArg(arguments, "query");
-                if (query.isBlank()) {
-                    return Map.of("status", "ERROR", "error", "query is required");
-                }
-                Map<String, Object> pack = contextPackService.loadPack();
-                String q = query.toLowerCase(Locale.ROOT);
-                List<Map<String, Object>> hits = new ArrayList<>();
-
-                appendDocHits(hits, "publicApiDoc", pack, q);
-                appendDocHits(hits, "applicationsDoc", pack, q);
-                appendDocHits(hits, "messagingDoc", pack, q);
-                appendDocHits(hits, "dashboardsDoc", pack, q);
-
-                Object examples = pack.get("examples");
-                if (examples instanceof List<?> list) {
-                    for (Object item : list) {
-                        if (item instanceof Map<?, ?> example) {
-                            String text = String.valueOf(example);
-                            if (text.toLowerCase(Locale.ROOT).contains(q)) {
-                                hits.add(Map.of(
-                                        "kind", "example",
-                                        "appId", String.valueOf(
-                                                example.get("packageId") != null
-                                                        ? example.get("packageId")
-                                                        : example.get("appId")
-                                        ),
-                                        "version", example.get("version"),
-                                        "sections", example.get("sections")
-                                ));
-                            }
-                        }
-                    }
-                }
-
-                Map<String, Object> result = new LinkedHashMap<>();
-                result.put("status", "OK");
-                result.put("query", query);
-                result.put("contextPackVersion", pack.getOrDefault("contextPackVersion", "unknown"));
-                result.put("hits", hits.stream().limit(8).toList());
-                result.put("scriptSteps", pack.get("scriptSteps"));
-                result.put("widgetTypes", pack.get("widgetTypes"));
-                result.put(
-                        "bundleManifestFields",
-                        ((Map<?, ?>) pack.getOrDefault("bundleManifest", Map.of())).get("fields")
-                );
-                if (isDashboardQuery(q)) {
-                    result.put("dashboardHint", """
-                            Dashboard widgets live ONLY in variable layout (JSON string with widgets[]).
-                            Do NOT set_variable name=widgets. Use get_dashboard_layout, set_dashboard_layout,
-                            or add_dashboard_widget. Templates: snmp-host-monitoring, demo-sensor, empty.
-                            """);
-                    result.put("dashboardTemplates", DashboardService.layoutTemplateNames());
-                }
-                return result;
-            }
-        };
-    }
-
-    private static boolean isDashboardQuery(String query) {
-        return query.contains("dashboard")
-                || query.contains("layout")
-                || query.contains("widget")
-                || query.contains("дашборд")
-                || query.contains("виджет");
-    }
-
-    private static void appendDocHits(
-            List<Map<String, Object>> hits,
-            String key,
-            Map<String, Object> pack,
-            String query
-    ) {
-        Object apiSlice = pack.get("apiSlice");
-        if (!(apiSlice instanceof Map<?, ?> slice)) {
-            return;
-        }
-        Object doc = slice.get(key);
-        if (!(doc instanceof String text) || !text.toLowerCase(Locale.ROOT).contains(query)) {
-            return;
-        }
-        int idx = text.toLowerCase(Locale.ROOT).indexOf(query);
-        int start = Math.max(0, idx - 120);
-        int end = Math.min(text.length(), idx + query.length() + 280);
-        hits.add(Map.of(
-                "kind", "doc",
-                "section", key,
-                "snippet", text.substring(start, end)
-        ));
     }
 
     private static PlatformAgentTool listObjectsTool(

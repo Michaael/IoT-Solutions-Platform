@@ -5,6 +5,7 @@ import com.ispf.ai.LlmRequest;
 import com.ispf.ai.LlmResponse;
 import com.ispf.server.ai.audit.AiToolAuditService;
 import com.ispf.server.ai.context.ContextPackService;
+import com.ispf.server.ai.context.PlatformBriefingService;
 import com.ispf.server.ai.llm.LlmProviderRegistry;
 import com.ispf.server.ai.validation.BundleValidationResult;
 import com.ispf.server.config.AiProperties;
@@ -25,6 +26,7 @@ public class TreeFirstAgentService {
     private final LlmProviderRegistry llmProviderRegistry;
     private final PlatformAgentToolRegistry toolRegistry;
     private final ContextPackService contextPackService;
+    private final PlatformBriefingService platformBriefingService;
     private final AiToolAuditService auditService;
     private final AiProperties aiProperties;
     private final ObjectMapper objectMapper;
@@ -34,6 +36,7 @@ public class TreeFirstAgentService {
             LlmProviderRegistry llmProviderRegistry,
             PlatformAgentToolRegistry toolRegistry,
             ContextPackService contextPackService,
+            PlatformBriefingService platformBriefingService,
             AiToolAuditService auditService,
             AiProperties aiProperties,
             ObjectMapper objectMapper,
@@ -42,6 +45,7 @@ public class TreeFirstAgentService {
         this.llmProviderRegistry = llmProviderRegistry;
         this.toolRegistry = toolRegistry;
         this.contextPackService = contextPackService;
+        this.platformBriefingService = platformBriefingService;
         this.auditService = auditService;
         this.aiProperties = aiProperties;
         this.objectMapper = objectMapper;
@@ -215,7 +219,13 @@ public class TreeFirstAgentService {
 
     private List<LlmMessage> buildMessagesWithHistory(AgentSession session, String userMessage) {
         List<LlmMessage> messages = new ArrayList<>();
-        messages.add(new LlmMessage("system", AgentPromptBuilder.build(session.rootPath(), toolRegistry.toolCatalog())));
+        boolean includeStatic = aiProperties.isBriefingEveryTurn() || session.turns().isEmpty();
+        String briefing = platformBriefingService.buildBriefing(session.rootPath(), includeStatic);
+        messages.add(new LlmMessage("system", AgentPromptBuilder.build(
+                session.rootPath(),
+                toolRegistry.toolCatalog(),
+                briefing
+        )));
 
         List<AgentTurn> history = session.turns();
         int maxTurns = Math.max(1, aiProperties.getAgentMaxHistoryTurns());

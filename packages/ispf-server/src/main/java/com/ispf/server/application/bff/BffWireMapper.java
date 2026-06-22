@@ -9,12 +9,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class BffWireMapper {
+public final class BffWireMapper {
 
     private BffWireMapper() {
     }
 
-    static Map<String, Object> toWire(DataRecord output, String wireProfile, DataSchema outputSchema) {
+    public static Map<String, Object> toWire(DataRecord output, String wireProfile, DataSchema outputSchema) {
         Map<String, Object> row = output != null && output.rowCount() > 0
                 ? new LinkedHashMap<>(output.firstRow())
                 : new LinkedHashMap<>();

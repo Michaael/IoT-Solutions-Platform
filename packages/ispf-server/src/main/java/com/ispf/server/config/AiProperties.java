@@ -22,6 +22,8 @@ public class AiProperties {
     private int agentMaxHistoryTurns = 50;
     private boolean agentDisableThinking = true;
     private int agentParseRetries = 3;
+    private int briefingMaxChars = 12_000;
+    private boolean briefingEveryTurn = false;
 
     public boolean isEnabled() {
         return enabled;
@@ -141,6 +143,22 @@ public class AiProperties {
 
     public void setAgentParseRetries(int agentParseRetries) {
         this.agentParseRetries = agentParseRetries;
+    }
+
+    public int getBriefingMaxChars() {
+        return briefingMaxChars;
+    }
+
+    public void setBriefingMaxChars(int briefingMaxChars) {
+        this.briefingMaxChars = briefingMaxChars;
+    }
+
+    public boolean isBriefingEveryTurn() {
+        return briefingEveryTurn;
+    }
+
+    public void setBriefingEveryTurn(boolean briefingEveryTurn) {
+        this.briefingEveryTurn = briefingEveryTurn;
     }
 
     public Duration timeout() {

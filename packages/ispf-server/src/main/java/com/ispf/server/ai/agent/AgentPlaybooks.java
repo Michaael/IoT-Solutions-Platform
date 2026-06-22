@@ -149,4 +149,49 @@ public final class AgentPlaybooks {
                 + ModelBootstrap.SNMP_POINT_MAPPINGS
                 + "\n";
     }
+
+    public static String virtualMeterLab() {
+        return """
+                ## Virtual driver — meter profile (lab-training / MES)
+                
+                Цель: симулятор налива без железа.
+                
+                Шаги:
+                1. create_object parentPath=root.platform.devices name=virtual-meter type=DEVICE
+                   displayName=Virtual meter, templateId=device-v1, driverId=virtual, autoStartDriver=false
+                2. set_variable name=driverConfigJson value={"profile":"meter","litersPerSecond":"120","filling":"true"}
+                3. configure_driver driverId=virtual autoStart=true
+                4. list_variables — meterLiters, flowRate, filling
+                5. finish
+                """;
+    }
+
+    public static String mesReferenceLifecycle() {
+        return """
+                ## MES reference (mes-reference bundle)
+                
+                Reference appId: mes-reference. BFF on root.platform.devices.demo-sensor-01:
+                1. list_functions objectPath=root.platform.devices.demo-sensor-01 appId=mes-reference
+                2. get_function objectPath=... functionName=mes_listOrders
+                3. invoke_bff objectPath=... functionName=mes_listOrders
+                4. invoke_bff ... functionName=mes_startFilling inputRows=[{"orderNo":"DO-1001"}]
+                5. invoke_bff ... functionName=mes_completeFilling inputRows=[{"orderNo":"DO-1001"}]
+                
+                For patterns use get_example_bundle appId=mes-reference sections=functions,objects.
+                Device rack: root.platform.devices.mes-rack-01. Alert mesRackOverTemp at temperature > 85.
+                """;
+    }
+
+    public static String modbusTcpDevice() {
+        return """
+                ## Modbus TCP device skeleton
+                
+                1. create_object parentPath=root.platform.devices name=modbus-tcp-01 type=DEVICE
+                   templateId=device-v1, driverId=modbus-tcp, autoStartDriver=false
+                2. set_variable name=driverConfigJson value={"host":"127.0.0.1","port":"502","unitId":"1"}
+                3. set_variable name=driverPointMappingsJson value={"temperature":"40001"}
+                4. configure_driver driverId=modbus-tcp autoStart=true
+                5. finish
+                """;
+    }
 }

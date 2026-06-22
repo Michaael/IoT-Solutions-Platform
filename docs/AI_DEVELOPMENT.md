@@ -18,6 +18,8 @@ See [ADR-0011](decisions/0011-ai-artifact-generation-gates.md) and [ADR-0012](de
 | FW-43 | Platform Studio | Web Console tab **AI Studio** (`apps/web-console`) |
 | FW-44 | Tree-first agent | `com.ispf.server.ai.agent.*`, REST `/api/v1/ai/agent/**` |
 | FW-44b | MCP adapter | `com.ispf.server.ai.mcp.*`, profile `mcp`, REST `/api/v1/ai/mcp` |
+| FW-45 | Platform knowledge briefing | `PlatformBriefingService`, `ContextPackSearchService`, agent tools |
+| FW-47 | Agent discovery tools | `AgentDiscoveryTools` — functions, events, variable schemas |
 
 ---
 
@@ -34,7 +36,34 @@ Outputs:
 - `ai/context/generated/ispf-context-pack.json`
 - `packages/ispf-server/src/main/resources/ai/context-pack.json`
 
-Pack includes bundle schema fields, script steps, widget types, API doc slices, and reference examples.
+Pack includes bundle schema fields, script steps, widget types, API doc slices, reference examples, **driverCatalog**, **featureIndex**, **exampleSummaries**, and **docChunks** for scored search.
+
+CI and release workflows run `python tools/ai-pack/build.py` before server tests/build (`ISPF_VERSION` from tag in release).
+
+---
+
+## Platform briefing (FW-45)
+
+Each agent chat injects a compact **Platform knowledge (auto)** block into the system prompt via `PlatformBriefingService`:
+
+| Block | Source |
+|-------|--------|
+| Drivers | Live `DriverCatalog` + maturity |
+| Virtual profiles | Built-in cheat sheet |
+| Reference examples | ContextPack `exampleSummaries` |
+| Features | ContextPack `featureIndex` |
+| Live snapshot | Deployed apps + bundle versions + tree children under session `rootPath` |
+
+Config:
+
+```yaml
+ispf:
+  ai:
+    briefing-max-chars: 12000
+    briefing-every-turn: false   # true = full static briefing every turn; default first turn only + live always
+```
+
+On follow-up turns (default): static drivers/examples/features omitted; **live snapshot** still refreshed.
 
 ---
 
@@ -110,7 +139,23 @@ Platform tools (Java handlers, ACL-aware):
 
 | Tool | Purpose |
 |------|---------|
-| `search_context` | Query ContextPack docs and examples |
+| `search_context` | Scored search over docChunks, drivers, features, examples (`topic` optional) |
+| `list_drivers` | Live driver catalog filter by query/maturity |
+| `get_driver_help` | Driver config slice from context pack |
+| `list_examples` | Reference bundle index |
+| `get_example_bundle` | Manifest subset for appId (e.g. mes-reference) |
+| `list_applications` | Registered apps + active bundle versions |
+| `list_functions` | Callable functions on object (tree + deployed BFF) |
+| `get_function` | Function input/output schema |
+| `list_event_catalog` | Bundle event catalog for appId |
+| `get_event_schema` | Event payload schema for fire_event |
+| `describe_variables` | Variable field schemas (writable, history) |
+| `invoke_bff` | Application BFF function (`mes_listOrders`, …) with wire result |
+| `invoke_tree_function` | Invoke function on object path (raw rows) |
+| `search_objects` | Search tree by query, optional type/parentPrefix |
+| `list_object_models` | Platform model templates (`templateId` for create_object) |
+| `fire_event` | Fire object event (optional appId for catalog schema) |
+| `list_events` | Recent event journal entries |
 | `list_objects` | List tree children |
 | `get_object` | Read one node |
 | `create_object` | Create DEVICE, DASHBOARD, CUSTOM, … |

@@ -14,9 +14,10 @@ class AgentPromptBuilderTest {
     void buildsPromptWithoutFormatPlaceholders() {
         String prompt = AgentPromptBuilder.build("root", List.of(
                 Map.of("name", "list_objects", "description", "List children")
-        ));
+        ), "### Drivers\n- snmp | SNMP\n");
         assertTrue(prompt.contains("list_objects"));
-        assertTrue(prompt.contains("root.platform.devices.snmp-localhost"));
+        assertTrue(prompt.contains("Platform knowledge"));
+        assertTrue(prompt.contains("snmp"));
         assertFalse(prompt.contains("%s"));
     }
 }

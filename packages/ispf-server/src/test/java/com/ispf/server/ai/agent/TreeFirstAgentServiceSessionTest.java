@@ -7,6 +7,7 @@ import com.ispf.ai.LlmResponse;
 import com.ispf.ai.LlmUsage;
 import com.ispf.server.ai.audit.AiToolAuditService;
 import com.ispf.server.ai.context.ContextPackService;
+import com.ispf.server.ai.context.PlatformBriefingService;
 import com.ispf.server.ai.llm.LlmProviderRegistry;
 import com.ispf.server.config.AiProperties;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,8 @@ class TreeFirstAgentServiceSessionTest {
     @Mock
     private ContextPackService contextPackService;
     @Mock
+    private PlatformBriefingService platformBriefingService;
+    @Mock
     private AiToolAuditService auditService;
     @Mock
     private AgentSessionStore sessionStore;
@@ -59,6 +62,7 @@ class TreeFirstAgentServiceSessionTest {
                 llmProviderRegistry,
                 toolRegistry,
                 contextPackService,
+                platformBriefingService,
                 auditService,
                 aiProperties,
                 objectMapper,
@@ -68,6 +72,7 @@ class TreeFirstAgentServiceSessionTest {
         when(llmProviderRegistry.isGenerationAvailable()).thenReturn(true);
         when(toolRegistry.toolCatalog()).thenReturn(List.of());
         when(contextPackService.contextPackVersion()).thenReturn("test-pack");
+        when(platformBriefingService.buildBriefing(any(), any(Boolean.class))).thenReturn("drivers: snmp, virtual");
         when(llmProviderRegistry.status()).thenReturn(Map.of("providerId", "test"));
         LlmProvider provider = org.mockito.Mockito.mock(LlmProvider.class);
         when(provider.providerId()).thenReturn("test");

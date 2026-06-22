@@ -159,6 +159,9 @@ REQ-PF и bundle deploy — способ **загрузить** declarative-ко
 | **FW-42**  | ToolRegistry (validate/deploy)     | **Done** | AI    | P3+ |
 | **FW-43**  | Platform Studio / AI copilot UI  | **Done** | AI    | P3+ |
 | **FW-44**  | Tree-first agent (sessions, tools, reliability) | **Done** | AI | P3+ |
+| **FW-45**  | Platform knowledge for agent (briefing + tools) | **Done** | AI | P3+ |
+| **FW-46**  | Agent action tools (invoke, search, events, models) | **Done** | AI | P3+ |
+| **FW-47**  | Agent discovery tools (functions, events, schemas) | **Done** | AI | P3+ |
 | **FW-50**  | Licensed driver JAR contract       | **Done** | DRV   | P3+ |
 
 
@@ -864,6 +867,29 @@ Platform **не** содержит отраслевую бизнес-логик�
 - [x] Reliability: parse retries, loop guard, startup validator, graceful ERROR turns
 - [x] Persistent DB sessions (`agent_sessions`, `agent_turns`, TTL eviction)
 - [x] MCP adapter ([ADR-0013](decisions/0013-mcp-agent-tool-adapter.md))
+
+#### FW-45 — Platform knowledge for agent
+
+- [x] `PlatformBriefingService` — auto-briefing in system prompt (drivers, examples, features, live snapshot)
+- [x] Extended ContextPack: `driverCatalog`, `featureIndex`, `exampleSummaries`, `docChunks`; CI rebuild
+- [x] Agent tools: `list_drivers`, `get_driver_help`, `list_examples`, `get_example_bundle`, `list_applications`
+- [x] `search_context` v2 — scored search with optional `topic`
+- [x] Playbooks: virtual meter, mes-reference, modbus-tcp
+
+#### FW-46 — Agent action tools
+
+- [x] `invoke_bff`, `invoke_tree_function` — FunctionService + ACL invoke
+- [x] `search_objects` — tree search with tenant/ACL filter
+- [x] `list_object_models` — ModelRegistry templates
+- [x] `fire_event`, `list_events` — event journal
+- [x] MES playbook with real invoke_bff steps
+
+#### FW-47 — Agent discovery tools
+
+- [x] `list_functions`, `get_function` — tree + deployed BFF signatures
+- [x] `list_event_catalog`, `get_event_schema` — bundle catalog + object events
+- [x] `describe_variables` — variable schemas before `set_variable`
+- [x] MES playbook: list_functions → get_function → invoke_bff
 
 ---
 

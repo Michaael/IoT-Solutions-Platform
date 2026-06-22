@@ -21,13 +21,15 @@ final class AgentLoopGuard {
             return """
                     You called the same tool repeatedly. Change strategy or emit {"type":"finish",...}. \
                     For dashboards: get_dashboard_layout / set_dashboard_layout / add_dashboard_widget. \
-                    Do not call search_context again for the same topic.""";
+                    For platform docs: list_drivers, get_driver_help, get_example_bundle instead of search_context loops. \
+                    Before invoke_bff: use list_functions and get_function instead of guessing function names.""";
         }
         long recentSearch = recentToolCount(steps, "search_context");
         if (recentSearch >= REPEAT_THRESHOLD) {
             return """
-                    Stop search_context. Use concrete platform tools (get_dashboard_layout, set_variable, \
-                    configure_driver, add_dashboard_widget). Finish with {"type":"finish",...} when done.""";
+                    Stop search_context loops. Use list_drivers, get_driver_help, list_examples, \
+                    get_example_bundle, or concrete tree tools (set_variable, configure_driver). \
+                    Finish with {"type":"finish",...} when done.""";
         }
         return defaultHint(maxSteps, steps);
     }
