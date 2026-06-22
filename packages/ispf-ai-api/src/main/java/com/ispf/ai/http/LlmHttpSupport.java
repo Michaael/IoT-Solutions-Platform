@@ -104,9 +104,35 @@ public final class LlmHttpSupport {
             root.put("temperature", request.temperature());
         }
         if (request.providerOptions() != null && !request.providerOptions().isEmpty()) {
-            request.providerOptions().forEach((key, value) -> root.set(key, MAPPER.valueToTree(value)));
+            mergeProviderOptions(root, request.providerOptions());
         }
         return root;
+    }
+
+    private static void mergeProviderOptions(ObjectNode root, Map<String, Object> providerOptions) {
+        for (Map.Entry<String, Object> entry : providerOptions.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof Map<?, ?> nested) {
+                ObjectNode child = root.putObject(entry.getKey());
+                for (Map.Entry<?, ?> nestedEntry : nested.entrySet()) {
+                    String key = String.valueOf(nestedEntry.getKey());
+                    Object nestedValue = nestedEntry.getValue();
+                    if (nestedValue instanceof Boolean bool) {
+                        child.put(key, bool);
+                    } else if (nestedValue instanceof Integer intValue) {
+                        child.put(key, intValue);
+                    } else if (nestedValue instanceof Long longValue) {
+                        child.put(key, longValue);
+                    } else if (nestedValue instanceof Double doubleValue) {
+                        child.put(key, doubleValue);
+                    } else if (nestedValue != null) {
+                        child.put(key, nestedValue.toString());
+                    }
+                }
+            } else {
+                root.putPOJO(entry.getKey(), value);
+            }
+        }
     }
 
     public static ObjectNode ollamaChatBody(LlmRequest request) {

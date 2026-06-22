@@ -61,9 +61,13 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
             throw new LlmException("OpenAI-compatible provider is not configured");
         }
         String model = request.model() != null && !request.model().isBlank() ? request.model() : defaultModel;
-        LlmRequest effective = request.model() != null && !request.model().isBlank()
-                ? request
-                : new LlmRequest(model, request.messages(), request.maxTokens(), request.temperature(), request.providerOptions());
+        LlmRequest effective = new LlmRequest(
+                model,
+                request.messages(),
+                request.maxTokens(),
+                request.temperature(),
+                request.providerOptions()
+        );
         var body = LlmHttpSupport.chatCompletionBody(effective);
         String json = LlmHttpSupport.postJson(
                 httpClient,
