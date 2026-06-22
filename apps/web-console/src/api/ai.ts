@@ -1,4 +1,5 @@
 import { getAuthHeaders } from "../auth/session";
+import { parseApiError } from "../utils/parseApiError";
 
 export interface AiValidationResult {
   status: string;
@@ -21,6 +22,7 @@ export interface AiProviderStatus {
   providerId: string;
   available: boolean;
   model?: string;
+  reason?: string;
 }
 
 export interface AiGenerateResult {
@@ -99,9 +101,27 @@ export interface AiAgentRunResult {
   contextPackVersion: string;
 }
 
-async function parseError(response: Response, fallback: string): Promise<string> {
+/** When provider responds but agent routes do not, the backend build is usually stale. */
+export function agentApiUnavailableMessage(providerReachable: boolean): string {
+  if (providerReachable) {
+    return (
+      "Сервер устарел: нет API агента (/api/v1/ai/agent/*). " +
+      "Пересоберите и перезапустите ispf-server (./gradlew :packages:ispf-server:bootRun --args=\"--spring.profiles.active=local\")."
+    );
+  }
+  return "Нет прав administrator или сессия истекла. Выйдите из консоли и войдите снова как admin.";
+}
+
+async function throwAiHttpError(response: Response, fallback: string): Promise<never> {
   const text = await response.text();
-  return text || fallback;
+  if (response.status === 403 && fallback.includes("agent")) {
+    throw new Error(
+      "Нет доступа к API агента (403). " +
+        "Если статус провайдера на вкладке «Настройки» загружается — пересоберите и перезапустите ispf-server. " +
+        "Иначе войдите как admin или обновите сессию."
+    );
+  }
+  throw new Error(parseApiError(text, fallback));
 }
 
 export function fetchAiContextPack(): Promise<AiContextPackInfo> {
@@ -109,7 +129,7 @@ export function fetchAiContextPack(): Promise<AiContextPackInfo> {
     headers: getAuthHeaders(),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Context pack failed: ${response.status}`));
+      throw new Error(parseApiError(await response.text(), `Context pack failed: ${response.status}`));
     }
     return response.json();
   });
@@ -120,7 +140,7 @@ export function fetchAiProviderStatus(): Promise<AiProviderStatus> {
     headers: getAuthHeaders(),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Provider status failed: ${response.status}`));
+      throw new Error(parseApiError(await response.text(), `Provider status failed: ${response.status}`));
     }
     return response.json();
   });
@@ -136,7 +156,7 @@ export function validateAiBundle(appId: string, manifest: unknown): Promise<AiVa
     body: JSON.stringify({ appId, manifest }),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Validate failed: ${response.status}`));
+      throw new Error(parseApiError(await response.text(), `Validate failed: ${response.status}`));
     }
     return response.json();
   });
@@ -152,7 +172,7 @@ export function dryRunAiDeploy(appId: string, manifest: unknown): Promise<AiVali
     body: JSON.stringify({ appId, manifest }),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Dry-run failed: ${response.status}`));
+      throw new Error(parseApiError(await response.text(), `Dry-run failed: ${response.status}`));
     }
     return response.json();
   });
@@ -172,7 +192,7 @@ export function generateAiBundle(
     body: JSON.stringify({ appId, prompt, baseManifest }),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Generate failed: ${response.status}`));
+      throw new Error(parseApiError(await response.text(), `Generate failed: ${response.status}`));
     }
     return response.json();
   });
@@ -183,7 +203,7 @@ export function fetchAiAgentTools(): Promise<{ tools: AiAgentTool[] }> {
     headers: getAuthHeaders(),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Agent tools failed: ${response.status}`));
+      return throwAiHttpError(response, `Agent tools failed: ${response.status}`);
     }
     return response.json();
   });
@@ -199,7 +219,7 @@ export function runAiAgent(goal: string, rootPath?: string): Promise<AiAgentRunR
     body: JSON.stringify({ goal, rootPath: rootPath || "root" }),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Agent run failed: ${response.status}`));
+      return throwAiHttpError(response, `Agent run failed: ${response.status}`);
     }
     return response.json();
   });
@@ -215,7 +235,7 @@ export function createAgentSession(rootPath?: string): Promise<AiAgentSessionSum
     body: JSON.stringify({ rootPath: rootPath || "root" }),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Create session failed: ${response.status}`));
+      return throwAiHttpError(response, `Create session failed: ${response.status}`);
     }
     return response.json();
   });
@@ -226,7 +246,7 @@ export function fetchAgentSession(sessionId: string): Promise<AiAgentSession> {
     headers: getAuthHeaders(),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Fetch session failed: ${response.status}`));
+      return throwAiHttpError(response, `Fetch session failed: ${response.status}`);
     }
     return response.json();
   });
@@ -246,7 +266,7 @@ export function sendAgentMessage(
     body: JSON.stringify({ message, rootPath }),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Send message failed: ${response.status}`));
+      return throwAiHttpError(response, `Send message failed: ${response.status}`);
     }
     return response.json();
   });
@@ -258,7 +278,7 @@ export function deleteAgentSession(sessionId: string): Promise<{ status: string;
     headers: getAuthHeaders(),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await parseError(response, `Delete session failed: ${response.status}`));
+      return throwAiHttpError(response, `Delete session failed: ${response.status}`);
     }
     return response.json();
   });

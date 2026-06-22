@@ -55,10 +55,11 @@ function AiStudioWorkspaceTabButton({
   onClick: () => void;
 }) {
   const chat = useAgentChatOptional();
+  const busy = chat?.isPending;
   return (
     <button type="button" className={active ? "active" : ""} onClick={onClick}>
       AI Studio
-      {chat?.isPending && <span className="tab-pending-dot" title="Агент выполняет задачу" />}
+      {busy && <span className="tab-pending-dot" title="Агент выполняет задачу" />}
     </button>
   );
 }
@@ -474,7 +475,9 @@ export default function App() {
         {workspaceTab === "system" && isAdmin && <SystemView />}
 
         {isAdmin && (
-          <main className="main ai-studio-main" hidden={workspaceTab !== "ai-studio"}>
+          <main
+            className={`main ai-studio-main${workspaceTab === "ai-studio" ? "" : " ai-studio-main-dormant"}`}
+          >
             <AiStudioPanel />
           </main>
         )}

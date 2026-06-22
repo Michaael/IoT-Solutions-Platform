@@ -7,7 +7,8 @@ interface AgentChatStatusBarProps {
 
 export default function AgentChatStatusBar({ workspaceTab, onOpenAiStudio }: AgentChatStatusBarProps) {
   const chat = useAgentChatOptional();
-  if (!chat?.isPending) {
+  const busy = chat?.isPending;
+  if (!busy) {
     return null;
   }
 

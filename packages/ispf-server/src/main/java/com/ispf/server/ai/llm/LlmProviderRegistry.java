@@ -45,16 +45,29 @@ public class LlmProviderRegistry {
 
     public boolean isGenerationAvailable() {
         LlmProvider provider = activeProvider();
-        return provider.isAvailable() && !NoopLlmProvider.PROVIDER_ID.equals(provider.providerId());
+        if (NoopLlmProvider.PROVIDER_ID.equals(provider.providerId())) {
+            return false;
+        }
+        if (!provider.isAvailable()) {
+            return false;
+        }
+        return !requiresApiKey(provider) || !resolveApiKey().isBlank();
     }
 
     public Map<String, Object> status() {
         LlmProvider provider = activeProvider();
+        boolean available = provider.isAvailable();
+        if (available && requiresApiKey(provider) && resolveApiKey().isBlank()) {
+            available = false;
+        }
         Map<String, Object> status = new LinkedHashMap<>();
         status.put("enabled", properties.isEnabled());
         status.put("providerId", provider.providerId());
-        status.put("available", provider.isAvailable());
+        status.put("available", available);
         status.put("model", properties.getModel());
+        if (!available && requiresApiKey(provider) && resolveApiKey().isBlank()) {
+            status.put("reason", "missing-api-key");
+        }
         return status;
     }
 
@@ -121,5 +134,10 @@ public class LlmProviderRegistry {
         }
         String value = System.getenv(envName);
         return value != null ? value : "";
+    }
+
+    private static boolean requiresApiKey(LlmProvider provider) {
+        String id = provider.providerId();
+        return "openai-compatible".equals(id) || "openai".equals(id) || "custom-url".equals(id);
     }
 }

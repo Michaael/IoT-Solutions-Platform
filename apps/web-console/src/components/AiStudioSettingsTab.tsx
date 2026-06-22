@@ -82,8 +82,17 @@ export default function AiStudioSettingsTab() {
           )}
           {!provider?.available && (
             <p className="hint">
-              Задайте <code>ispf.ai.provider</code> и <code>base-url</code> в конфигурации сервера
-              (или переменные окружения) и перезапустите <code>ispf-server</code>.
+              {provider?.reason === "missing-api-key" ? (
+                <>
+                  Задайте <code>ISPF_AI_API_KEY</code> в файле <code>.env</code> в корне репозитория и
+                  запустите сервер через <code>scripts/run-local-with-ai.ps1</code>.
+                </>
+              ) : (
+                <>
+                  Задайте <code>ispf.ai.provider</code> и <code>base-url</code> в конфигурации сервера
+                  (или переменные окружения) и перезапустите <code>ispf-server</code>.
+                </>
+              )}
             </p>
           )}
         </section>

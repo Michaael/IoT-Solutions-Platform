@@ -13,13 +13,6 @@ export interface AgentChatIndex {
   chats: AgentChatIndexEntry[];
 }
 
-export interface AgentPendingTurn {
-  sessionId: string;
-  startedAt: string;
-  userMessage: string;
-  turnCountBefore: number;
-}
-
 export interface AiStudioPrefs {
   defaultRootPath: string;
   defaultAppId: string;
@@ -80,28 +73,13 @@ export function clearAgentChatIndex(): AgentChatIndex {
   return cleared;
 }
 
-export function loadAgentPendingTurn(): AgentPendingTurn | null {
+/** Удаляет устаревший ключ ispf-agent-pending (больше не используется). */
+export function purgeLegacyAgentPending(): void {
   try {
-    const raw = localStorage.getItem(PENDING_KEY);
-    if (!raw) {
-      return null;
-    }
-    const parsed = JSON.parse(raw) as AgentPendingTurn;
-    if (!parsed.sessionId || !parsed.startedAt) {
-      return null;
-    }
-    return parsed;
+    localStorage.removeItem(PENDING_KEY);
   } catch {
-    return null;
+    // ignore quota / private mode
   }
-}
-
-export function saveAgentPendingTurn(pending: AgentPendingTurn): void {
-  localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
-}
-
-export function clearAgentPendingTurn(): void {
-  localStorage.removeItem(PENDING_KEY);
 }
 
 export function loadAiStudioPrefs(): AiStudioPrefs {

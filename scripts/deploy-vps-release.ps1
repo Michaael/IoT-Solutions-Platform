@@ -1,6 +1,6 @@
 # Build release, publish to GitHub, deploy to VPS with LLM settings.
 param(
-    [string]$Version = "0.7.4",
+    [string]$Version = "0.7.6",
     [string]$VpsHost = "root@92.63.104.121",
     [string]$AiApiKey = $env:ISPF_AI_API_KEY
 )
@@ -39,13 +39,20 @@ Write-Host "=== Git tag + GitHub release v$Version ==="
 git add -A
 $status = git status --porcelain
 if ($status) {
-    git commit -m "Release v$Version: LLM env support and VPS deploy scripts."
+    git commit -m "Release v$Version: AI Studio agent chat fixes and LLM key detection."
 }
 git tag -f "v$Version"
 git push origin main
 git push -f origin "v$Version"
 gh release delete "v$Version" -y 2>$null
-gh release create "v$Version" --title "ISPF v$Version" --notes "Sprint G AI Layer + LLM provider config for VPS." ispf-server.jar apps/web-console/web-console.zip
+gh release create "v$Version" --title "ISPF v$Version" --notes @"
+## Summary
+- AI Studio: fix agent chat send/session race, agent API availability banner, clearer 403/401 errors
+- LLM: provider status reports missing API key; Settings tab hints for .env and run-local-with-ai.ps1
+
+## Deploy
+VPS: ispf.iot-solutions.ru
+"@ ispf-server.jar apps/web-console/web-console.zip
 
 Write-Host "=== Deploy to $VpsHost ==="
 scp deploy/vps-configure-ai-env.sh deploy/vps-apply-release.sh deploy/vps-deploy-release-with-ai.sh "${VpsHost}:/tmp/"

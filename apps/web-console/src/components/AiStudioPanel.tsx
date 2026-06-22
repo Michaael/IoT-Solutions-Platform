@@ -24,12 +24,12 @@ export default function AiStudioPanel() {
   const [validationText, setValidationText] = useState<string | null>(null);
   const [dryRunText, setDryRunText] = useState<string | null>(null);
 
+  const backgroundBusy = isPending;
+
   useEffect(() => {
     const prefs = loadAiStudioPrefs();
     saveAiStudioPrefs({ ...prefs, lastTab: mode });
   }, [mode]);
-
-  const setStudioMode = (next: StudioMode) => setMode(next);
 
   return (
     <div className="ai-studio-panel">
@@ -38,7 +38,7 @@ export default function AiStudioPanel() {
           <h3>AI Studio</h3>
           <p className="op-muted">Студия разработки — агент, генерация пакетов и настройки провайдера.</p>
         </div>
-        {isPending && mode !== "agent" && (
+        {backgroundBusy && mode !== "agent" && (
           <div className="ai-studio-background-hint" role="status">
             <span className="ai-agent-status-bar-pulse" aria-hidden />
             Агент выполняет задачу в фоне — переключитесь на вкладку «Агент»
@@ -52,10 +52,12 @@ export default function AiStudioPanel() {
             key={tab}
             type="button"
             className={mode === tab ? "active" : ""}
-            onClick={() => setStudioMode(tab)}
+            onClick={() => setMode(tab)}
           >
             {MODE_LABELS[tab]}
-            {tab === "agent" && isPending && <span className="tab-pending-dot" title="Выполняется запрос" />}
+            {tab === "agent" && backgroundBusy && (
+              <span className="tab-pending-dot" title="Выполняется запрос" />
+            )}
           </button>
         ))}
       </nav>
@@ -71,31 +73,33 @@ export default function AiStudioPanel() {
                 : "не настроен"
               : "—"}
         </span>
-        {isPending && (
-          <span className="ai-studio-badge warn">Запрос выполняется…</span>
-        )}
+        {isPending && <span className="ai-studio-badge warn">Запрос выполняется…</span>}
       </div>
 
-      <AiAgentChat visible={mode === "agent"} />
+      <div className="ai-studio-body">
+        <div className={`ai-studio-tab-layer ${mode === "agent" ? "active" : "dormant"}`}>
+          <AiAgentChat />
+        </div>
 
-      <div className={`ai-studio-tab-panel ${mode === "bundle" ? "active" : ""}`} hidden={mode !== "bundle"}>
-        <AiStudioBundleTab
-          appId={appId}
-          setAppId={setAppId}
-          prompt={prompt}
-          setPrompt={setPrompt}
-          manifestText={manifestText}
-          setManifestText={setManifestText}
-          validationText={validationText}
-          setValidationText={setValidationText}
-          dryRunText={dryRunText}
-          setDryRunText={setDryRunText}
-          provider={provider}
-        />
-      </div>
+        <div className={`ai-studio-tab-layer ${mode === "bundle" ? "active" : "dormant"}`}>
+          <AiStudioBundleTab
+            appId={appId}
+            setAppId={setAppId}
+            prompt={prompt}
+            setPrompt={setPrompt}
+            manifestText={manifestText}
+            setManifestText={setManifestText}
+            validationText={validationText}
+            setValidationText={setValidationText}
+            dryRunText={dryRunText}
+            setDryRunText={setDryRunText}
+            provider={provider}
+          />
+        </div>
 
-      <div className={`ai-studio-tab-panel ${mode === "settings" ? "active" : ""}`} hidden={mode !== "settings"}>
-        <AiStudioSettingsTab />
+        <div className={`ai-studio-tab-layer ${mode === "settings" ? "active" : "dormant"}`}>
+          <AiStudioSettingsTab />
+        </div>
       </div>
     </div>
   );

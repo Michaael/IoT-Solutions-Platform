@@ -1,6 +1,4 @@
 import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchAiAgentTools } from "../api/ai";
 import { useAgentChat } from "../context/AgentChatContext";
 
 const EXAMPLE_PROMPTS = [
@@ -8,10 +6,6 @@ const EXAMPLE_PROMPTS = [
   "Покажи, какие устройства есть в root.platform.devices.",
   "Проверь, работает ли SNMP localhost, и запусти опрос драйвера если нужно.",
 ];
-
-interface AiAgentChatProps {
-  visible: boolean;
-}
 
 function formatChatDate(iso: string): string {
   try {
@@ -33,9 +27,12 @@ function dashboardLink(path: string | undefined): string | null {
   return `/?path=${encodeURIComponent(path)}`;
 }
 
-export default function AiAgentChat({ visible }: AiAgentChatProps) {
+export default function AiAgentChat() {
   const {
     provider,
+    agentApiReady,
+    agentApiBanner,
+    agentTools,
     chatIndex,
     activeSessionId,
     messages,
@@ -50,30 +47,29 @@ export default function AiAgentChat({ visible }: AiAgentChatProps) {
   } = useAgentChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const agentToolsQuery = useQuery({
-    queryKey: ["ai-agent-tools"],
-    queryFn: fetchAiAgentTools,
-  });
-
   useEffect(() => {
-    if (visible && isPending) {
+    if (isPending) {
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [visible, isPending, messages.length]);
+  }, [isPending, messages.length]);
 
   if (loadingSession) {
-    return (
-      <div className="ai-studio-tab-panel active" hidden={!visible}>
-        <p className="op-muted">Загрузка чата…</p>
-      </div>
-    );
+    return <p className="op-muted">Загрузка чата…</p>;
   }
 
   const providerReady = provider?.available ?? false;
+  const sending = isPending;
+  const chatEnabled = providerReady && agentApiReady;
 
   return (
-    <div className={`ai-studio-tab-panel ${visible ? "active" : ""}`} hidden={!visible} aria-hidden={!visible}>
-      {!providerReady && (
+    <>
+      {agentApiBanner && (
+        <div className="op-alert op-alert-error" role="alert">
+          {agentApiBanner}
+        </div>
+      )}
+
+      {!providerReady && !agentApiBanner && (
         <div className="op-alert op-alert-error">
           LLM не настроен — агент недоступен. Настройте провайдер на вкладке «Настройки».
         </div>
@@ -84,7 +80,7 @@ export default function AiAgentChat({ visible }: AiAgentChatProps) {
           <button
             type="button"
             className="btn primary ai-agent-new-chat"
-            disabled={isPending}
+            disabled={sending || !chatEnabled}
             onClick={() => void startNewChat()}
           >
             + Новый чат
@@ -98,6 +94,7 @@ export default function AiAgentChat({ visible }: AiAgentChatProps) {
                 <button
                   type="button"
                   className="ai-agent-chat-item"
+                  disabled={sending}
                   onClick={() => void switchSession(chat.id)}
                 >
                   <span className="ai-agent-chat-title">{chat.title}</span>
@@ -112,7 +109,7 @@ export default function AiAgentChat({ visible }: AiAgentChatProps) {
                   type="button"
                   className="ai-agent-chat-delete"
                   aria-label={`Удалить чат «${chat.title}»`}
-                  disabled={isPending}
+                  disabled={sending}
                   onClick={() => void deleteChat(chat.id)}
                 >
                   ×
@@ -120,11 +117,11 @@ export default function AiAgentChat({ visible }: AiAgentChatProps) {
               </li>
             ))}
           </ul>
-          {agentToolsQuery.data && (
+          {agentTools && agentTools.length > 0 && (
             <details className="ai-agent-sidebar-tools">
-              <summary>Инструменты ({agentToolsQuery.data.tools.length})</summary>
+              <summary>Инструменты ({agentTools.length})</summary>
               <ul>
-                {agentToolsQuery.data.tools.map((tool) => (
+                {agentTools.map((tool) => (
                   <li key={tool.name}>
                     <code>{tool.name}</code> — {tool.description}
                   </li>
@@ -143,7 +140,7 @@ export default function AiAgentChat({ visible }: AiAgentChatProps) {
                 type="button"
                 className="btn small ai-agent-example-chip"
                 title={example}
-                disabled={isPending || !providerReady}
+                disabled={sending || !chatEnabled}
                 onClick={() => void sendMessage(example)}
               >
                 {example.length > 72 ? `${example.slice(0, 72)}…` : example}
@@ -177,7 +174,13 @@ export default function AiAgentChat({ visible }: AiAgentChatProps) {
             <div ref={scrollRef} />
           </div>
 
-          <div className="ai-agent-chat-compose">
+          <form
+            className="ai-agent-chat-compose"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void sendMessage(input);
+            }}
+          >
             <textarea
               rows={3}
               value={input}
@@ -186,23 +189,22 @@ export default function AiAgentChat({ visible }: AiAgentChatProps) {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  void sendMessage(input);
+                  e.currentTarget.form?.requestSubmit();
                 }
               }}
-              disabled={isPending || !providerReady}
+              disabled={sending || !chatEnabled}
             />
             <button
-              type="button"
+              type="submit"
               className="btn primary"
-              disabled={isPending || !providerReady || !input.trim()}
-              onClick={() => void sendMessage(input)}
+              disabled={sending || !chatEnabled || !input.trim()}
             >
               Отправить
             </button>
-          </div>
+          </form>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

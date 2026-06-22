@@ -30,3 +30,12 @@ logs/
 /data/
 packages/ispf-server/data/
 *.log
+
+# Release / local deploy artifacts
+ispf-server.jar
+deploy/debug-llm-*.py
+deploy/verify-agent-*.py
+deploy/verify-if-mib-followup.py
+deploy/verify-restore-dashboard.py
+deploy/web-console.tar.gz
+deploy/web-console.zip
