@@ -5,6 +5,7 @@ import { useBoundVariable } from "../../../hooks/useBoundVariable";
 import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
+import { useEditorDemoRows } from "../widgetDemoPreview";
 
 interface GanttChartWidgetViewProps {
   widget: GanttChartWidget;
@@ -26,7 +27,7 @@ export default function GanttChartWidgetView({
     refreshIntervalMs
   );
 
-  const rows = useMemo(() => {
+  const liveRows = useMemo(() => {
     const list = variable?.value?.rows ?? [];
     const labelField = widget.labelField ?? "name";
     const startField = widget.startField ?? "start";
@@ -39,6 +40,23 @@ export default function GanttChartWidgetView({
     }));
   }, [variable, widget.labelField, widget.startField, widget.endField]);
 
+  const { rows: demoGantt, isDemo: isDemoRaw } = useEditorDemoRows(
+    widget,
+    [] as Array<{ label: string; start: number; end: number }>,
+    editable
+  );
+  const demoRows =
+    isDemoRaw && demoGantt.length > 0
+      ? demoGantt.map((row, index) => ({
+          id: index,
+          label: row.label,
+          start: row.start,
+          end: row.end,
+        }))
+      : [];
+  const rows = demoRows.length > 0 ? demoRows : liveRows;
+  const isDemo = demoRows.length > 0;
+
   const min = rows.reduce((m, r) => Math.min(m, r.start), Infinity);
   const max = rows.reduce((m, r) => Math.max(m, r.end), -Infinity);
   const span = max - min || 1;
@@ -49,9 +67,13 @@ export default function GanttChartWidgetView({
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-gantt"
       editable={editable}
+      demo={isDemo}
     >
       <div className="dash-gantt-body" style={styles.body}>
-        {rows.map((row) => (
+        {rows.length === 0 ? (
+          <p className="hint">Нет строк для диаграммы Ганта</p>
+        ) : (
+          rows.map((row) => (
           <div key={row.id} className="dash-gantt-row">
             <span className="dash-gantt-label">{row.label}</span>
             <div className="dash-gantt-track">
@@ -64,7 +86,8 @@ export default function GanttChartWidgetView({
               />
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </DashWidgetShell>
   );

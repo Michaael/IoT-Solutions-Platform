@@ -1,10 +1,10 @@
 package com.ispf.server.object;
 
 import com.ispf.plugin.model.ModelDefinition;
-import com.ispf.plugin.model.ModelEngine;
 import com.ispf.plugin.model.ModelException;
 import com.ispf.plugin.model.ModelRegistry;
 import com.ispf.server.bootstrap.LabModelBootstrap;
+import com.ispf.server.plugin.model.ModelApplicationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,17 +28,14 @@ public class ObjectTemplateService {
     );
 
     private final ModelRegistry modelRegistry;
-    private final ModelEngine modelEngine;
-    private final ObjectManager objectManager;
+    private final ModelApplicationService modelApplicationService;
 
     public ObjectTemplateService(
             ModelRegistry modelRegistry,
-            ModelEngine modelEngine,
-            ObjectManager objectManager
+            ModelApplicationService modelApplicationService
     ) {
         this.modelRegistry = modelRegistry;
-        this.modelEngine = modelEngine;
-        this.objectManager = objectManager;
+        this.modelApplicationService = modelApplicationService;
     }
 
     @Transactional
@@ -61,9 +58,8 @@ public class ObjectTemplateService {
 
     private void applyResolvedModel(String objectPath, ModelDefinition model) {
         try {
-            modelEngine.applyModel(model.id(), objectPath);
-            objectManager.persistNodeTree(objectPath);
-        } catch (ModelException e) {
+            modelApplicationService.applyModelWithRules(model, objectPath, model.parameters());
+        } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }

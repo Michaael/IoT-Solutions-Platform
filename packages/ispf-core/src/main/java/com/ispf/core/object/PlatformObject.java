@@ -3,9 +3,11 @@ package com.ispf.core.object;
 import com.ispf.core.model.DataRecord;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * A node in the hierarchical resource graph — the central ISPF concept.
@@ -20,6 +22,7 @@ public class PlatformObject {
     private volatile String displayName;
     private volatile String description;
     private final String templateId;
+    private final List<String> appliedModelIds = new CopyOnWriteArrayList<>();
     private volatile int sortOrder;
     private final Instant createdAt;
     private volatile long revision;
@@ -114,6 +117,37 @@ public class PlatformObject {
 
     public Optional<String> templateId() {
         return Optional.ofNullable(templateId);
+    }
+
+    public List<String> appliedModelIds() {
+        return List.copyOf(appliedModelIds);
+    }
+
+    public void setAppliedModelIds(List<String> modelIds) {
+        appliedModelIds.clear();
+        if (modelIds != null) {
+            for (String modelId : modelIds) {
+                if (modelId != null && !modelId.isBlank()) {
+                    appliedModelIds.add(modelId);
+                }
+            }
+        }
+    }
+
+    public void addAppliedModelId(String modelId) {
+        if (modelId == null || modelId.isBlank()) {
+            return;
+        }
+        if (!appliedModelIds.contains(modelId)) {
+            appliedModelIds.add(modelId);
+        }
+    }
+
+    public String lastAppliedModelId() {
+        if (appliedModelIds.isEmpty()) {
+            return null;
+        }
+        return appliedModelIds.get(appliedModelIds.size() - 1);
     }
 
     public Instant createdAt() {

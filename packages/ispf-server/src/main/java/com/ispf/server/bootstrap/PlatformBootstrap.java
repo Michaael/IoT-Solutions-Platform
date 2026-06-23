@@ -49,10 +49,15 @@ public class PlatformBootstrap {
                 "root.platform.models",
                 ObjectType.MODEL,
                 "Models",
-                "Model definitions and object templates",
+                "Legacy model catalog (see typed catalogs)",
                 null
         );
         tree.register(models);
+
+        registerCatalogFolder(tree, "root.platform.relative-models", "Relative Models", "Mixin blueprints for existing objects");
+        registerCatalogFolder(tree, "root.platform.instance-types", "Instance Types", "Blueprints for new object instances");
+        registerCatalogFolder(tree, "root.platform.absolute-models", "Absolute Models", "Singleton object blueprints");
+        registerCatalogFolder(tree, "root.platform.instances", "Instances", "Singleton absolute model instances");
 
         PlatformObject dashboards = new PlatformObject(
                 UUID.randomUUID().toString(),
@@ -173,5 +178,19 @@ public class PlatformBootstrap {
                 "workflow-v1"
         );
         tree.register(demoWorkflow);
+    }
+
+    private static void registerCatalogFolder(ObjectTree tree, String path, String displayName, String description) {
+        if (tree.findByPath(path).isPresent()) {
+            return;
+        }
+        tree.register(new PlatformObject(
+                UUID.randomUUID().toString(),
+                path,
+                ObjectType.MODEL,
+                displayName,
+                description,
+                null
+        ));
     }
 }

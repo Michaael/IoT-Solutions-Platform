@@ -7,6 +7,7 @@ import { setVariable } from "../../../api";
 import { cloneRecord } from "../../../utils/record";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
+import { useEditorDemoRows } from "../widgetDemoPreview";
 
 interface SpreadsheetWidgetViewProps {
   widget: SpreadsheetWidget;
@@ -30,9 +31,14 @@ export default function SpreadsheetWidgetView({
   );
 
   const rows = variable?.value?.rows ?? [];
+  const { rows: displayRows, isDemo } = useEditorDemoRows(
+    widget,
+    rows,
+    editMode
+  );
   const columns =
-    rows.length > 0
-      ? Object.keys(rows[0]).filter((k) => k !== "schema")
+    displayRows.length > 0
+      ? Object.keys(displayRows[0]).filter((k) => k !== "schema")
       : [];
 
   const mutation = useMutation({
@@ -52,8 +58,9 @@ export default function SpreadsheetWidgetView({
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-spreadsheet"
       editable={editMode}
+      demo={isDemo}
     >
-      {isLoading ? (
+      {isLoading && !isDemo ? (
         <p className="hint">Загрузка…</p>
       ) : (
         <div className="dash-table-wrap" style={styles.body}>
@@ -66,11 +73,11 @@ export default function SpreadsheetWidgetView({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, ri) => (
+              {displayRows.map((row, ri) => (
                 <tr key={ri}>
                   {columns.map((col) => (
                     <td key={col}>
-                      {widget.editable && !editMode ? (
+                      {widget.editable && !editMode && !isDemo ? (
                         <input
                           defaultValue={String(readFieldValue(row, col) ?? "")}
                           onBlur={(e) => {

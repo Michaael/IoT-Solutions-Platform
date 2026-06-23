@@ -1,4 +1,5 @@
 import { Line, LineChart, ResponsiveContainer } from "recharts";
+import { useMemo } from "react";
 import type { SparklineWidget } from "../../../types/dashboard";
 import { widgetHistoryRangeLabel } from "../../../types/dashboard";
 import { useTrendSeries } from "../../../hooks/useTrendSeries";
@@ -6,6 +7,7 @@ import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 import WidgetHistoryControls from "../WidgetHistoryControls";
+import { buildDemoTrendPoints, parseDemoPreview } from "../widgetDemoPreview";
 
 interface SparklineWidgetViewProps {
   widget: SparklineWidget;
@@ -25,7 +27,7 @@ export default function SparklineWidgetView({
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const styles = useWidgetStyles(widget.stylesJson);
 
-  const { points, stats, isLoading, historyEnabled } = useTrendSeries(
+  const { points: livePoints, stats, isLoading, historyEnabled } = useTrendSeries(
     objectPath,
     widget.variableName ?? "",
     widget.valueField,
@@ -33,6 +35,18 @@ export default function SparklineWidgetView({
     maxPoints,
     historyRange
   );
+
+  const demoPoints = useMemo(() => {
+    if (!editable || livePoints.length >= 2) return [];
+    const structured = parseDemoPreview<Array<{ t?: number; v: number }>>(widget.demoPreviewJson);
+    if (structured?.length) return buildDemoTrendPoints(structured);
+    const flat = parseDemoPreview<number[]>(widget.demoPreviewJson);
+    if (flat?.length) return buildDemoTrendPoints(flat.map((v) => ({ v })));
+    return [];
+  }, [editable, livePoints.length, widget.demoPreviewJson]);
+  const points = demoPoints.length >= 2 ? demoPoints : livePoints;
+  const isDemo = demoPoints.length >= 2;
+  const latest = isDemo ? points[points.length - 1]?.value : stats.latest;
 
   const historyControls = (
     <WidgetHistoryControls
@@ -53,6 +67,7 @@ export default function SparklineWidgetView({
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-sparkline"
       editable={editable}
+      demo={isDemo}
     >
       <div className="dash-sparkline-body" style={styles.body}>
         {!objectPath && widget.selectionKey ? (
@@ -61,7 +76,7 @@ export default function SparklineWidgetView({
           <>
             <div className="dash-sparkline-head">
               <div className="dash-sparkline-value" style={styles.value}>
-                {stats.latest != null ? stats.latest.toFixed(decimals) : isLoading ? "…" : "—"}
+                {latest != null ? latest.toFixed(decimals) : isLoading ? "…" : "—"}
               </div>
               {historyControls}
             </div>

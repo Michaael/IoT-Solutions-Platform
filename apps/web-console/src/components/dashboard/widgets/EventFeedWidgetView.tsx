@@ -5,6 +5,16 @@ import type { EventFeedWidget } from "../../../types/dashboard";
 import { matchesPayloadFilter } from "../../../utils/payloadFilter";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
+import { parseDemoPreview } from "../widgetDemoPreview";
+
+interface DemoFeedEvent {
+  id: string;
+  eventName: string;
+  level: string;
+  objectPath: string;
+  timestamp: string;
+  payload?: { rows?: Array<Record<string, unknown>> };
+}
 
 interface EventFeedWidgetViewProps {
   widget: EventFeedWidget;
@@ -46,19 +56,27 @@ export default function EventFeedWidgetView({
     return true;
   });
 
+  const demoEvents =
+    editable && filtered.length === 0 && !events.isLoading
+      ? parseDemoPreview<DemoFeedEvent[]>(widget.demoPreviewJson) ?? []
+      : [];
+  const isDemo = demoEvents.length > 0;
+  const displayEvents = isDemo ? demoEvents : filtered;
+
   return (
     <DashWidgetShell
       title={widget.title}
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-event-feed"
       editable={editable}
+      demo={isDemo}
     >
-      {events.isLoading && <p className="hint">Загрузка…</p>}
-      {filtered.length === 0 && !events.isLoading && (
+      {events.isLoading && !isDemo && <p className="hint">Загрузка…</p>}
+      {displayEvents.length === 0 && !events.isLoading && (
         <p className="hint">Нет событий</p>
       )}
       <ul className="dash-event-feed-list" style={styles.body}>
-        {filtered.map((event) => {
+        {displayEvents.map((event) => {
           const payload = event.payload?.rows?.[0];
           const detail = payload
             ? Object.entries(payload)

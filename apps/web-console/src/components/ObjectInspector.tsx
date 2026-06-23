@@ -295,7 +295,32 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
               <input value={obj.id} readOnly className="readonly" />
             </label>
             <label>
-              Модель
+              Основная модель
+              <input
+                value={
+                  obj.appliedModels?.find((model) => model.primary)?.name ??
+                  obj.templateId ??
+                  "—"
+                }
+                readOnly
+                className="readonly"
+              />
+            </label>
+            {(obj.appliedModels?.length ?? 0) > 0 && (
+              <div className="full">
+                <span className="field-label">Применённые модели</span>
+                <ul className="applied-models-list">
+                  {obj.appliedModels!.map((model) => (
+                    <li key={model.id} className={model.primary ? "primary-model" : undefined}>
+                      <code>{model.name}</code>{" "}
+                      <span className="hint">({model.type}{model.primary ? ", primary" : ""})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <label className="legacy-template-id">
+              templateId
               <input value={obj.templateId ?? "—"} readOnly className="readonly" />
             </label>
             <label>

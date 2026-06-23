@@ -52,6 +52,14 @@ public record ModelDefinition(
         return modelsRoot + "." + name;
     }
 
+    public String catalogRoot() {
+        return ModelCatalogRoots.catalogRoot(type);
+    }
+
+    public String catalogObjectPath() {
+        return catalogRoot() + "." + name;
+    }
+
     /** Semantic version string stored in {@link #parameters()} under {@code modelVersion}. */
     public String modelVersion() {
         return parameters.getOrDefault("modelVersion", "1");

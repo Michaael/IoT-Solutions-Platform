@@ -462,9 +462,28 @@ export default function ObjectPropertiesEditor({
               <input value={ctx.path} readOnly className="readonly" />
             </label>
             <label>
-              Модель
-              <input value={ctx.templateId ?? "—"} readOnly className="readonly" />
+              Основная модель
+              <input
+                value={
+                  ctx.appliedModels?.find((m) => m.primary)?.name ?? ctx.templateId ?? "—"
+                }
+                readOnly
+                className="readonly"
+              />
             </label>
+            {(ctx.appliedModels?.length ?? 0) > 0 && (
+              <div className="full">
+                <span className="field-label">Применённые модели</span>
+                <ul className="applied-models-list">
+                  {ctx.appliedModels!.map((model) => (
+                    <li key={model.id}>
+                      <code>{model.name}</code> ({model.type}
+                      {model.primary ? ", primary" : ""})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <label>
               Revision
               <input value={String(revision)} readOnly className="readonly" />

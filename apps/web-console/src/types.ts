@@ -70,6 +70,14 @@ export interface ObjectSummary {
   federated?: boolean;
   federationPeerId?: string | null;
   federationRemotePath?: string | null;
+  appliedModels?: AppliedModelSummary[];
+}
+
+export interface AppliedModelSummary {
+  id: string;
+  name: string;
+  type: "RELATIVE" | "INSTANCE" | "ABSOLUTE";
+  primary: boolean;
 }
 
 export interface DataSchema {
@@ -165,6 +173,7 @@ export interface CreateObjectPayload {
   displayName?: string;
   description?: string;
   templateId?: string;
+  autoApplyRelativeModels?: boolean;
   driverId?: string;
   driverPollIntervalMs?: number;
   autoStartDriver?: boolean;

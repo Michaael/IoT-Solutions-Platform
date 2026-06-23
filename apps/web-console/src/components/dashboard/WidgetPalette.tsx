@@ -4,6 +4,7 @@ import { WIDGET_TYPES } from "../../types/dashboard";
 
 interface WidgetPaletteProps {
   onAdd: (type: WidgetType) => void;
+  layout?: "sidebar";
 }
 
 interface PaletteGroup {
@@ -350,9 +351,16 @@ function WidgetTypeIcon({ type }: { type: WidgetType }) {
   );
 }
 
-export default function WidgetPalette({ onAdd }: WidgetPaletteProps) {
+export default function WidgetPalette({ onAdd, layout }: WidgetPaletteProps) {
   return (
-    <div className="dashboard-widget-palette">
+    <div
+      className={`dashboard-widget-palette${layout === "sidebar" ? " dashboard-widget-palette--sidebar" : ""}`}
+    >
+      {layout === "sidebar" && (
+        <div className="dashboard-palette-sidebar-head">
+          <h4>Виджеты</h4>
+        </div>
+      )}
       <div className="dashboard-widget-palette-hint" role="note">
         <svg
           className="dashboard-widget-palette-hint-icon"

@@ -1,8 +1,7 @@
 package com.ispf.server.driver;
 
 import com.ispf.driver.DriverMetadata;
-import com.ispf.plugin.model.ModelEngine;
-import com.ispf.plugin.model.ModelException;
+import com.ispf.server.plugin.model.ModelApplicationService;
 import com.ispf.plugin.model.ModelRegistry;
 import com.ispf.server.plugin.model.ModelBootstrap;
 import org.springframework.http.HttpStatus;
@@ -17,18 +16,18 @@ import java.util.Map;
 @Service
 public class DeviceProvisioningService {
 
-    private final ModelEngine modelEngine;
+    private final ModelApplicationService modelApplicationService;
     private final ModelRegistry modelRegistry;
     private final DriverCatalog driverCatalog;
     private final DriverRuntimeService driverRuntimeService;
 
     public DeviceProvisioningService(
-            ModelEngine modelEngine,
+            ModelApplicationService modelApplicationService,
             ModelRegistry modelRegistry,
             DriverCatalog driverCatalog,
             DriverRuntimeService driverRuntimeService
     ) {
-        this.modelEngine = modelEngine;
+        this.modelApplicationService = modelApplicationService;
         this.modelRegistry = modelRegistry;
         this.driverCatalog = driverCatalog;
         this.driverRuntimeService = driverRuntimeService;
@@ -48,11 +47,11 @@ public class DeviceProvisioningService {
                 ));
 
         try {
-            modelEngine.applyModel(
+            modelApplicationService.applyModelWithRules(
                     modelRegistry.requireByName(ModelBootstrap.DEVICE_DRIVER_MODEL).id(),
                     devicePath
             );
-        } catch (ModelException e) {
+        } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
 

@@ -15,6 +15,9 @@ import com.ispf.core.model.DataRecord;
 import com.ispf.core.model.DataSchema;
 import com.ispf.expression.BindingExpressionValidator;
 import com.ispf.server.api.dto.ObjectDto;
+import com.ispf.plugin.model.ModelRegistry;
+import com.ispf.server.plugin.model.ModelApplicationService;
+import com.ispf.server.plugin.model.dto.AppliedModelDto;
 import com.ispf.server.api.dto.ObjectEditorDto;
 import com.ispf.server.api.dto.VariableDto;
 import com.ispf.server.object.ObjectChangeEvent;
@@ -77,6 +80,8 @@ public class ObjectController {
     private final FederationBindService federationBindService;
     private final ObjectMapper objectMapper;
     private final ObjectEditLeaseService editLeaseService;
+    private final ModelRegistry modelRegistry;
+    private final ModelApplicationService modelApplicationService;
 
     public ObjectController(
             ObjectManager objectManager,
@@ -94,7 +99,9 @@ public class ObjectController {
             FederationProxyService federationProxyService,
             FederationBindService federationBindService,
             ObjectMapper objectMapper,
-            ObjectEditLeaseService editLeaseService
+            ObjectEditLeaseService editLeaseService,
+            ModelRegistry modelRegistry,
+            ModelApplicationService modelApplicationService
     ) {
         this.objectManager = objectManager;
         this.objectTemplateService = objectTemplateService;
@@ -112,10 +119,16 @@ public class ObjectController {
         this.federationBindService = federationBindService;
         this.objectMapper = objectMapper;
         this.editLeaseService = editLeaseService;
+        this.modelRegistry = modelRegistry;
+        this.modelApplicationService = modelApplicationService;
     }
 
     private ObjectDto toDto(PlatformObject node) {
-        return ObjectDto.from(node, objectUiIconService.readIconId(node).orElse(null));
+        return ObjectDto.from(
+                node,
+                objectUiIconService.readIconId(node).orElse(null),
+                AppliedModelDto.resolve(node, modelRegistry)
+        );
     }
 
     private void beginWrite(String path, Authentication authentication, HttpHeaders headers) {
@@ -253,6 +266,11 @@ public class ObjectController {
                 request.templateId()
         );
         objectTemplateService.applyTemplate(node.path(), request.templateId());
+        boolean autoApplyRelative = request.autoApplyRelativeModels() == null
+                || Boolean.TRUE.equals(request.autoApplyRelativeModels());
+        if (autoApplyRelative) {
+            modelApplicationService.applyRelativeModelsWithRules(node.path());
+        }
         if (request.type() == ObjectType.DASHBOARD) {
             dashboardService.ensureDashboardStructure(node.path());
         }
@@ -600,6 +618,7 @@ public class ObjectController {
             String displayName,
             String description,
             String templateId,
+            Boolean autoApplyRelativeModels,
             String driverId,
             Integer driverPollIntervalMs,
             Boolean autoStartDriver
@@ -639,7 +658,8 @@ public class ObjectController {
                 remote.eventNames(),
                 true,
                 target.peerId().toString(),
-                target.remotePath()
+                target.remotePath(),
+                remote.appliedModels() != null ? remote.appliedModels() : List.of()
         );
     }
 

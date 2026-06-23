@@ -31,6 +31,22 @@ export function fetchModels(): Promise<ModelDto[]> {
   return request("/api/v1/models");
 }
 
+export function fetchRelativeModels(): Promise<ModelDto[]> {
+  return request("/api/v1/relative-models");
+}
+
+export function fetchInstanceTypes(platformType?: string, parentPath?: string): Promise<ModelDto[]> {
+  const params = new URLSearchParams();
+  if (platformType) params.set("platformType", platformType);
+  if (parentPath) params.set("parentPath", parentPath);
+  const query = params.toString();
+  return request(`/api/v1/instance-types${query ? `?${query}` : ""}`);
+}
+
+export function fetchAbsoluteModels(): Promise<ModelDto[]> {
+  return request("/api/v1/absolute-models");
+}
+
 export function fetchModelByName(name: string): Promise<ModelDto> {
   return request(`/api/v1/models/by-name/${encodeURIComponent(name)}`);
 }
@@ -58,6 +74,10 @@ export function applyModel(modelId: string, objectPath: string): Promise<ModelAt
     `/api/v1/models/${encodeURIComponent(modelId)}/apply?objectPath=${encodeURIComponent(objectPath)}`,
     { method: "POST" }
   );
+}
+
+export function fetchAbsoluteModelInstance(modelId: string): Promise<ObjectSummary> {
+  return request(`/api/v1/absolute-models/${encodeURIComponent(modelId)}/instance`);
 }
 
 export function instantiateModel(

@@ -1,16 +1,35 @@
 # Models Plugin
 
-Модуль `ispf-plugin-model` — система **моделей** (шаблонов структуры объектов).
+Модуль `ispf-plugin-model` — система **blueprint** (шаблонов структуры объектов). Один движок, три вида в дереве и API.
 
-## Типы моделей (`ModelType`)
+## Три вида моделей (`ModelType`)
 
-| Тип | Поведение |
-|-----|-----------|
-| `RELATIVE` | Переменные/события/функции **вливаются** в существующий объект |
-| `ABSOLUTE` | Отдельная ветка (singleton branch) |
-| `INSTANCE` | Создание **дочернего экземпляра** по запросу |
+| Тип | Каталог | Поведение |
+|-----|---------|-----------|
+| `RELATIVE` | `root.platform.relative-models` | Variables/events/functions **вливаются** в существующий объект (mixin) |
+| `INSTANCE` | `root.platform.instance-types` | Шаблон **типа объекта** — создание экземпляров через instantiate |
+| `ABSOLUTE` | `root.platform.absolute-models` | Singleton blueprint — один живой объект в `root.platform.instances.*` |
 
-При создании объекта с `templateId` автоматически применяются RELATIVE-модели, привязанные к типу.
+См. [ADR-0018](decisions/0018-model-type-semantics.md).
+
+### Связь с объектом
+
+- `templateId` — primary model (INSTANCE/ABSOLUTE)
+- `appliedModelIds` — JSON-массив id всех применённых моделей (persisted)
+- При merge коллизий имён: **last-wins + warning** (не ошибка)
+
+### Auto-apply RELATIVE
+
+При `POST /objects` с `autoApplyRelativeModels=true` (default) применяются все RELATIVE-модели, прошедшие `targetObjectType` + `suitabilityExpression`.
+
+## API
+
+| Method | Path | Описание |
+|--------|------|----------|
+| GET/POST/… | `/api/v1/relative-models` | RELATIVE facades |
+| GET/POST/… | `/api/v1/instance-types` | INSTANCE facades (+ `?platformType=` для create dialog) |
+| GET/POST/… | `/api/v1/absolute-models` | ABSOLUTE facades |
+| GET/POST/… | `/api/v1/models` | Legacy unified API (совместимость) |
 
 ## Состав модели (`ModelDefinition`)
 

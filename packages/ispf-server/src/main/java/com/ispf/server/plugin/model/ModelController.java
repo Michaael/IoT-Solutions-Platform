@@ -49,19 +49,22 @@ public class ModelController {
     private final ObjectManager objectManager;
     private final ModelPersistenceService modelPersistence;
     private final ModelMergeService modelMergeService;
+    private final ModelApplicationService modelApplicationService;
 
     public ModelController(
             ModelRegistry modelRegistry,
             ModelEngine modelEngine,
             ObjectManager objectManager,
             ModelPersistenceService modelPersistence,
-            ModelMergeService modelMergeService
+            ModelMergeService modelMergeService,
+            ModelApplicationService modelApplicationService
     ) {
         this.modelRegistry = modelRegistry;
         this.modelEngine = modelEngine;
         this.objectManager = objectManager;
         this.modelPersistence = modelPersistence;
         this.modelMergeService = modelMergeService;
+        this.modelApplicationService = modelApplicationService;
     }
 
     @GetMapping
@@ -143,10 +146,11 @@ public class ModelController {
             @RequestParam @NotBlank String objectPath
     ) {
         try {
-            ModelAttachmentDto attachment = ModelAttachmentDto.from(modelEngine.applyModel(id, objectPath));
-            objectManager.persistNodeTree(objectPath);
+            ModelAttachmentDto attachment = ModelAttachmentDto.from(
+                    modelApplicationService.applyModelWithRules(id, objectPath)
+            );
             return attachment;
-        } catch (ModelException e) {
+        } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
@@ -157,15 +161,22 @@ public class ModelController {
             @Valid @RequestBody InstantiateModelRequest request
     ) {
         try {
-            PlatformObject instance = modelEngine.instantiateModel(
+            modelApplicationService.instantiateWithRules(
                     id,
                     request.parentPath(),
                     request.instanceName(),
                     request.parameters() != null ? request.parameters() : Map.of()
             );
-            objectManager.persistNodeTree(instance.path());
-            return ObjectDto.from(instance);
-        } catch (ModelException e) {
+            String path = objectManager.tree().resolveChildPath(request.parentPath(), request.instanceName());
+            return ObjectDto.from(
+                    objectManager.require(path),
+                    null,
+                    com.ispf.server.plugin.model.dto.AppliedModelDto.resolve(
+                            objectManager.require(path),
+                            modelRegistry
+                    )
+            );
+        } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
@@ -180,7 +191,7 @@ public class ModelController {
                     request.type() != null ? request.type() : ModelType.INSTANCE
             );
             modelPersistence.persist(model, false);
-            objectManager.persistNodeTree(model.objectPath(modelEngine.modelsRoot()));
+            objectManager.persistNodeTree(model.catalogObjectPath());
             return ModelDto.from(model, modelEngine.modelsRoot());
         } catch (ModelException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -209,15 +220,17 @@ public class ModelController {
                         "Model version mismatch: requested " + targetVersion + ", actual " + model.modelVersion()
                 );
             }
-            ModelAttachment attachment = modelEngine.applyModel(id, targetPath);
-            objectManager.persistNodeTree(targetPath);
+            ModelAttachmentDto attachment = ModelAttachmentDto.from(
+                    modelApplicationService.applyModelWithRules(id, targetPath)
+            );
             return Map.of(
                     "status", "OK",
                     "targetPath", targetPath,
                     "modelVersion", model.modelVersion(),
-                    "attachmentId", attachment.id()
+                    "attachmentId", attachment.id(),
+                    "warnings", attachment.warnings()
             );
-        } catch (ModelException e) {
+        } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
@@ -255,8 +268,7 @@ public class ModelController {
                 }
             }
             for (com.ispf.core.object.PlatformObject node : objectManager.tree().all()) {
-                if (node.path().startsWith(modelEngine.modelsRoot() + ".")
-                        || node.path().equals(modelEngine.modelsRoot())) {
+                if (modelEngine.isModelCatalogPath(node.path())) {
                     continue;
                 }
                 if (model.type() == com.ispf.plugin.model.ModelType.INSTANCE
@@ -275,8 +287,7 @@ public class ModelController {
                     upgraded.add(targetPath);
                     continue;
                 }
-                modelEngine.applyModel(id, targetPath);
-                objectManager.persistNodeTree(targetPath);
+                modelApplicationService.applyModelWithRules(id, targetPath);
                 upgraded.add(targetPath);
             }
             return Map.of(

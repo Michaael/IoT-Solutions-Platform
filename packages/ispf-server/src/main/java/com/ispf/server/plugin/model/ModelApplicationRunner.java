@@ -31,23 +31,28 @@ public class ModelApplicationRunner {
     private final ModelRegistry modelRegistry;
     private final ObjectManager objectManager;
     private final ModelBindingRulesMerger bindingRulesMerger;
+    private final ModelApplicationService modelApplicationService;
 
     public ModelApplicationRunner(
             ModelEngine modelEngine,
             ModelRegistry modelRegistry,
             ObjectManager objectManager,
-            ModelBindingRulesMerger bindingRulesMerger
+            ModelBindingRulesMerger bindingRulesMerger,
+            ModelApplicationService modelApplicationService
     ) {
         this.modelEngine = modelEngine;
         this.modelRegistry = modelRegistry;
         this.objectManager = objectManager;
         this.bindingRulesMerger = bindingRulesMerger;
+        this.modelApplicationService = modelApplicationService;
+    }
+
+    public void restoreAttachments() {
+        modelApplicationService.restoreAttachments();
     }
 
     private void applyModelWithRules(ModelDefinition model, String path) {
-        modelEngine.applyModel(model.id(), path);
-        bindingRulesMerger.mergeModelRules(path, model, model.parameters());
-        objectManager.persistNodeTree(path);
+        modelApplicationService.applyModelWithRules(model, path, model.parameters());
     }
 
     public void applyDemoModels() {
@@ -58,7 +63,7 @@ public class ModelApplicationRunner {
 
         modelRegistry.findByName("dashboard-v1").ifPresent(model -> {
             String path = "root.platform.dashboards.demo-sensor";
-            modelEngine.applyModel(model.id(), path);
+            applyModelWithRules(model, path);
             PlatformObject dashboard = objectManager.require(path);
             dashboard.setVariableValue(
                     "title",
@@ -79,7 +84,7 @@ public class ModelApplicationRunner {
 
         modelRegistry.findByName("dashboard-v1").ifPresent(model -> {
             String path = "root.platform.dashboards.snmp-host-monitoring";
-            modelEngine.applyModel(model.id(), path);
+            applyModelWithRules(model, path);
             PlatformObject dashboard = objectManager.require(path);
             dashboard.setVariableValue(
                     "title",
@@ -107,7 +112,7 @@ public class ModelApplicationRunner {
 
         modelRegistry.findByName("workflow-v1").ifPresent(model -> {
             String path = "root.platform.workflows.demo-alarm-handler";
-            modelEngine.applyModel(model.id(), path);
+            applyModelWithRules(model, path);
             PlatformObject workflow = objectManager.require(path);
             workflow.setVariableValue(
                     "title",
@@ -143,9 +148,14 @@ public class ModelApplicationRunner {
         modelRegistry.findByName("vendor-sensor-ext-v1").ifPresent(model -> {
             String path = "root.platform.devices.vendor-sensor-demo";
             if (objectManager.tree().findByPath(path).isEmpty()) {
-                modelEngine.instantiateModel(model.id(), "root.platform.devices", "vendor-sensor-demo", Map.of());
+                modelApplicationService.instantiateWithRules(
+                        model.id(),
+                        "root.platform.devices",
+                        "vendor-sensor-demo",
+                        Map.of()
+                );
             } else {
-                modelEngine.applyModel(model.id(), path);
+                applyModelWithRules(model, path);
             }
             objectManager.persistNodeTree(path);
         });
@@ -182,7 +192,7 @@ public class ModelApplicationRunner {
     public void ensureSnmpLocalhostDevice() {
         modelRegistry.findByName(ModelBootstrap.SNMP_AGENT_MODEL).ifPresent(model -> {
             if (objectManager.tree().findByPath(ModelBootstrap.SNMP_LOCALHOST_PATH).isEmpty()) {
-                modelEngine.instantiateModel(
+                modelApplicationService.instantiateWithRules(
                         model.id(),
                         "root.platform.devices",
                         "snmp-localhost",

@@ -14,6 +14,8 @@ import com.ispf.server.persistence.ObjectNodeRepository;
 import com.ispf.server.persistence.ObjectVariableRepository;
 import com.ispf.server.persistence.entity.ObjectNodeEntity;
 import com.ispf.server.persistence.entity.ObjectVariableEntity;
+import com.ispf.plugin.model.ModelCatalogRoots;
+import com.ispf.plugin.model.ModelEngine;
 import com.ispf.server.plugin.model.ModelApplicationRunner;
 import com.ispf.server.plugin.model.ModelBootstrap;
 import com.ispf.server.plugin.model.ModelPersistenceService;
@@ -52,6 +54,7 @@ public class ObjectManager {
     private final ObjectProvider<ModelBootstrap> modelBootstrap;
     private final ObjectProvider<ModelApplicationRunner> modelApplicationRunner;
     private final ObjectProvider<ModelPersistenceService> modelPersistence;
+    private final ObjectProvider<ModelEngine> modelEngine;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectConfigAuditService configAuditService;
     private volatile boolean initialized;
@@ -64,6 +67,7 @@ public class ObjectManager {
             ObjectProvider<ModelBootstrap> modelBootstrap,
             ObjectProvider<ModelApplicationRunner> modelApplicationRunner,
             ObjectProvider<ModelPersistenceService> modelPersistence,
+            ObjectProvider<ModelEngine> modelEngine,
             ApplicationEventPublisher eventPublisher,
             ObjectConfigAuditService configAuditService
     ) {
@@ -74,6 +78,7 @@ public class ObjectManager {
         this.modelBootstrap = modelBootstrap;
         this.modelApplicationRunner = modelApplicationRunner;
         this.modelPersistence = modelPersistence;
+        this.modelEngine = modelEngine;
         this.eventPublisher = eventPublisher;
         this.configAuditService = configAuditService;
     }
@@ -93,9 +98,14 @@ public class ObjectManager {
         }
         modelBootstrap.getObject().ensureBuiltInModels();
         modelPersistence.ifAvailable(ModelPersistenceService::restoreCustomModels);
+        modelEngine.ifAvailable(engine -> {
+            engine.ensureCatalogContainers();
+            cleanupLegacyModelDefinitionNodes();
+        });
         modelApplicationRunner.getObject().applyDemoModels();
         modelApplicationRunner.getObject().ensureSnmpLocalhostDevice();
         modelApplicationRunner.getObject().syncAllModelBackedVariableMetadata();
+        modelApplicationRunner.getObject().restoreAttachments();
         initialized = true;
     }
 
@@ -531,6 +541,7 @@ public class ObjectManager {
                     entity.getLastChangedBy(),
                     entity.getLastChangedAt()
             );
+            node.setAppliedModelIds(mapper.readAppliedModelIds(entity.getAppliedModelIdsJson()));
             for (EventDescriptor event : mapper.readEvents(entity.getEventsJson())) {
                 node.addEvent(event);
             }
@@ -579,6 +590,25 @@ public class ObjectManager {
             }
         }
         return grouped;
+    }
+
+    private void cleanupLegacyModelDefinitionNodes() {
+        String legacyPrefix = ModelCatalogRoots.LEGACY + ".";
+        List<String> legacyPaths = objectTree.all().stream()
+                .map(PlatformObject::path)
+                .filter(path -> path.startsWith(legacyPrefix))
+                .sorted(Comparator.comparingInt(String::length).reversed())
+                .toList();
+        for (String path : legacyPaths) {
+            if (objectTree.findByPath(path).isEmpty()) {
+                continue;
+            }
+            objectTree.delete(path);
+            nodeRepository.findByPath(path).ifPresent(entity -> {
+                variableRepository.deleteByObjectPath(path);
+                nodeRepository.deleteById(entity.getId());
+            });
+        }
     }
 
     private void persistNode(PlatformObject node) {

@@ -5,6 +5,7 @@ import { useBoundVariable } from "../../../hooks/useBoundVariable";
 import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
+import { parseDemoPreview } from "../widgetDemoPreview";
 
 interface NetworkGraphWidgetViewProps {
   widget: NetworkGraphWidget;
@@ -42,18 +43,27 @@ export default function NetworkGraphWidgetView({
     return { nodes, edges, labels };
   }, [nodesVar.variable, edgesVar.variable, widget.labelField]);
 
+  const demo = editable
+    ? parseDemoPreview<{ nodes: string[]; edges: number }>(widget.demoPreviewJson)
+    : null;
+  const isDemo = Boolean(editable && summary.nodes === 0 && demo);
+  const display = isDemo
+    ? { nodes: demo!.nodes.length, edges: demo!.edges, labels: demo!.nodes }
+    : summary;
+
   return (
     <DashWidgetShell
       title={widget.title}
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-network"
       editable={editable}
+      demo={isDemo}
     >
       <p style={styles.body}>
-        Узлов: {summary.nodes}, рёбер: {summary.edges}
+        Узлов: {display.nodes}, рёбер: {display.edges}
       </p>
       <ul className="dash-network-list">
-        {summary.labels.map((label, i) => (
+        {display.labels.map((label, i) => (
           <li key={i}>{label}</li>
         ))}
       </ul>

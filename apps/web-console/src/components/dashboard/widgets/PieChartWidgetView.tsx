@@ -6,6 +6,7 @@ import { useBoundVariable } from "../../../hooks/useBoundVariable";
 import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
+import { useEditorDemoRows } from "../widgetDemoPreview";
 
 const SLICE_COLORS = ["#2f81f7", "#3fb950", "#d29922", "#f85149", "#a371f7", "#39c5cf"];
 
@@ -51,27 +52,34 @@ export default function PieChartWidgetView({
       .filter((item): item is { name: string; value: number } => item != null);
   }, [labelField, valueField, variable?.value?.rows]);
 
+  const { rows: displaySlices, isDemo } = useEditorDemoRows(
+    widget,
+    slices,
+    editable
+  );
+
   return (
     <DashWidgetShell
       title={widget.title}
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-pie-chart"
       editable={editable}
+      demo={isDemo}
     >
       {!objectPath && widget.selectionKey ? (
         <p className="hint">Выберите объект</p>
-      ) : isLoading ? (
+      ) : isLoading && !isDemo ? (
         <p className="hint">Загрузка…</p>
-      ) : isError ? (
+      ) : isError && !isDemo ? (
         <p className="hint">Ошибка привязки</p>
-      ) : slices.length === 0 ? (
+      ) : displaySlices.length === 0 ? (
         <p className="hint">Нет данных для диаграммы</p>
       ) : (
         <div className="dash-pie-chart-body" style={{ ...styles.body, ...styles.chart, height: "100%" }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={slices}
+                data={displaySlices}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
@@ -82,7 +90,7 @@ export default function PieChartWidgetView({
                 }
                 isAnimationActive={false}
               >
-                {slices.map((_, index) => (
+                {displaySlices.map((_, index) => (
                   <Cell key={index} fill={SLICE_COLORS[index % SLICE_COLORS.length]} />
                 ))}
               </Pie>

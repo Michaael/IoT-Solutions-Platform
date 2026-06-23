@@ -37,7 +37,7 @@ public record ModelDto(
                 model.type(),
                 model.targetObjectType(),
                 model.suitabilityExpression(),
-                model.objectPath(modelsRoot),
+                model.catalogObjectPath(),
                 model.variables(),
                 model.events(),
                 model.functions(),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchObjects,
@@ -10,6 +10,7 @@ import {
 import type { DashboardLayout, DashboardWidget, WidgetType } from "../../types/dashboard";
 import { layoutToJson, newWidget, parseLayoutJson } from "../../types/dashboard";
 import WidgetPalette from "./WidgetPalette";
+import { WIDGET_SAMPLE_PATHS } from "./widgetSamples";
 import {
   DashboardProvider,
   mergeSession,
@@ -230,6 +231,36 @@ export default function DashboardBuilder({
     setDraftLayout({ ...layout, widgets });
   };
 
+  const isEditorWorkspace = !operatorMode && mode === "edit";
+
+  const editorSession = useMemo<DashboardSession>(
+    () =>
+      isEditorWorkspace
+        ? mergeSession(currentSession, {
+            selection: {
+              device: WIDGET_SAMPLE_PATHS.device,
+              order: WIDGET_SAMPLE_PATHS.device,
+            },
+            params: {
+              clusterPath: WIDGET_SAMPLE_PATHS.devices,
+              device: WIDGET_SAMPLE_PATHS.device,
+              zoneLabel: "Зона A",
+            },
+          })
+        : currentSession,
+    [currentSession, isEditorWorkspace]
+  );
+
+  useEffect(() => {
+    if (!isEditorWorkspace) {
+      return;
+    }
+    document.body.classList.add("dashboard-editor-fullscreen");
+    return () => {
+      document.body.classList.remove("dashboard-editor-fullscreen");
+    };
+  }, [isEditorWorkspace]);
+
   if (dashboard.isLoading) {
     return <div className="dashboard-shell loading">Загрузка дашборда…</div>;
   }
@@ -243,7 +274,11 @@ export default function DashboardBuilder({
   }
 
   return (
-    <div className={`dashboard-shell ${operatorMode ? "operator-dashboard-shell" : ""}`}>
+    <div
+      className={`dashboard-shell ${operatorMode ? "operator-dashboard-shell" : ""}${
+        isEditorWorkspace ? " dashboard-shell--editor-fullscreen" : ""
+      }`}
+    >
       {!operatorMode && (
         <header className="dashboard-toolbar">
           <div>
@@ -310,53 +345,81 @@ export default function DashboardBuilder({
         </header>
       )}
 
-      {!operatorMode && mode === "edit" && <WidgetPalette onAdd={addWidget} />}
+      {!operatorMode && mode === "edit" && (
+        <div className="dashboard-editor-workspace">
+          <aside className="dashboard-palette-sidebar">
+            <WidgetPalette layout="sidebar" onAdd={addWidget} />
+          </aside>
 
-      <div
-        className={`dashboard-body ${!operatorMode && mode === "edit" ? "with-sidebar" : ""}`}
-      >
-        <DashboardProvider
-          session={currentSession}
-          onSessionChange={onSessionChange}
-          onSelectionChange={onSelectionChange}
-          onParamsChange={onParamsChange}
-          onNavigateDashboard={handleNavigateDashboard}
-          onOpenDashboardModal={handleOpenDashboardModal}
-        >
-          <main className="dashboard-canvas">
-            <DashboardGrid
+          <DashboardProvider
+            session={editorSession}
+            onSessionChange={onSessionChange}
+            onSelectionChange={onSelectionChange}
+            onParamsChange={onParamsChange}
+            onNavigateDashboard={handleNavigateDashboard}
+            onOpenDashboardModal={handleOpenDashboardModal}
+          >
+            <main className="dashboard-canvas dashboard-canvas--editor">
+              <DashboardGrid
+                layout={layout}
+                refreshIntervalMs={refreshIntervalMs}
+                editable
+                selectedWidgetId={selectedWidgetId}
+                onSelectWidget={setSelectedWidgetId}
+                onLayoutChange={handleLayoutChange}
+                subDashboardDepth={subDashboardDepth}
+              />
+              {showJson && (
+                <pre className="dashboard-json-panel">{layoutToJson(layout)}</pre>
+              )}
+            </main>
+          </DashboardProvider>
+
+          {showSettings ? (
+            <DashboardSettingsPanel
               layout={layout}
               refreshIntervalMs={refreshIntervalMs}
-              editable={!operatorMode && mode === "edit"}
-              selectedWidgetId={!operatorMode && mode === "edit" ? selectedWidgetId : null}
-              onSelectWidget={!operatorMode && mode === "edit" ? setSelectedWidgetId : undefined}
-              onLayoutChange={!operatorMode && mode === "edit" ? handleLayoutChange : undefined}
-              subDashboardDepth={subDashboardDepth}
+              dashboardPath={path}
+              onLayoutChange={updateLayoutSettings}
+              onRefreshIntervalChange={setDraftRefreshMs}
             />
-            {!operatorMode && showJson && (
-              <pre className="dashboard-json-panel">{layoutToJson(layout)}</pre>
-            )}
-          </main>
-        </DashboardProvider>
-        {!operatorMode && mode === "edit" && showSettings && (
-          <DashboardSettingsPanel
-            layout={layout}
-            refreshIntervalMs={refreshIntervalMs}
-            dashboardPath={path}
-            onLayoutChange={updateLayoutSettings}
-            onRefreshIntervalChange={setDraftRefreshMs}
-          />
-        )}
-        {!operatorMode && mode === "edit" && !showSettings && (
-          <WidgetEditorPanel
-            widget={selectedWidget}
-            objects={bindingObjects}
-            dashboards={dashboardObjects}
-            onChange={updateWidget}
-            onDelete={deleteWidget}
-          />
-        )}
-      </div>
+          ) : (
+            <WidgetEditorPanel
+              widget={selectedWidget}
+              objects={bindingObjects}
+              dashboards={dashboardObjects}
+              onChange={updateWidget}
+              onDelete={deleteWidget}
+            />
+          )}
+        </div>
+      )}
+
+      {!isEditorWorkspace && (
+        <div className="dashboard-body">
+          <DashboardProvider
+            session={currentSession}
+            onSessionChange={onSessionChange}
+            onSelectionChange={onSelectionChange}
+            onParamsChange={onParamsChange}
+            onNavigateDashboard={handleNavigateDashboard}
+            onOpenDashboardModal={handleOpenDashboardModal}
+          >
+            <main className="dashboard-canvas">
+              <DashboardGrid
+                layout={layout}
+                refreshIntervalMs={refreshIntervalMs}
+                editable={false}
+                selectedWidgetId={null}
+                subDashboardDepth={subDashboardDepth}
+              />
+              {!operatorMode && showJson && (
+                <pre className="dashboard-json-panel">{layoutToJson(layout)}</pre>
+              )}
+            </main>
+          </DashboardProvider>
+        </div>
+      )}
       {!embeddedModal && modalDashboard && (
         <DashboardModal
           path={modalDashboard.path}

@@ -1,4 +1,4 @@
-import { MODELS_ROOT } from "../types/models";
+import { MODELS_ROOT, RELATIVE_MODELS_ROOT, INSTANCE_TYPES_ROOT, ABSOLUTE_MODELS_ROOT } from "../types/models";
 import type { ObjectType } from "../types";
 import { isOperatorAppChildPath } from "./operatorAppsPath";
 import { isSecurityRolePath, isSecurityRolesRoot } from "./securityRolePath";
@@ -45,6 +45,10 @@ const EXACT_CATALOG_PATHS: ReadonlySet<string> = new Set([
   "root.platform",
   "root.platform.devices",
   MODELS_ROOT,
+  RELATIVE_MODELS_ROOT,
+  INSTANCE_TYPES_ROOT,
+  ABSOLUTE_MODELS_ROOT,
+  "root.platform.instances",
   "root.platform.dashboards",
   "root.platform.reports",
   "root.platform.data-sources",
@@ -158,9 +162,27 @@ const META_BY_TYPE: Partial<Record<ObjectType, SystemFolderListMeta>> = {
 };
 
 const MODELS_FOLDER_META: SystemFolderListMeta = {
-  title: "Модели",
+  title: "Модели (legacy)",
   description:
-    "Определения моделей в root.platform.models. Полное определение — в редакторе (двойной щелчок).",
+    "Устаревший каталог. Новые определения — в relative-models, instance-types, absolute-models.",
+  idColumnLabel: "ID",
+};
+
+const RELATIVE_MODELS_FOLDER_META: SystemFolderListMeta = {
+  title: "Относительные модели",
+  description: "Mixin blueprints (RELATIVE) — обогащают существующие объекты.",
+  idColumnLabel: "ID",
+};
+
+const INSTANCE_TYPES_FOLDER_META: SystemFolderListMeta = {
+  title: "Типы объектов",
+  description: "INSTANCE blueprints — шаблоны для создания экземпляров.",
+  idColumnLabel: "ID",
+};
+
+const ABSOLUTE_MODELS_FOLDER_META: SystemFolderListMeta = {
+  title: "Абсолютные модели",
+  description: "ABSOLUTE singleton blueprints — один живой объект на модель.",
   idColumnLabel: "ID",
 };
 
@@ -169,7 +191,12 @@ function isApplicationSubfolder(path: string): boolean {
 }
 
 function resolveCatalogType(path: string, objectType?: ObjectType): ObjectType | null {
-  if (path === MODELS_ROOT) {
+  if (
+    path === MODELS_ROOT
+    || path === RELATIVE_MODELS_ROOT
+    || path === INSTANCE_TYPES_ROOT
+    || path === ABSOLUTE_MODELS_ROOT
+  ) {
     return "MODEL";
   }
   if (objectType && CATALOG_CONTAINER_TYPES.has(objectType)) {
@@ -223,7 +250,7 @@ export function isSystemCatalogFolder(path: string, objectType?: ObjectType): bo
     return false;
   }
 
-  if (objectType === "MODEL" && path !== MODELS_ROOT) {
+  if (objectType === "MODEL" && !EXACT_CATALOG_PATHS.has(path)) {
     return false;
   }
 
@@ -237,6 +264,15 @@ export function getSystemFolderListMeta(
   description?: string,
 ): SystemFolderListMeta {
   const catalogType = resolveCatalogType(path, objectType);
+  if (path === RELATIVE_MODELS_ROOT) {
+    return { ...RELATIVE_MODELS_FOLDER_META, title: displayName?.trim() || RELATIVE_MODELS_FOLDER_META.title };
+  }
+  if (path === INSTANCE_TYPES_ROOT) {
+    return { ...INSTANCE_TYPES_FOLDER_META, title: displayName?.trim() || INSTANCE_TYPES_FOLDER_META.title };
+  }
+  if (path === ABSOLUTE_MODELS_ROOT) {
+    return { ...ABSOLUTE_MODELS_FOLDER_META, title: displayName?.trim() || ABSOLUTE_MODELS_FOLDER_META.title };
+  }
   if (catalogType === "MODEL") {
     return {
       ...MODELS_FOLDER_META,

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   Area,
   AreaChart,
@@ -18,6 +19,7 @@ import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
 import { useWidgetStyles } from "../widgetStyles";
 import WidgetDragHandle from "../WidgetDragHandle";
 import WidgetHistoryControls from "../WidgetHistoryControls";
+import { buildDemoTrendPoints, parseDemoPreview } from "../widgetDemoPreview";
 
 interface ChartWidgetViewProps {
   widget: ChartWidget;
@@ -39,7 +41,7 @@ export default function ChartWidgetView({
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const styles = useWidgetStyles(widget.stylesJson);
 
-  const { points, stats, isLoading, isError, variable, historyEnabled, aggregated, historyBucket } =
+  const { points: livePoints, stats, isLoading, isError, variable, historyEnabled, aggregated, historyBucket } =
     useTrendSeries(
       objectPath,
       widget.variableName ?? "",
@@ -48,6 +50,23 @@ export default function ChartWidgetView({
       maxPoints,
       historyRange
     );
+
+  const demoPoints = useMemo(
+    () =>
+      editable && livePoints.length < 2
+        ? buildDemoTrendPoints(parseDemoPreview<Array<{ t?: number; v: number }>>(widget.demoPreviewJson))
+        : [],
+    [editable, livePoints.length, widget.demoPreviewJson]
+  );
+  const points = demoPoints.length >= 2 ? demoPoints : livePoints;
+  const isDemo = demoPoints.length >= 2;
+  const displayStats = isDemo
+    ? {
+        latest: points[points.length - 1]?.value ?? null,
+        min: Math.min(...points.map((p) => p.value)),
+        max: Math.max(...points.map((p) => p.value)),
+      }
+    : stats;
 
   const unitRow = variable?.value?.rows[0];
   const unit =
@@ -60,20 +79,21 @@ export default function ChartWidgetView({
       <div className="dash-widget-chart-head" style={styles.body}>
         <div className="dash-widget-title" style={styles.title}>
           {widget.title}
+          {isDemo ? <span className="dash-widget-demo-badge">пример</span> : null}
         </div>
         <div className="dash-chart-head-side">
           <div className="dash-chart-stats">
-            {stats.latest != null ? (
+            {displayStats.latest != null ? (
               <span className="dash-chart-latest" style={styles.value}>
-                {stats.latest.toFixed(decimals)}
+                {displayStats.latest.toFixed(decimals)}
                 {unit ? ` ${unit}` : ""}
               </span>
             ) : (
               <span className="dash-chart-latest muted">—</span>
             )}
-            {stats.min != null && stats.max != null && (
+            {displayStats.min != null && displayStats.max != null && (
               <span className="dash-chart-range">
-                min {stats.min.toFixed(decimals)} · max {stats.max.toFixed(decimals)}
+                min {displayStats.min.toFixed(decimals)} · max {displayStats.max.toFixed(decimals)}
                 {aggregated && historyBucket ? ` · avg/${historyBucket}` : ""}
               </span>
             )}
@@ -93,9 +113,9 @@ export default function ChartWidgetView({
       <div className="dash-chart-body" style={styles.chart}>
         {!objectPath && widget.selectionKey ? (
           <div className="dash-chart-placeholder">Выберите устройство</div>
-        ) : isLoading && points.length === 0 ? (
+        ) : isLoading && points.length === 0 && !isDemo ? (
           <div className="dash-chart-placeholder">Сбор данных…</div>
-        ) : isError ? (
+        ) : isError && !isDemo ? (
           <div className="dash-chart-placeholder error">Ошибка привязки</div>
         ) : points.length < 2 ? (
           <div className="dash-chart-placeholder">

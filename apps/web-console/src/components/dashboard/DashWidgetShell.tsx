@@ -7,6 +7,7 @@ interface DashWidgetShellProps {
   stylesJson?: string;
   className: string;
   editable?: boolean;
+  demo?: boolean;
   rootStyle?: CSSProperties;
   footer?: ReactNode;
   headerExtra?: ReactNode;
@@ -18,6 +19,7 @@ export default function DashWidgetShell({
   stylesJson,
   className,
   editable = false,
+  demo = false,
   rootStyle,
   footer,
   headerExtra,
@@ -30,6 +32,7 @@ export default function DashWidgetShell({
       <WidgetDragHandle visible={editable} />
       <div className="dash-widget-title" style={styles.title}>
         {title}
+        {demo ? <span className="dash-widget-demo-badge">пример</span> : null}
         {headerExtra}
       </div>
       {children}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createObject } from "../api";
+import { fetchInstanceTypes, instantiateModel } from "../api/models";
 import { registerApplication } from "../api/applications";
 import { saveReportDefinition } from "../api/reports";
 import { createOperatorApp } from "../api/operatorApps";
@@ -10,10 +11,14 @@ import DriverMaturityBadge, { formatDriverOptionLabel } from "./DriverMaturityBa
 import {
   applicationObjectPath,
   defaultObjectTypeForParent,
+  instanceTypeFilterForParent,
   operatorAppObjectPath,
   resolveCreateDialogMode,
 } from "../utils/createObjectMode";
+import type { ModelDto } from "../types/models";
 import type { ObjectType } from "../types";
+
+const INSTANCE_TYPE_PREFIX = "instance:";
 
 const OBJECT_TYPES: ObjectType[] = [
   "CUSTOM",
@@ -47,9 +52,12 @@ export default function CreateObjectDialog({
   const [displayName, setDisplayName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<ObjectType>(() => defaultObjectTypeForParent(parentPath));
+  const [typeSelection, setTypeSelection] = useState<string>(() => defaultObjectTypeForParent(parentPath));
 
   useEffect(() => {
-    setType(defaultObjectTypeForParent(parentPath));
+    const defaultType = defaultObjectTypeForParent(parentPath);
+    setType(defaultType);
+    setTypeSelection(defaultType);
   }, [parentPath]);
   const [driverId, setDriverId] = useState("virtual");
   const [pollIntervalMs, setPollIntervalMs] = useState(DEFAULT_POLL_INTERVAL_MS);
@@ -78,6 +86,25 @@ export default function CreateObjectDialog({
     queryFn: fetchDrivers,
     enabled: mode === "object",
   });
+
+  const instanceTypeFilter = useMemo(
+    () => instanceTypeFilterForParent(parentPath),
+    [parentPath],
+  );
+
+  const instanceTypesQuery = useQuery({
+    queryKey: ["instance-types", parentPath, instanceTypeFilter],
+    queryFn: () => fetchInstanceTypes(instanceTypeFilter, parentPath),
+    enabled: mode === "object",
+  });
+
+  const selectedInstanceModel = useMemo(() => {
+    if (!typeSelection.startsWith(INSTANCE_TYPE_PREFIX)) {
+      return null;
+    }
+    const modelId = typeSelection.slice(INSTANCE_TYPE_PREFIX.length);
+    return instanceTypesQuery.data?.find((model) => model.id === modelId) ?? null;
+  }, [typeSelection, instanceTypesQuery.data]);
 
   const selectedDriver = useMemo(
     () => driversQuery.data?.find((driver) => driver.id === driverId),
@@ -145,6 +172,10 @@ export default function CreateObjectDialog({
             columns: [{ field: "value", label: "Value" }],
           });
         }
+        return obj.path;
+      }
+      if (selectedInstanceModel) {
+        const obj = await instantiateModel(selectedInstanceModel.id, parentPath, name, {});
         return obj.path;
       }
       const obj = await createObject({
@@ -246,17 +277,45 @@ export default function CreateObjectDialog({
             {mode === "object" && (
               <label>
                 Тип
-                <select value={type} onChange={(e) => setType(e.target.value as ObjectType)}>
-                  {OBJECT_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
+                <select
+                  value={typeSelection}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setTypeSelection(next);
+                    if (!next.startsWith(INSTANCE_TYPE_PREFIX)) {
+                      setType(next as ObjectType);
+                    } else {
+                      const model = instanceTypesQuery.data?.find(
+                        (item) => item.id === next.slice(INSTANCE_TYPE_PREFIX.length)
+                      );
+                      if (model?.targetObjectType) {
+                        setType(model.targetObjectType);
+                      }
+                    }
+                  }}
+                >
+                  <optgroup label="Platform types">
+                    {OBJECT_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {(instanceTypesQuery.data?.length ?? 0) > 0 && (
+                    <optgroup label="Типы объектов (INSTANCE)">
+                      {(instanceTypesQuery.data ?? []).map((model: ModelDto) => (
+                        <option key={model.id} value={`${INSTANCE_TYPE_PREFIX}${model.id}`}>
+                          {model.name}
+                          {model.targetObjectType ? ` (${model.targetObjectType})` : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </label>
             )}
 
-            {mode === "object" && type === "DEVICE" && (
+            {mode === "object" && type === "DEVICE" && !selectedInstanceModel && (
               <>
                 <label>
                   Драйвер *

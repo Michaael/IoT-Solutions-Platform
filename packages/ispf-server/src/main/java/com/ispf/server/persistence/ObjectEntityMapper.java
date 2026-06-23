@@ -31,6 +31,7 @@ public class ObjectEntityMapper {
         entity.setDisplayName(node.displayName());
         entity.setDescription(node.description());
         entity.setTemplateId(node.templateId().orElse(null));
+        entity.setAppliedModelIdsJson(writeAppliedModelIds(node.appliedModelIds()));
         entity.setCreatedAt(node.createdAt());
         entity.setSortOrder(node.sortOrder());
         entity.setEventsJson(writeJson(node.events().values().toArray(new EventDescriptor[0])));
@@ -101,6 +102,25 @@ public class ObjectEntityMapper {
 
     public String writeDataRecord(DataRecord record) {
         return writeJson(record);
+    }
+
+    public List<String> readAppliedModelIds(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            String[] ids = objectMapper.readValue(json, String[].class);
+            return List.of(ids);
+        } catch (JacksonException e) {
+            return List.of();
+        }
+    }
+
+    public String writeAppliedModelIds(List<String> modelIds) {
+        if (modelIds == null || modelIds.isEmpty()) {
+            return null;
+        }
+        return writeJson(modelIds.toArray(new String[0]));
     }
 
     private String writeJson(Object value) {

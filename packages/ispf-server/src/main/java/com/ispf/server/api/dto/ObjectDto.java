@@ -5,6 +5,7 @@ import com.ispf.server.federation.FederationProxyMetadata;
 import com.ispf.core.object.ObjectType;
 import com.ispf.server.object.BindingStateVariables;
 import com.ispf.server.object.ObjectUiIconService;
+import com.ispf.server.plugin.model.dto.AppliedModelDto;
 
 import java.time.Instant;
 import java.util.List;
@@ -27,22 +28,31 @@ public record ObjectDto(
         List<String> eventNames,
         boolean federated,
         String federationPeerId,
-        String federationRemotePath
+        String federationRemotePath,
+        List<AppliedModelDto> appliedModels
 ) {
     public static ObjectDto from(PlatformObject node) {
-        return from(node, null);
+        return from(node, null, List.of());
     }
 
     public static ObjectDto from(PlatformObject node, String iconId) {
-        return from(node, iconId, false);
+        return from(node, iconId, List.of());
+    }
+
+    public static ObjectDto from(PlatformObject node, String iconId, List<AppliedModelDto> appliedModels) {
+        return from(node, iconId, appliedModels, false);
     }
 
     /** Lightweight list payload without variable/event name lists. */
     public static ObjectDto fromLite(PlatformObject node, String iconId) {
-        return from(node, iconId, true);
+        return from(node, iconId, List.of(), true);
     }
 
-    private static ObjectDto from(PlatformObject node, String iconId, boolean lite) {
+    public static ObjectDto fromLite(PlatformObject node, String iconId, List<AppliedModelDto> appliedModels) {
+        return from(node, iconId, appliedModels, true);
+    }
+
+    private static ObjectDto from(PlatformObject node, String iconId, List<AppliedModelDto> appliedModels, boolean lite) {
         boolean federated = FederationProxyMetadata.isProxy(node);
         return new ObjectDto(
                 node.id(),
@@ -66,7 +76,8 @@ public record ObjectDto(
                 lite ? List.of() : node.events().keySet().stream().sorted().toList(),
                 federated,
                 federated ? FederationProxyMetadata.peerId(node).map(UUID::toString).orElse(null) : null,
-                federated ? FederationProxyMetadata.remotePath(node).orElse(null) : null
+                federated ? FederationProxyMetadata.remotePath(node).orElse(null) : null,
+                appliedModels != null ? appliedModels : List.of()
         );
     }
 }

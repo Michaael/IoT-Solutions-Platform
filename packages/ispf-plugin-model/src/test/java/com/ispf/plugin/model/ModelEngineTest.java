@@ -44,14 +44,6 @@ class ModelEngineTest {
                 null,
                 null
         ));
-        objectTree.register(new PlatformObject(
-                UUID.randomUUID().toString(),
-                "root.platform.models",
-                ObjectType.MODEL,
-                "Models",
-                null,
-                null
-        ));
 
         engine = new ModelEngine(
                 new ModelRegistry(),
@@ -106,9 +98,9 @@ class ModelEngineTest {
         );
         objectTree.register(device);
 
-        ModelAttachment attachment = engine.applyModel(model.id(), device.path());
+        ModelApplyResult result = engine.applyModel(model.id(), device.path());
 
-        assertThat(attachment.modelName()).isEqualTo("mqtt-sensor-v1");
+        assertThat(result.attachment().modelName()).isEqualTo("mqtt-sensor-v1");
         assertThat(device.getVariable("temperature")).isPresent();
         assertThat(device.events()).containsKey("thresholdExceeded");
     }
@@ -132,15 +124,17 @@ class ModelEngineTest {
         );
         engine.createModel(model);
 
-        PlatformObject instance = engine.instantiateModel(
+        ModelApplyResult result = engine.instantiateModel(
                 model.id(),
                 "root.platform.devices",
                 "pump-01",
                 Map.of()
         );
+        PlatformObject instance = objectTree.require("root.platform.devices.pump-01");
 
         assertThat(instance.path()).isEqualTo("root.platform.devices.pump-01");
         assertThat(instance.templateId()).contains(model.id());
+        assertThat(result.attachment().modelId()).isEqualTo(model.id());
     }
 
     @Test

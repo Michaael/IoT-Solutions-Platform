@@ -7,6 +7,7 @@ import {
   deleteModel,
   fetchModelByName,
   fetchModelInstances,
+  fetchAbsoluteModelInstance,
   fetchModelDiff,
   fetchModelMergePreview,
   fetchModels,
@@ -159,6 +160,14 @@ function ModelDetail({
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["objects"] });
       onSelectPath?.(created.path);
+    },
+  });
+
+  const absoluteSingletonMutation = useMutation({
+    mutationFn: () => fetchAbsoluteModelInstance(model.id),
+    onSuccess: (instance) => {
+      queryClient.invalidateQueries({ queryKey: ["objects"] });
+      onSelectPath?.(instance.path);
     },
   });
 
@@ -789,6 +798,29 @@ function ModelDetail({
               </div>
               {instantiateMutation.error && (
                 <p className="hint error">{String(instantiateMutation.error)}</p>
+              )}
+            </div>
+          )}
+
+          {model.type === "ABSOLUTE" && (
+            <div className="model-action-block">
+              <p className="hint">
+                <strong>Singleton</strong> — один объект по пути{" "}
+                <code>
+                  {model.parameters.absoluteInstancePath ||
+                    `root.platform.instances.${model.name}`}
+                </code>
+              </p>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={absoluteSingletonMutation.isPending}
+                onClick={() => absoluteSingletonMutation.mutate()}
+              >
+                Открыть singleton
+              </button>
+              {absoluteSingletonMutation.error && (
+                <p className="hint error">{String(absoluteSingletonMutation.error)}</p>
               )}
             </div>
           )}

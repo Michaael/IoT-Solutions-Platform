@@ -44,6 +44,13 @@ export interface ModelDto {
   updatedAt: string;
 }
 
+export interface ModelMergeWarningDto {
+  kind: string;
+  name: string;
+  previousModelId: string | null;
+  appliedModelId: string;
+}
+
 export interface ModelAttachmentDto {
   id: string;
   modelId: string;
@@ -51,6 +58,7 @@ export interface ModelAttachmentDto {
   modelType: ModelType;
   objectPath: string;
   attachedAt: string;
+  warnings?: ModelMergeWarningDto[];
 }
 
 export interface CreateModelPayload {
@@ -80,6 +88,16 @@ export interface UpdateModelPayload {
 }
 
 export const MODELS_ROOT = "root.platform.models";
+export const RELATIVE_MODELS_ROOT = "root.platform.relative-models";
+export const INSTANCE_TYPES_ROOT = "root.platform.instance-types";
+export const ABSOLUTE_MODELS_ROOT = "root.platform.absolute-models";
+
+export const MODEL_CATALOG_ROOTS = [
+  MODELS_ROOT,
+  RELATIVE_MODELS_ROOT,
+  INSTANCE_TYPES_ROOT,
+  ABSOLUTE_MODELS_ROOT,
+] as const;
 
 export const BUILTIN_MODEL_NAMES = new Set([
   "mqtt-sensor-v1",
@@ -91,12 +109,27 @@ export const BUILTIN_MODEL_NAMES = new Set([
 ]);
 
 export function modelNameFromPath(path: string): string | null {
-  if (!path.startsWith(MODELS_ROOT + ".")) {
-    return null;
+  for (const root of MODEL_CATALOG_ROOTS) {
+    const prefix = `${root}.`;
+    if (path.startsWith(prefix)) {
+      return path.slice(prefix.length);
+    }
   }
-  return path.slice(MODELS_ROOT.length + 1);
+  return null;
 }
 
 export function isModelsPath(path: string): boolean {
-  return path === MODELS_ROOT || path.startsWith(MODELS_ROOT + ".");
+  if (MODEL_CATALOG_ROOTS.some((root) => path === root || path.startsWith(`${root}.`))) {
+    return true;
+  }
+  return false;
+}
+
+export function modelCatalogRootFromPath(path: string): string | null {
+  for (const root of MODEL_CATALOG_ROOTS) {
+    if (path === root || path.startsWith(`${root}.`)) {
+      return root;
+    }
+  }
+  return null;
 }

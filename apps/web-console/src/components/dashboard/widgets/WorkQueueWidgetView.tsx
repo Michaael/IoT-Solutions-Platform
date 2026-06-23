@@ -4,6 +4,15 @@ import type { WorkQueueWidget } from "../../../types/dashboard";
 import type { WorkQueueItem } from "../../../types/operator";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
+import { parseDemoPreview } from "../widgetDemoPreview";
+
+interface DemoWorkTask {
+  id: string;
+  title: string;
+  status: string;
+  instructions?: string;
+  workflowPath?: string;
+}
 
 interface WorkQueueWidgetViewProps {
   widget: WorkQueueWidget;
@@ -36,6 +45,12 @@ export default function WorkQueueWidgetView({ widget, editable }: WorkQueueWidge
   });
 
   const tasks = (queue.data ?? []).filter((t) => t.status !== "COMPLETED");
+  const demoTasks =
+    editable && tasks.length === 0 && !queue.isLoading
+      ? parseDemoPreview<DemoWorkTask[]>(widget.demoPreviewJson) ?? []
+      : [];
+  const isDemo = demoTasks.length > 0;
+  const displayTasks = isDemo ? demoTasks : tasks;
   const busy = claimMutation.isPending || completeMutation.isPending;
 
   return (
@@ -43,22 +58,23 @@ export default function WorkQueueWidgetView({ widget, editable }: WorkQueueWidge
       title={
         <>
           {widget.title}
-          <span className="badge">{tasks.length}</span>
+          <span className="badge">{displayTasks.length}</span>
         </>
       }
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-work-queue"
       editable={editable}
+      demo={isDemo}
     >
-      {queue.isLoading && <p className="hint">Загрузка…</p>}
-      {tasks.length === 0 && !queue.isLoading && (
+      {queue.isLoading && !isDemo && <p className="hint">Загрузка…</p>}
+      {displayTasks.length === 0 && !queue.isLoading && (
         <p className="hint">Нет открытых задач</p>
       )}
       <ul className="dash-work-queue-list" style={styles.body}>
-        {tasks.map((task) => (
+        {displayTasks.map((task) => (
           <WorkQueueRow
             key={task.id}
-            task={task}
+            task={task as WorkQueueItem}
             editable={editable}
             busy={busy}
             onClaim={() => claimMutation.mutate(task.id)}
