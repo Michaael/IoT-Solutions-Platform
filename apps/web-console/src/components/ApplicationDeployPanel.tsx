@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchDeployHistory,
@@ -13,6 +14,7 @@ interface ApplicationDeployPanelProps {
 }
 
 export default function ApplicationDeployPanel({ appId, canManage }: ApplicationDeployPanelProps) {
+  const { t } = useTranslation("platform");
   const queryClient = useQueryClient();
   const [rollbackVersion, setRollbackVersion] = useState<string | null>(null);
   const [fnObjectPath, setFnObjectPath] = useState("root.platform.devices.demo-sensor-01");
@@ -52,19 +54,16 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
 
   return (
     <div className="application-deploy-panel">
-      <h3>Bundle deploy</h3>
-      <p className="op-muted">
-        История версий bundle и откат. Deploy выполняется через{" "}
-        <code>POST /api/v1/applications/{appId}/deploy</code>.
-      </p>
+      <h3>{t("deploy.title")}</h3>
+      <p className="op-muted">{t("deploy.subtitle", { appId })}</p>
 
-      {historyQuery.isLoading && <p className="op-muted">Загрузка истории…</p>}
+      {historyQuery.isLoading && <p className="op-muted">{t("deploy.loadingHistory")}</p>}
       {historyQuery.error && (
         <div className="op-alert op-alert-error">{String(historyQuery.error)}</div>
       )}
 
       {historyQuery.data && historyQuery.data.length === 0 && (
-        <p className="op-muted">История deploy пуста.</p>
+        <p className="op-muted">{t("deploy.emptyHistory")}</p>
       )}
 
       {historyQuery.data && historyQuery.data.length > 0 && (
@@ -76,7 +75,7 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
               <li key={entry.version} className={entry.active ? "active-version" : ""}>
                 <span>
                   v{entry.version}
-                  {entry.active ? " (active)" : ""}
+                  {entry.active ? ` (${t("deploy.active")})` : ""}
                 </span>
                 <span className="op-muted">{entry.deployedAt}</span>
                 {canManage && !entry.active && (
@@ -89,7 +88,7 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
                       rollbackMutation.mutate(entry.version);
                     }}
                   >
-                    {rollingBack ? "Откат…" : "Откатить bundle"}
+                    {rollingBack ? t("deploy.rollingBack") : t("deploy.rollbackBundle")}
                   </button>
                 )}
               </li>
@@ -103,17 +102,17 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
       )}
       {rollbackMutation.isSuccess && (
         <div className="op-alert op-alert-success">
-          Bundle откат выполнен
+          {t("deploy.rollbackSuccess")}
           {rollbackMutation.data?.rolledBackTo
-            ? ` → версия ${rollbackMutation.data.rolledBackTo}`
+            ? ` → ${t("deploy.versionLabel", { version: rollbackMutation.data.rolledBackTo })}`
             : ""}
         </div>
       )}
 
       <hr />
 
-      <h3>Function versions (PF-11)</h3>
-      <p className="op-muted">Откат script-функции на предыдущую deploy-версию.</p>
+      <h3>{t("deploy.functionVersionsTitle")}</h3>
+      <p className="op-muted">{t("deploy.functionVersionsHint")}</p>
       <div className="form-grid">
         <label>
           objectPath
@@ -134,7 +133,7 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
       </div>
 
       {functionVersionsQuery.isFetching && fnName.trim() && (
-        <p className="op-muted">Загрузка версий…</p>
+        <p className="op-muted">{t("deploy.loadingVersions")}</p>
       )}
       {functionVersionsQuery.error && (
         <div className="op-alert op-alert-error">{String(functionVersionsQuery.error)}</div>
@@ -149,7 +148,7 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
               <li key={entry.version} className={entry.active ? "active-version" : ""}>
                 <span>
                   v{entry.version}
-                  {entry.active ? " (active)" : ""}
+                  {entry.active ? ` (${t("deploy.active")})` : ""}
                 </span>
                 {entry.deployedAt && <span className="op-muted">{entry.deployedAt}</span>}
                 {canManage && !entry.active && (
@@ -162,7 +161,7 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
                       functionRollbackMutation.mutate(entry.version);
                     }}
                   >
-                    {rollingBack ? "Deploy…" : "Deploy previous"}
+                    {rollingBack ? t("deploy.deploying") : t("deploy.deployPrevious")}
                   </button>
                 )}
               </li>
@@ -176,7 +175,7 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
       )}
       {functionRollbackMutation.isSuccess && (
         <div className="op-alert op-alert-success">
-          Активна версия {functionRollbackMutation.data?.version}
+          {t("deploy.functionActiveVersion", { version: functionRollbackMutation.data?.version })}
         </div>
       )}
     </div>

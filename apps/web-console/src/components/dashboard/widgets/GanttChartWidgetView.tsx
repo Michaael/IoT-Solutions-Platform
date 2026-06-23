@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { GanttChartWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
@@ -18,6 +19,7 @@ export default function GanttChartWidgetView({
   refreshIntervalMs,
   editable,
 }: GanttChartWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const { variable } = useBoundVariable(
@@ -71,7 +73,7 @@ export default function GanttChartWidgetView({
     >
       <div className="dash-gantt-body" style={styles.body}>
         {rows.length === 0 ? (
-          <p className="hint">Нет строк для диаграммы Ганта</p>
+          <p className="hint">{t("view.noGanttRows")}</p>
         ) : (
           rows.map((row) => (
           <div key={row.id} className="dash-gantt-row">

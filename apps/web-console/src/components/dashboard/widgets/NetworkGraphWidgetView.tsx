@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { NetworkGraphWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
@@ -18,6 +19,7 @@ export default function NetworkGraphWidgetView({
   refreshIntervalMs,
   editable,
 }: NetworkGraphWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const nodesVar = useBoundVariable(
@@ -60,7 +62,7 @@ export default function NetworkGraphWidgetView({
       demo={isDemo}
     >
       <p style={styles.body}>
-        Узлов: {display.nodes}, рёбер: {display.edges}
+        {t("view.networkGraphStats", { nodes: display.nodes, edges: display.edges })}
       </p>
       <ul className="dash-network-list">
         {display.labels.map((label, i) => (

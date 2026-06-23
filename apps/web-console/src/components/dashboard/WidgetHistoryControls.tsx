@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import VariableHistoryModal from "../VariableHistoryModal";
 
 interface WidgetHistoryControlsProps {
@@ -18,6 +19,7 @@ export default function WidgetHistoryControls({
   historyEnabled,
   historyRangeLabel,
 }: WidgetHistoryControlsProps) {
+  const { t } = useTranslation("widgets");
   const [showHistory, setShowHistory] = useState(false);
 
   if (!historyEnabled || !objectPath || !variableName) {
@@ -36,7 +38,7 @@ export default function WidgetHistoryControls({
         className="btn tiny dash-widget-history-btn"
         onClick={() => setShowHistory(true)}
       >
-        История
+        {t("history.label")}
       </button>
       {showHistory && (
         <VariableHistoryModal

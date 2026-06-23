@@ -45,6 +45,14 @@ public class WorkflowController {
         return workflowService.updateStatus(path, request.status());
     }
 
+    @PutMapping("/by-path/operator-app")
+    public WorkflowService.WorkflowView updateOperatorApp(
+            @RequestParam String path,
+            @RequestBody UpdateOperatorAppRequest request
+    ) {
+        return workflowService.updateOperatorAppId(path, request.operatorAppId());
+    }
+
     @PostMapping("/by-path/run")
     public WorkflowService.WorkflowView run(
             @RequestParam String path,
@@ -66,6 +74,9 @@ public class WorkflowController {
     }
 
     public record UpdateStatusRequest(WorkflowLifecycleStatus status) {
+    }
+
+    public record UpdateOperatorAppRequest(String operatorAppId) {
     }
 
     public record SignalBroadcastRequest(String workflowPath, String signal, String operatorId) {

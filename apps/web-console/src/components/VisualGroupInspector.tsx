@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchGroupMembers, fetchObjects, updateGroupMembers } from "../api";
 import type { ObjectSummary } from "../types";
 import { objectTreeKey } from "../utils/treeRowKey";
@@ -19,6 +20,7 @@ export default function VisualGroupInspector({
   onSelectPath,
   onMembersChanged,
 }: VisualGroupInspectorProps) {
+  const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
@@ -84,13 +86,13 @@ export default function VisualGroupInspector({
   return (
     <div className="visual-group-inspector">
       <p className="hint">
-        Визуальная группа — ссылки на объекты без изменения их путей. Один объект может входить в несколько групп.
+        {t("visualGroup.hint")}
       </p>
 
       {canManage && (
         <div className="visual-group-toolbar">
           <button type="button" className="btn primary" onClick={() => setPickerOpen(true)}>
-            Добавить объекты…
+            {t("visualGroup.addObjects")}
           </button>
           <button
             type="button"
@@ -101,15 +103,15 @@ export default function VisualGroupInspector({
               setSelectedMemberPaths(new Set());
             }}
           >
-            Убрать выбранных
+            {t("visualGroup.removeSelected")}
           </button>
         </div>
       )}
 
-      {membersQuery.isLoading && <p className="sidebar-msg">Загрузка участников…</p>}
+      {membersQuery.isLoading && <p className="sidebar-msg">{t("visualGroup.loadingMembers")}</p>}
 
       {!membersQuery.isLoading && members.length === 0 && (
-        <p className="inspector-empty">Группа пуста. Добавьте объекты кнопкой выше.</p>
+        <p className="inspector-empty">{t("visualGroup.empty")}</p>
       )}
 
       <ul className="visual-group-member-list">
@@ -130,7 +132,7 @@ export default function VisualGroupInspector({
               />
             )}
             <button type="button" className="linkish" onClick={() => onSelectPath(member.path)}>
-              {summary?.displayName ?? `(отсутствует) ${member.path}`}
+              {summary?.displayName ?? t("visualGroup.missing", { path: member.path })}
             </button>
             <span className="tree-type mono">{member.path}</span>
           </li>
@@ -140,10 +142,10 @@ export default function VisualGroupInspector({
       {pickerOpen && (
         <div className="modal-backdrop" onClick={() => setPickerOpen(false)}>
           <div className="modal visual-group-picker" onClick={(e) => e.stopPropagation()}>
-            <h3>Добавить в группу</h3>
+            <h3>{t("visualGroup.addToGroup")}</h3>
             <input
               type="search"
-              placeholder="Поиск по имени или пути…"
+              placeholder={t("visualGroup.searchPlaceholder")}
               value={pickerQuery}
               onChange={(e) => setPickerQuery(e.target.value)}
               autoFocus
@@ -167,10 +169,10 @@ export default function VisualGroupInspector({
                 </li>
               ))}
             </ul>
-            {pickerCandidates.length === 0 && <p className="hint">Нет подходящих объектов</p>}
+            {pickerCandidates.length === 0 && <p className="hint">{t("common:empty.noMatches")}</p>}
             <div className="modal-actions">
               <button type="button" className="btn" onClick={() => setPickerOpen(false)}>
-                Закрыть
+                {t("common:action.close")}
               </button>
             </div>
           </div>

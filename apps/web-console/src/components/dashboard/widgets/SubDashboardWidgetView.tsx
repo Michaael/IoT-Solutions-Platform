@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchDashboard } from "../../../api";
 import type { SubDashboardWidget } from "../../../types/dashboard";
@@ -24,6 +25,7 @@ export default function SubDashboardWidgetView({
   editable,
   depth = 0,
 }: SubDashboardWidgetViewProps) {
+  const { t } = useTranslation(["widgets", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
   const session = useWidgetSession();
 
@@ -68,7 +70,7 @@ export default function SubDashboardWidgetView({
         className="dash-widget dash-widget-sub-dashboard"
         editable={editable}
       >
-        <p className="hint">Укажите targetDashboardPath или targetDashboardPathKey</p>
+        <p className="hint">{t("view.specifyTargetDashboardOrKey")}</p>
       </DashWidgetShell>
     );
   }
@@ -76,7 +78,7 @@ export default function SubDashboardWidgetView({
   if (depth >= MAX_SUB_DASHBOARD_DEPTH) {
     return (
       <DashWidgetShell title={widget.title} className="dash-widget" editable={editable}>
-        <p className="hint">Максимальная глубина сабдашбордов</p>
+        <p className="hint">{t("view.subDashboardMaxDepth")}</p>
       </DashWidgetShell>
     );
   }
@@ -91,9 +93,9 @@ export default function SubDashboardWidgetView({
     >
       <div className="dash-sub-dashboard-body" style={styles.body}>
         {embedded.isLoading ? (
-          <p className="hint">Загрузка…</p>
+          <p className="hint">{t("common:action.loading")}</p>
         ) : embedded.error ? (
-          <p className="hint">Ошибка загрузки</p>
+          <p className="hint">{t("view.subDashboardLoadError")}</p>
         ) : (
           <DashboardGrid
             layout={layout}

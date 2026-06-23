@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchAiAgentTools,
@@ -13,6 +14,7 @@ import {
 } from "../utils/agentChatStorage";
 
 export default function AiStudioSettingsTab() {
+  const { t } = useTranslation(["ai", "common"]);
   const { chatIndex, clearLocalChatIndex, defaultRootPath } = useAgentChat();
   const [prefs, setPrefs] = useState<AiStudioPrefs>(() => loadAiStudioPrefs());
   const [savedHint, setSavedHint] = useState<string | null>(null);
@@ -45,38 +47,38 @@ export default function AiStudioSettingsTab() {
     const next = { ...prefs, ...patch };
     setPrefs(next);
     saveAiStudioPrefs(next);
-    setSavedHint("Сохранено");
+    setSavedHint(t("common:action.saved"));
   };
 
   return (
     <div className="ai-studio-settings">
       <div className="ai-studio-settings-grid">
         <section className="panel-card ai-studio-settings-card">
-          <h4>Провайдер LLM</h4>
-          {providerQuery.isLoading && <p className="op-muted">Загрузка…</p>}
+          <h4>{t("settings.llmProvider")}</h4>
+          {providerQuery.isLoading && <p className="op-muted">{t("common:action.loading")}</p>}
           {provider && (
             <dl className="ai-studio-dl">
               <div>
-                <dt>Статус</dt>
+                <dt>{t("settings.status")}</dt>
                 <dd>
                   <span className={`ai-studio-badge ${provider.available ? "ok" : "warn"}`}>
-                    {provider.available ? "готов" : "не настроен"}
+                    {provider.available ? t("settings.ready") : t("settings.notConfigured")}
                   </span>
                 </dd>
               </div>
               <div>
-                <dt>ID провайдера</dt>
+                <dt>{t("settings.providerId")}</dt>
                 <dd><code>{provider.providerId}</code></dd>
               </div>
               {provider.model && (
                 <div>
-                  <dt>Модель</dt>
+                  <dt>{t("settings.model")}</dt>
                   <dd><code>{provider.model}</code></dd>
                 </div>
               )}
               <div>
-                <dt>Включён на сервере</dt>
-                <dd>{provider.enabled ? "да" : "нет"}</dd>
+                <dt>{t("settings.enabledOnServer")}</dt>
+                <dd>{provider.enabled ? t("common:action.yes") : t("common:action.no")}</dd>
               </div>
             </dl>
           )}
@@ -84,13 +86,19 @@ export default function AiStudioSettingsTab() {
             <p className="hint">
               {provider?.reason === "missing-api-key" ? (
                 <>
-                  Задайте <code>ISPF_AI_API_KEY</code> в файле <code>.env</code> в корне репозитория и
-                  запустите сервер через <code>scripts/run-local-with-ai.ps1</code>.
+                  {t("settings.missingApiKeyBefore")}{" "}
+                  <code>ISPF_AI_API_KEY</code>{" "}
+                  {t("settings.missingApiKeyAfter")}{" "}
+                  <code>scripts/run-local-with-ai.ps1</code>.
                 </>
               ) : (
                 <>
-                  Задайте <code>ispf.ai.provider</code> и <code>base-url</code> в конфигурации сервера
-                  (или переменные окружения) и перезапустите <code>ispf-server</code>.
+                  {t("settings.missingProviderBefore")}{" "}
+                  <code>ispf.ai.provider</code>{" "}
+                  {t("settings.missingProviderMid")}{" "}
+                  <code>base-url</code>{" "}
+                  {t("settings.missingProviderAfter")}{" "}
+                  <code>ispf-server</code>.
                 </>
               )}
             </p>
@@ -98,29 +106,29 @@ export default function AiStudioSettingsTab() {
         </section>
 
         <section className="panel-card ai-studio-settings-card">
-          <h4>Context Pack</h4>
-          {contextPackQuery.isLoading && <p className="op-muted">Загрузка…</p>}
+          <h4>{t("settings.contextPack")}</h4>
+          {contextPackQuery.isLoading && <p className="op-muted">{t("common:action.loading")}</p>}
           {contextPack && (
             <dl className="ai-studio-dl">
               <div>
-                <dt>Версия</dt>
+                <dt>{t("settings.version")}</dt>
                 <dd><code>{contextPack.contextPackVersion}</code></dd>
               </div>
               {contextPack.platformVersion && (
                 <div>
-                  <dt>Платформа</dt>
+                  <dt>{t("settings.platform")}</dt>
                   <dd><code>{contextPack.platformVersion}</code></dd>
                 </div>
               )}
               {contextPack.exampleCount != null && (
                 <div>
-                  <dt>Примеров в пакете</dt>
+                  <dt>{t("settings.examplesInPack")}</dt>
                   <dd>{contextPack.exampleCount}</dd>
                 </div>
               )}
               {contextPack.generatedAt && (
                 <div>
-                  <dt>Сгенерирован</dt>
+                  <dt>{t("settings.generatedAt")}</dt>
                   <dd>{new Date(contextPack.generatedAt).toLocaleString()}</dd>
                 </div>
               )}
@@ -129,10 +137,10 @@ export default function AiStudioSettingsTab() {
         </section>
 
         <section className="panel-card ai-studio-settings-card ai-studio-settings-wide">
-          <h4>Поведение агента</h4>
+          <h4>{t("settings.agentBehavior")}</h4>
           <div className="form-grid">
             <label>
-              Корневой путь новых сессий
+              {t("settings.defaultRootPath")}
               <input
                 value={prefs.defaultRootPath}
                 onChange={(e) => updatePrefs({ defaultRootPath: e.target.value })}
@@ -140,7 +148,7 @@ export default function AiStudioSettingsTab() {
               />
             </label>
             <label>
-              AppId по умолчанию (bundle)
+              {t("settings.defaultAppId")}
               <input
                 value={prefs.defaultAppId}
                 onChange={(e) => updatePrefs({ defaultAppId: e.target.value })}
@@ -153,33 +161,31 @@ export default function AiStudioSettingsTab() {
                 onChange={(e) => updatePrefs({ restoreLastChat: e.target.checked })}
               />
               {" "}
-              Восстанавливать последний чат при открытии консоли
+              {t("settings.restoreLastChat")}
             </label>
           </div>
           <p className="hint">
-            Текущий корневой путь активной сессии: <code>{defaultRootPath}</code>.
-            Чаты и незавершённые запросы сохраняются в браузере и продолжают выполняться на сервере,
-            даже если вы переключили вкладку или закрыли окно.
+            {t("settings.activeRootHint", { path: defaultRootPath })}{" "}
+            {t("settings.persistenceHint")}
           </p>
           {savedHint && <p className="hint success">{savedHint}</p>}
         </section>
 
         <section className="panel-card ai-studio-settings-card ai-studio-settings-wide">
-          <h4>Локальные сессии</h4>
+          <h4>{t("settings.localSessions")}</h4>
           <p className="op-muted">
-            В списке чатов: {chatIndex.chats.length}. Данные хранятся в localStorage этого браузера;
-            серверные сессии не удаляются при очистке списка.
+            {t("settings.chatCountHint", { count: chatIndex.chats.length })}
           </p>
           <div className="form-actions">
             <button type="button" className="btn" onClick={() => clearLocalChatIndex()}>
-              Очистить локальный список чатов
+              {t("settings.clearLocalChats")}
             </button>
           </div>
         </section>
 
         <section className="panel-card ai-studio-settings-card ai-studio-settings-wide">
-          <h4>Инструменты агента</h4>
-          {toolsQuery.isLoading && <p className="op-muted">Загрузка…</p>}
+          <h4>{t("settings.agentTools")}</h4>
+          {toolsQuery.isLoading && <p className="op-muted">{t("common:action.loading")}</p>}
           {toolsQuery.data && (
             <ul className="ai-studio-tools-list">
               {toolsQuery.data.tools.map((tool) => (

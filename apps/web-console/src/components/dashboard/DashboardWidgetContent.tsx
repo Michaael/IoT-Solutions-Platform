@@ -1,4 +1,5 @@
 import type { DashboardWidget } from "../../types/dashboard";
+import { useTranslation } from "react-i18next";
 import ValueWidgetView from "./widgets/ValueWidgetView";
 import IndicatorWidgetView, { ToggleWidgetView } from "./widgets/IndicatorWidgetView";
 import ChartWidgetView from "./widgets/ChartWidgetView";
@@ -47,6 +48,7 @@ export default function DashboardWidgetContent({
   refreshIntervalMs,
   editable,
 }: DashboardWidgetContentProps) {
+  const { t } = useTranslation("widgets");
   switch (widget.type) {
     case "value":
       return (
@@ -285,6 +287,6 @@ export default function DashboardWidgetContent({
     case "steps-panel":
       return null;
     default:
-      return <div className="dash-widget">Неизвестный виджет</div>;
+      return <div className="dash-widget">{t("error.unknownWidget")}</div>;
   }
 }

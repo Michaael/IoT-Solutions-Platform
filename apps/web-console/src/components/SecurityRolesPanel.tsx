@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchSecurityRoles } from "../api/securityRoles";
 import CreateSecurityRoleDialog from "./CreateSecurityRoleDialog";
 
@@ -9,6 +10,7 @@ interface SecurityRolesPanelProps {
 }
 
 export default function SecurityRolesPanel({ canManage, onSelectRole }: SecurityRolesPanelProps) {
+  const { t } = useTranslation(["security", "common"]);
   const [showCreate, setShowCreate] = useState(false);
   const queryClient = useQueryClient();
 
@@ -18,21 +20,18 @@ export default function SecurityRolesPanel({ canManage, onSelectRole }: Security
   });
 
   if (!canManage) {
-    return <p className="op-muted">Управление ролями доступно только admin.</p>;
+    return <p className="op-muted">{t("roles.adminOnly")}</p>;
   }
 
   return (
     <section className="security-users-panel">
       <header className="security-users-header">
         <div>
-          <h3>Роли платформы</h3>
-          <p className="op-muted">
-            RBAC-роли в <code>root.platform.security.roles</code>. Выберите роль в дереве или в
-            списке — свойства редактируются в инспекторе объекта.
-          </p>
+          <h3>{t("roles.title")}</h3>
+          <p className="op-muted">{t("roles.subtitle")}</p>
         </div>
         <button type="button" className="btn primary" onClick={() => setShowCreate(true)}>
-          + Создать роль
+          {t("roles.create")}
         </button>
       </header>
 
@@ -41,10 +40,10 @@ export default function SecurityRolesPanel({ canManage, onSelectRole }: Security
       <table className="op-table security-users-table security-users-table-compact">
         <thead>
           <tr>
-            <th>Имя</th>
-            <th>Отображаемое имя</th>
-            <th>Описание</th>
-            <th>Тип</th>
+            <th>{t("roles.column.name")}</th>
+            <th>{t("roles.column.displayName")}</th>
+            <th>{t("roles.column.description")}</th>
+            <th>{t("roles.column.type")}</th>
           </tr>
         </thead>
         <tbody>
@@ -60,8 +59,8 @@ export default function SecurityRolesPanel({ canManage, onSelectRole }: Security
                 </button>
               </td>
               <td>{role.displayName}</td>
-              <td>{role.description || "—"}</td>
-              <td>{role.builtIn ? "встроенная" : "пользовательская"}</td>
+              <td>{role.description || t("common:empty.dash")}</td>
+              <td>{role.builtIn ? t("roles.type.builtIn") : t("roles.type.custom")}</td>
             </tr>
           ))}
         </tbody>

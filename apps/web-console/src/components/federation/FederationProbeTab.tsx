@@ -1,4 +1,5 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { FederationPeer } from "../../api/federation";
 
 interface FederationProbeTabProps {
@@ -20,24 +21,24 @@ export default function FederationProbeTab({
   probeResult,
   probeMutation,
 }: FederationProbeTabProps) {
+  const { t } = useTranslation("federation");
+
   return (
     <div className="panel-card federation-probe">
-      <h4>Проверка proxy read</h4>
-      <p className="op-muted">
-        Выполняет GET объекта через выбранный федеративный узел для проверки связности и авторизации.
-      </p>
+      <h4>{t("probe.title")}</h4>
+      <p className="op-muted">{t("probe.subtitle")}</p>
       <div className="form-grid">
         <label>
-          Узел
+          {t("probe.field.peer")}
           <select value={probePeerId} onChange={(e) => setProbePeerId(e.target.value)}>
-            <option value="">— выберите узел —</option>
+            <option value="">{t("bind.selectPeer")}</option>
             {(peersQuery.data ?? []).map((peer) => (
               <option key={peer.id} value={peer.id}>{peer.name}</option>
             ))}
           </select>
         </label>
         <label>
-          Путь (локальный или относительный)
+          {t("probe.field.path")}
           <input value={probePath} onChange={(e) => setProbePath(e.target.value)} />
         </label>
       </div>
@@ -48,7 +49,7 @@ export default function FederationProbeTab({
           disabled={probeMutation.isPending || !probePeerId}
           onClick={() => probeMutation.mutate()}
         >
-          {probeMutation.isPending ? "Проверка…" : "Проверить объект"}
+          {probeMutation.isPending ? t("probe.running") : t("probe.run")}
         </button>
       </div>
       {probeResult && (

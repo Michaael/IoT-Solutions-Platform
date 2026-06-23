@@ -1,0 +1,22 @@
+{
+  "fireEvent.event": "Событие:",
+  "fireEvent.object": "Объект:",
+  "fireEvent.payload": "Payload (JSON DataRecord, опционально)",
+  "fireEvent.payloadHint": "Пустой объект или только schema/rows — платформа подставит схему из descriptor.",
+  "fireEvent.publish": "Опубликовать",
+  "fireEvent.publishing": "Публикация…",
+  "fireEvent.title": "Опубликовать событие",
+  "functionJournal.empty": "Вызовов пока нет",
+  "functionJournal.filter.all": "все",
+  "functionJournal.filter.error": "ошибка",
+  "functionJournal.filter.success": "успех",
+  "functionJournal.loadError": "Не удалось загрузить журнал",
+  "functionJournal.subtitle": "Все invoke через API, workflow, scheduler и UI",
+  "functionJournal.title": "Журнал вызовов функций",
+  "invokeFunction.input": "Ввод (запись данных JSON)",
+  "invokeFunction.inputHint": "Пустой rows — платформа подставит inputSchema из descriptor.",
+  "invokeFunction.invoke": "Вызвать",
+  "invokeFunction.invoking": "Вызов…",
+  "invokeFunction.result": "Результат",
+  "invokeFunction.title": "Вызов функции"
+}

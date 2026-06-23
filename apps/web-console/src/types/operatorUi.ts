@@ -19,8 +19,10 @@ export interface OperatorUi {
   dashboards: OperatorUiDashboard[];
   reports?: OperatorUiReport[];
   defaultReport?: string;
-  /** Optional object path filter for operator event journal sidebar. */
+  /** Optional object path prefix filter for operator event journal sidebar. */
   eventJournalObjectPath?: string;
+  /** Optional workflow path prefix filter for operator work queue sidebar. */
+  workQueueWorkflowPathPrefix?: string;
   /** Global popup alarm bar configuration for operator mode. */
   alarmBar?: OperatorAlarmBarConfig;
 }

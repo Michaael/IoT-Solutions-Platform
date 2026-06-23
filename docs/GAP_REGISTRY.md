@@ -11,7 +11,7 @@
 1. **Этот файл** — сводка пробелов по подсистемам и приоритетам.
 2. **[PLATFORM_DEVELOPER_BACKLOG.md §3](PLATFORM_DEVELOPER_BACKLOG.md#3-сводная-матрица-req-pf)** — матрица REQ-PF/FW и acceptance-критерии.
 
-Текущая волна — [ROADMAP.md § Phase 18](ROADMAP.md#phase-18--reference-solutions--v080-rollout). Gate обобщения — [ADR-0009](decisions/0009-dogfooding-gate.md): каждый PR в platform проходит три вопроса (object tree, deploy REST only, второй сценарий).
+Текущая волна — [ROADMAP.md § Phase 18](ROADMAP.md#phase-18--reference-solutions--v080-rollout). Phase 19 i18n — **Done** ([ADR-0020](decisions/0020-web-console-i18n.md)). Gate обобщения — [ADR-0009](decisions/0009-dogfooding-gate.md): каждый PR в platform проходит три вопроса (object tree, deploy REST only, второй сценарий).
 
 ## Правило обновления
 
@@ -51,12 +51,15 @@
 | Driver stub catalog | ~95% | 6 STUB/BETA drivers по demand | [DRIVERS.md § Stub promotion](DRIVERS.md#stub-promotion-demand-driven) |
 | Mini-TEC reference (Phase 18) | ~40% | CI smoke, SLD acceptance, prod deploy | [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md) |
 | Frontend e2e (Playwright) | ~0% | Admin critical paths | Phase 18.5 |
+| Web Console i18n | ~100% | — | Phase 19, [ADR-0020](decisions/0020-web-console-i18n.md) |
 | Scale (load test) | ~100% | — | `ListDevicesLoadTest`, `ISPF_LOAD_P99_CEILING_MS` |
 
 ## История
 
 | Дата | Изменение |
 |------|-----------|
+| 2026-06-23 | Phase 19 Done: i18n en/ru/de/zh, LocaleSwitcher, ADR-0020 |
+| 2026-06-23 | Phase 19 draft: Web Console i18n (locale dropdown, ru/en, waves 19.1–19.6) |
 | 2026-06-23 | Phase 18 kickoff: mini-TEC walkthrough, ROADMAP 18.1–18.6 |
 | 2026-06-23 | Phase 17.2: drop binding_expr (V41, V1 cleanup); dev — пересоздание БД |
 | 2026-06-23 | Phase 17 formalized; MCP ContextPack resources; sprint planning section; ADR 0017–0019 |

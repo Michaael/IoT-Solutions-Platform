@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { AuthSession } from "../../auth/session";
 import { useOperatorUi } from "../../hooks/useOperatorUi";
 import { useObjectWebSocket } from "../../hooks/useObjectWebSocket";
@@ -10,6 +11,7 @@ import {
 } from "../../types/operatorUi";
 import type { DashboardSession } from "../dashboard/DashboardContext";
 import { emptySession, mergeSession } from "../dashboard/DashboardContext";
+import LocaleSwitcher from "../LocaleSwitcher";
 import DashboardBuilder from "../dashboard/DashboardBuilder";
 import ReportBuilder from "../report/ReportBuilder";
 import AlarmBarOverlay from "./AlarmBarOverlay";
@@ -72,6 +74,7 @@ export default function OperatorDashboardApp({
   session,
   onLogout,
 }: OperatorDashboardAppProps) {
+  const { t } = useTranslation(["operator", "common"]);
   useObjectWebSocket();
   const uiQuery = useOperatorUi(appId);
   const [viewKind, setViewKind] = useState<OperatorViewKind>(resolveViewKindFromUrl);
@@ -146,7 +149,7 @@ export default function OperatorDashboardApp({
   }, [ui, viewKind, dashboardPath, reportPath, navigateDashboard, navigateReport]);
 
   if (uiQuery.isLoading) {
-    return <div className="operator-shell op-loading">Загрузка operator UI…</div>;
+    return <div className="operator-shell op-loading">{t("operator:loadingUi")}</div>;
   }
 
   const hasDashboards = Boolean(ui?.dashboards?.length);
@@ -158,7 +161,7 @@ export default function OperatorDashboardApp({
       <div className="operator-shell op-loading">
         {uiQuery.error
           ? String(uiQuery.error)
-          : `Operator UI для «${appId}» не найден. Настройте в дереве → root.platform.operator-apps или deploy bundle operatorUi.`}
+          : t("operator:uiNotFound", { appId })}
       </div>
     );
   }
@@ -166,7 +169,7 @@ export default function OperatorDashboardApp({
   if (!activePath) {
     return (
       <div className="operator-shell op-loading">
-        {`Operator UI для «${appId}» не содержит дашбордов или отчётов.`}
+        {t("operator:uiNoDashboards", { appId })}
       </div>
     );
   }
@@ -201,7 +204,7 @@ export default function OperatorDashboardApp({
           )}
         </main>
         <aside className="operator-sidebar">
-          <OperatorSidebar operatorId={operatorId} ui={ui} />
+          <OperatorSidebar appId={appId} operatorId={operatorId} ui={ui} />
         </aside>
       </div>
       {alarmBar.position === "bottom" && <AlarmBarOverlay {...alarmBar} />}
@@ -230,6 +233,7 @@ function OperatorDashboardChrome({
   onSelectDashboard: (path: string) => void;
   onSelectReport: (path: string) => void;
 }) {
+  const { t } = useTranslation(["operator", "common"]);
   const activeTitle =
     viewKind === "report"
       ? (ui.reports?.find((item) => item.path === activePath)?.title ?? activePath)
@@ -246,14 +250,15 @@ function OperatorDashboardChrome({
           </span>
         </div>
         <div className="topbar-actions">
+          <LocaleSwitcher />
           {onLogout && (
             <button type="button" className="btn" onClick={onLogout}>
-              Выйти
+              {t("common:action.logout")}
             </button>
           )}
           {onSwitchAdmin && (
             <button type="button" className="btn" onClick={onSwitchAdmin}>
-              Админ-консоль
+              {t("operator:launcher.switchAdmin")}
             </button>
           )}
         </div>

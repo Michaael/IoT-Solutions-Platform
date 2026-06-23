@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fetchVariables } from "../api";
 import { historizableFieldsFromVariable } from "../utils/variableHistoryFields";
 import VariableHistoryPanel from "./VariableHistoryPanel";
@@ -18,6 +19,7 @@ export default function VariableHistoryModal({
   title,
   onClose,
 }: VariableHistoryModalProps) {
+  const { t } = useTranslation("common");
   const variablesQuery = useQuery({
     queryKey: ["variables", objectPath],
     queryFn: () => fetchVariables(objectPath),
@@ -37,7 +39,7 @@ export default function VariableHistoryModal({
       >
         <header>
           <h3>{title ?? variableName}</h3>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Закрыть">
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t("action.close")}>
             ✕
           </button>
         </header>

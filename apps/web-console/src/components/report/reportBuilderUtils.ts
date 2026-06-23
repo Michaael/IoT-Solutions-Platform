@@ -32,13 +32,13 @@ export function validateParameters(names: string[]): string | null {
   const seen = new Set<string>();
   for (const name of names) {
     if (!name) {
-      return "Имя параметра не может быть пустым";
+      return "error.paramEmpty";
     }
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
-      return `Недопустимое имя параметра: ${name}`;
+      return `error.paramInvalid:${name}`;
     }
     if (seen.has(name)) {
-      return `Дублирующийся параметр: ${name}`;
+      return `error.paramDuplicate:${name}`;
     }
     seen.add(name);
   }
@@ -47,18 +47,18 @@ export function validateParameters(names: string[]): string | null {
 
 export function validateColumns(columns: ReportColumn[]): string | null {
   if (columns.length === 0) {
-    return "Добавьте хотя бы одну колонку";
+    return "error.columnsEmpty";
   }
   const seen = new Set<string>();
   for (const col of columns) {
     if (!col.field) {
-      return "У каждой колонки должен быть field";
+      return "error.columnFieldRequired";
     }
     if (!col.label) {
-      return `Колонка ${col.field}: укажите label`;
+      return `error.columnLabelRequired:${col.field}`;
     }
     if (seen.has(col.field)) {
-      return `Дублирующийся field: ${col.field}`;
+      return `error.columnFieldDuplicate:${col.field}`;
     }
     seen.add(col.field);
   }

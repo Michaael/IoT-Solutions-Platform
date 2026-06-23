@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ObjectInspector from "./ObjectInspector";
 import OperatorAppsPanel from "./OperatorAppsPanel";
 import SecurityUsersPanel from "./SecurityUsersPanel";
@@ -56,8 +57,10 @@ export default function ExplorerView({
   showBackToTree = false,
   onBackToTree,
 }: ExplorerViewProps) {
+  const { t } = useTranslation(["explorer", "common"]);
+
   if (!selectedPath) {
-    return <div className="inspector-empty">Выберите объект в дереве</div>;
+    return <div className="inspector-empty">{t("explorer:empty.selectObject")}</div>;
   }
 
   const isOperatorAppChild = isOperatorAppChildPath(selectedPath);
@@ -102,7 +105,7 @@ export default function ExplorerView({
       {showBackToTree && onBackToTree && (
         <div className="explorer-mobile-nav">
           <button type="button" className="btn explorer-back-btn" onClick={onBackToTree}>
-            ← Дерево объектов
+            {t("explorer:mobile.backToTree")}
           </button>
         </div>
       )}
@@ -114,14 +117,14 @@ export default function ExplorerView({
             </button>
           )}
           <button type="button" className="btn" onClick={() => onOpenEditor(selectedPath)}>
-            Открыть в редакторе
+            {t("common:action.openInEditor")}
           </button>
           <span className="hint">
             {isModelsPath(selectedPath)
-              ? "Полное определение модели — в редакторе (кнопка выше или двойной щелчок)"
+              ? t("common:hint.modelFullDefinition")
               : opensInEditor
-                ? "Редактор — двойной щелчок в дереве или «Открыть в редакторе»"
-                : "Двойной щелчок по узлу также открывает редактор"}
+                ? t("common:hint.openEditorButton")
+                : t("common:hint.doubleClickEditor")}
           </span>
         </div>
       )}

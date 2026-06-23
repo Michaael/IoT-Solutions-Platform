@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteObject,
@@ -96,6 +97,7 @@ function VariableEditorRow({
   onChange: (next: DataRecord) => void;
   onHistoryChange: (next: VariableHistoryState) => void;
 }) {
+  const { t } = useTranslation(["inspector", "common"]);
   const [showHistory, setShowHistory] = useState(false);
   const [showJson, setShowJson] = useState(false);
   const dirty = !recordsEqual(record, baseline);
@@ -120,7 +122,7 @@ function VariableEditorRow({
         </div>
         <div className="property-card-tools">
           <button type="button" className="btn tiny" onClick={() => setShowHistory((v) => !v)}>
-            История
+            {t("objectEditor.historyBtn")}
           </button>
           <button type="button" className="btn tiny" onClick={() => setShowJson((v) => !v)}>
             JSON
@@ -164,7 +166,7 @@ function VariableEditorRow({
             />
           ))}
           {record.schema.fields.length === 0 && (
-            <p className="hint">Схема переменной пуста</p>
+            <p className="hint">{t("objectEditor.emptyVariableSchema")}</p>
           )}
         </div>
       )}
@@ -178,6 +180,7 @@ export default function ObjectPropertiesEditor({
   onDeleted,
   canManage = false,
 }: ObjectPropertiesEditorProps) {
+  const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     info: true,
@@ -305,7 +308,7 @@ export default function ObjectPropertiesEditor({
     },
     onError: (error: Error) => {
       if (error.message.startsWith("REVISION_CONFLICT:")) {
-        setConflictMessage("Объект изменился другим пользователем. Перезагрузите или перезапишите (admin).");
+        setConflictMessage(t("objectEditor.conflictMessage"));
       }
     },
   });
@@ -341,15 +344,15 @@ export default function ObjectPropertiesEditor({
 
   const editorData = resolveInspectorEditor(path, editorQuery.data);
   if (editorQuery.error && !editorData) {
-    return <div className="editor-loading error">Ошибка загрузки редактора</div>;
+    return <div className="editor-loading error">{t("objectEditor.loadError")}</div>;
   }
 
   if (!editorData && inspectorQueryLoading(editorQuery)) {
-    return <div className="editor-loading">Загрузка редактора…</div>;
+    return <div className="editor-loading">{t("objectEditor.loading")}</div>;
   }
 
   if (!editorData || !state) {
-    return <div className="editor-loading">Загрузка редактора…</div>;
+    return <div className="editor-loading">{t("objectEditor.loading")}</div>;
   }
 
   const ctx = editorData.object;
@@ -373,10 +376,10 @@ export default function ObjectPropertiesEditor({
         </div>
         <div className="toolbar-actions">
           <button type="button" className="btn" onClick={() => editorQuery.refetch()}>
-            Обновить
+            {t("common:action.refresh")}
           </button>
           <button type="button" className="btn" disabled={!isDirty} onClick={revert}>
-            Отменить
+            {t("common:action.revert")}
           </button>
           <button
             type="button"
@@ -384,19 +387,19 @@ export default function ObjectPropertiesEditor({
             disabled={!isDirty || saveMutation.isPending || (staleRemote && !forceNextSave)}
             onClick={() => saveMutation.mutate()}
           >
-            Сохранить
+            {t("common:action.save")}
           </button>
           {canDelete && (
             <button
               type="button"
               className="btn danger"
               onClick={() => {
-                if (confirm(`Удалить «${ctx.displayName}»?`)) {
+                if (confirm(t("common:action.confirmDeleteNamed", { name: ctx.displayName }))) {
                   deleteMutation.mutate();
                 }
               }}
             >
-              Удалить
+              {t("common:action.delete")}
             </button>
           )}
         </div>
@@ -419,18 +422,17 @@ export default function ObjectPropertiesEditor({
               <span className="inline-badge federated-inline-badge">federated</span>
             )}
           </h2>
-          <p className="hint">{ctx.description || "Универсальный редактор объекта"}</p>
+          <p className="hint">{ctx.description || t("objectEditor.defaultDescription")}</p>
         </div>
-        {isDirty && <span className="dirty-pill">Изменено</span>}
+        {isDirty && <span className="dirty-pill">{t("common:dirty.changed")}</span>}
       </div>
 
-      {saveMutation.isSuccess && <div className="banner success">Изменения сохранены</div>}
+      {saveMutation.isSuccess && <div className="banner success">{t("common:changes.saved")}</div>}
       {staleRemote && (
         <div className="banner warning">
-          Объект изменился на сервере (revision {remoteRevision}). Сохранение заблокировано до перезагрузки
-          или принудительной перезаписи.
+          {t("objectEditor.staleRemote", { revision: remoteRevision })}
           <button type="button" className="btn btn-sm" onClick={() => editorQuery.refetch()}>
-            Перезагрузить
+            {t("common:action.reload")}
           </button>
           {canManage && (
             <button
@@ -441,7 +443,7 @@ export default function ObjectPropertiesEditor({
                 saveMutation.mutate();
               }}
             >
-              Перезаписать
+              {t("common:action.overwrite")}
             </button>
           )}
         </div>
@@ -453,27 +455,27 @@ export default function ObjectPropertiesEditor({
 
       <section className="editor-section">
         <button type="button" className="section-toggle" onClick={() => toggleSection("info")}>
-          <span>{openSections.info ? "▾" : "▸"}</span> Информация
+          <span>{openSections.info ? "▾" : "▸"}</span> {t("common:section.info")}
         </button>
         {openSections.info && (
           <div className="section-body form-grid">
             <label>
-              Отображаемое имя
+              {t("common:field.displayName")}
               <input
                 value={state.displayName}
                 onChange={(e) => setState((s) => s && { ...s, displayName: e.target.value })}
               />
             </label>
             <label>
-              Тип
+              {t("common:table.type")}
               <input value={ctx.type} readOnly className="readonly" />
             </label>
             <label>
-              Путь
+              {t("common:field.path")}
               <input value={ctx.path} readOnly className="readonly" />
             </label>
             <label>
-              Основная модель
+              {t("common:field.primaryModel")}
               <input
                 value={
                   ctx.appliedModels?.find((m) => m.primary)?.name ?? ctx.templateId ?? "—"
@@ -484,7 +486,7 @@ export default function ObjectPropertiesEditor({
             </label>
             {(ctx.appliedModels?.length ?? 0) > 0 && (
               <div className="full">
-                <span className="field-label">Применённые модели</span>
+                <span className="field-label">{t("common:field.appliedModels")}</span>
                 <ul className="applied-models-list">
                   {ctx.appliedModels!.map((model) => (
                     <li key={model.id}>
@@ -500,7 +502,7 @@ export default function ObjectPropertiesEditor({
               <input value={String(revision)} readOnly className="readonly" />
             </label>
             <label className="full">
-              Описание
+              {t("common:field.description")}
               <textarea
                 rows={2}
                 value={state.description}
@@ -508,7 +510,7 @@ export default function ObjectPropertiesEditor({
               />
             </label>
             <label className="full">
-              Иконка в дереве
+              {t("common:field.iconInTree")}
               <IconPicker
                 path={ctx.path}
                 type={ctx.type}
@@ -537,13 +539,13 @@ export default function ObjectPropertiesEditor({
 
       <section className="editor-section">
         <button type="button" className="section-toggle" onClick={() => toggleSection("variables")}>
-          <span>{openSections.variables ? "▾" : "▸"}</span> Переменные ({editorData.variables.length})
+          <span>{openSections.variables ? "▾" : "▸"}</span> {t("tab.variables")} ({editorData.variables.length})
         </button>
         {openSections.variables && (
           <div className="section-body property-list">
             {ctx.federated && (
               <p className="hint">
-                Переменные проксируются с remote peer. Локальные переменные скрыты пока активен bind.
+                {t("variables.federatedHint")}
               </p>
             )}
             {canManage && !ctx.federated && (
@@ -553,12 +555,12 @@ export default function ObjectPropertiesEditor({
                   className="btn primary small"
                   onClick={() => setShowCreateVariable(true)}
                 >
-                  + Переменная
+                  {t("variables.add")}
                 </button>
               </div>
             )}
             {editorData.variables.length === 0 && (
-              <p className="hint">Нет переменных</p>
+              <p className="hint">{t("variables.empty")}</p>
             )}
             {editorData.variables
               .filter((variable) => variable.name !== "uiIcon")
@@ -593,19 +595,19 @@ export default function ObjectPropertiesEditor({
 
       <section className="editor-section">
         <button type="button" className="section-toggle" onClick={() => toggleSection("events")}>
-          <span>{openSections.events ? "▾" : "▸"}</span> События ({editorData.events.length})
+          <span>{openSections.events ? "▾" : "▸"}</span> {t("tab.events")} ({editorData.events.length})
         </button>
         {openSections.events && (
           <div className="section-body">
             {editorData.events.length === 0 ? (
-              <p className="hint">Нет событий</p>
+              <p className="hint">{t("events.empty")}</p>
             ) : (
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Имя</th>
-                    <th>Уровень</th>
-                    <th>Описание</th>
+                    <th>{t("common:table.name")}</th>
+                    <th>{t("common:field.level")}</th>
+                    <th>{t("common:table.description")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -613,7 +615,7 @@ export default function ObjectPropertiesEditor({
                     <tr key={ev.name}>
                       <td><code>{ev.name}</code></td>
                       <td>{ev.level}</td>
-                      <td>{ev.description || "—"}</td>
+                      <td>{ev.description || t("common:empty.dash")}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -625,27 +627,27 @@ export default function ObjectPropertiesEditor({
 
       <section className="editor-section">
         <button type="button" className="section-toggle" onClick={() => toggleSection("functions")}>
-          <span>{openSections.functions ? "▾" : "▸"}</span> Функции ({editorData.functions.length})
+          <span>{openSections.functions ? "▾" : "▸"}</span> {t("tab.functions")} ({editorData.functions.length})
         </button>
         {openSections.functions && (
           <div className="section-body">
             {editorData.functions.length === 0 ? (
-              <p className="hint">Нет функций</p>
+              <p className="hint">{t("functions.empty")}</p>
             ) : (
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Имя</th>
-                    <th>Описание</th>
-                    <th>Вход</th>
-                    <th>Выход</th>
+                    <th>{t("common:table.name")}</th>
+                    <th>{t("common:table.description")}</th>
+                    <th>{t("common:field.input")}</th>
+                    <th>{t("common:field.output")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {editorData.functions.map((fn) => (
                     <tr key={fn.name}>
                       <td><code>{fn.name}</code></td>
-                      <td>{fn.description || "—"}</td>
+                      <td>{fn.description || t("common:empty.dash")}</td>
                       <td className="mono small">{fn.inputSchema.name}</td>
                       <td className="mono small">{fn.outputSchema.name}</td>
                     </tr>
@@ -659,22 +661,22 @@ export default function ObjectPropertiesEditor({
 
       <section className="editor-section">
         <button type="button" className="section-toggle" onClick={() => toggleSection("history")}>
-          <span>{openSections.history ? "▾" : "▸"}</span> История изменений
+          <span>{openSections.history ? "▾" : "▸"}</span> {t("common:section.changeHistory")}
         </button>
         {openSections.history && (
           <div className="section-body">
-            {auditQuery.isLoading && <p className="hint">Загрузка…</p>}
+            {auditQuery.isLoading && <p className="hint">{t("common:action.loading")}</p>}
             {auditQuery.data && auditQuery.data.length === 0 && (
-              <p className="hint">Записей пока нет</p>
+              <p className="hint">{t("common:empty.noRecords")}</p>
             )}
             {auditQuery.data && auditQuery.data.length > 0 && (
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Время</th>
-                    <th>Тип</th>
-                    <th>Поле</th>
-                    <th>Актор</th>
+                    <th>{t("common:field.time")}</th>
+                    <th>{t("common:table.type")}</th>
+                    <th>{t("common:field.field")}</th>
+                    <th>{t("common:field.actor")}</th>
                     <th>Rev</th>
                   </tr>
                 </thead>
@@ -683,8 +685,8 @@ export default function ObjectPropertiesEditor({
                     <tr key={entry.id}>
                       <td className="mono small">{entry.occurredAt}</td>
                       <td>{entry.changeType}</td>
-                      <td>{entry.field || "—"}</td>
-                      <td>{entry.actor || "—"}</td>
+                      <td>{entry.field || t("common:empty.dash")}</td>
+                      <td>{entry.actor || t("common:empty.dash")}</td>
                       <td className="mono small">
                         {entry.revisionBefore}→{entry.revisionAfter}
                       </td>

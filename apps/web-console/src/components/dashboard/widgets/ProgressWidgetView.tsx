@@ -1,4 +1,5 @@
 import type { ProgressWidget } from "../../../types/dashboard";
+import { useTranslation } from "react-i18next";
 import { resolveWidgetPath } from "../dashboardUtils";
 import { useDashboardContext } from "../DashboardContext";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
@@ -16,6 +17,7 @@ export default function ProgressWidgetView({
   refreshIntervalMs,
   editable,
 }: ProgressWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const objectPath = resolveWidgetPath(widget.objectPath, widget.selectionKey, selection);
@@ -42,7 +44,7 @@ export default function ProgressWidgetView({
       footer={objectPath ? `${ratio.toFixed(0)}%` : undefined}
     >
       {!objectPath ? (
-        <p className="hint">Выберите наряд</p>
+        <p className="hint">{t("view.selectOrder")}</p>
       ) : (
         <div style={styles.body}>
           <div className="dash-progress-head">

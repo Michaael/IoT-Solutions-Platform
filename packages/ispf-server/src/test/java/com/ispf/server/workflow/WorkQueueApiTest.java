@@ -98,6 +98,19 @@ class WorkQueueApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.instanceState").value(org.hamcrest.Matchers.containsString("WAITING")));
 
+        mockMvc.perform(get("/api/v1/work-queue"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", hasItem("Подтвердите тревогу")))
+                .andExpect(jsonPath("$[0].operatorAppId").value("platform"));
+
+        mockMvc.perform(get("/api/v1/work-queue").param("operatorAppId", "platform"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", hasItem("Подтвердите тревогу")));
+
+        mockMvc.perform(get("/api/v1/work-queue").param("operatorAppId", "other-app"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
         MvcResult queueResult = mockMvc.perform(get("/api/v1/work-queue"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].title", hasItem("Подтвердите тревогу")))

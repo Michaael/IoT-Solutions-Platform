@@ -142,6 +142,13 @@ public class ModelApplicationRunner {
                             Map.of("value", WorkflowDefinitions.DEMO_ALARM_TRIGGER.trim())
                     )
             );
+            workflow.setVariableValue(
+                    "operatorAppId",
+                    DataRecord.single(
+                            DataSchema.builder("operatorAppId").field("value", FieldType.STRING).build(),
+                            Map.of("value", "platform")
+                    )
+            );
             objectManager.persistNodeTree(path);
         });
 

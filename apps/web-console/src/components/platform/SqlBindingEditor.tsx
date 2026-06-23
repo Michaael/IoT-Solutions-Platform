@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchVariables } from "../../api";
 import { fetchSqlBinding, refreshSqlBinding, updateSqlBinding } from "../../api/platformSql";
@@ -14,6 +15,7 @@ interface SqlBindingEditorProps {
 }
 
 export default function SqlBindingEditor({ path, onClose, onOpenProperties }: SqlBindingEditorProps) {
+  const { t } = useTranslation(["platform", "common"]);
   const queryClient = useQueryClient();
   const bindingQuery = useQuery({
     queryKey: ["sql-binding", path],
@@ -96,7 +98,7 @@ export default function SqlBindingEditor({ path, onClose, onOpenProperties }: Sq
   });
 
   if (bindingQuery.isLoading) {
-    return <p className="hint">Загрузка SQL-привязки…</p>;
+    return <p className="hint">{t("platform:sqlBinding.loading")}</p>;
   }
 
   if (bindingQuery.error) {
@@ -105,8 +107,8 @@ export default function SqlBindingEditor({ path, onClose, onOpenProperties }: Sq
 
   return (
     <PlatformSqlEditorShell
-      title={bindingQuery.data?.bindingId ?? "SQL-привязка"}
-      subtitle="SELECT → переменная объекта"
+      title={bindingQuery.data?.bindingId ?? t("platform:sqlBinding.title")}
+      subtitle={t("platform:sqlBinding.subtitle")}
       path={path}
       onClose={onClose}
       onOpenProperties={onOpenProperties}
@@ -118,7 +120,7 @@ export default function SqlBindingEditor({ path, onClose, onOpenProperties }: Sq
             disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isPending ? "Сохранение…" : "Сохранить"}
+            {saveMutation.isPending ? t("common:action.saving") : t("common:action.save")}
           </button>
           <button
             type="button"
@@ -126,7 +128,7 @@ export default function SqlBindingEditor({ path, onClose, onOpenProperties }: Sq
             disabled={refreshMutation.isPending || !query.trim() || !dataSourcePath.trim()}
             onClick={() => refreshMutation.mutate()}
           >
-            {refreshMutation.isPending ? "Обновление…" : "Обновить сейчас"}
+            {refreshMutation.isPending ? t("platform:sqlBinding.refreshing") : t("platform:sqlBinding.refreshNow")}
           </button>
         </>
       }
@@ -158,7 +160,7 @@ export default function SqlBindingEditor({ path, onClose, onOpenProperties }: Sq
         <label className="full">
           Data source *
           <select value={dataSourcePath} onChange={(e) => setDataSourcePath(e.target.value)} required>
-            <option value="">— выберите —</option>
+            <option value="">{t("platform:sqlBinding.selectPlaceholder")}</option>
             {(dataSourcesQuery.data ?? []).map((ds) => (
               <option key={ds.path} value={ds.path}>
                 {ds.displayName} ({ds.path})
@@ -202,7 +204,7 @@ export default function SqlBindingEditor({ path, onClose, onOpenProperties }: Sq
           <input
             value={triggerObjectPath}
             onChange={(e) => setTriggerObjectPath(e.target.value)}
-            placeholder="для on_function_success"
+            placeholder={t("platform:sqlBinding.triggerPlaceholder")}
           />
         </label>
         <label className="full">
@@ -210,7 +212,7 @@ export default function SqlBindingEditor({ path, onClose, onOpenProperties }: Sq
           <input
             value={triggerFunctionName}
             onChange={(e) => setTriggerFunctionName(e.target.value)}
-            placeholder="для on_function_success"
+            placeholder={t("platform:sqlBinding.triggerPlaceholder")}
           />
         </label>
         <label className="full">
@@ -218,17 +220,20 @@ export default function SqlBindingEditor({ path, onClose, onOpenProperties }: Sq
           {" "}Enabled
         </label>
         {bindingQuery.data?.lastRefreshedAt && (
-          <p className="hint full">Последнее обновление: {bindingQuery.data.lastRefreshedAt}</p>
+          <p className="hint full">{t("platform:sqlBinding.lastRefreshed", { time: bindingQuery.data.lastRefreshedAt })}</p>
         )}
         {targetPreview?.value?.rows?.[0] && (
           <p className="hint full mono small">
-            Текущее значение {variable}: {JSON.stringify(targetPreview.value.rows[0])}
+            {t("platform:sqlBinding.currentValue", {
+              variable,
+              value: JSON.stringify(targetPreview.value.rows[0]),
+            })}
           </p>
         )}
         {saveError && <p className="hint error full">{saveError}</p>}
         {refreshError && <p className="hint error full">{refreshError}</p>}
-        {saveMutation.isSuccess && <p className="hint full">Сохранено</p>}
-        {refreshMutation.isSuccess && <p className="hint full">Значение обновлено</p>}
+        {saveMutation.isSuccess && <p className="hint full">{t("common:action.saved")}</p>}
+        {refreshMutation.isSuccess && <p className="hint full">{t("platform:sqlBinding.valueUpdated")}</p>}
       </form>
     </PlatformSqlEditorShell>
   );

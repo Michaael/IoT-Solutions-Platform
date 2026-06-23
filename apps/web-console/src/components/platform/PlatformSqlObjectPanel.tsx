@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   isDataSourcePath,
   isMigrationPath,
@@ -9,33 +10,35 @@ interface PlatformSqlObjectPanelProps {
   onOpenEditor: (path: string) => void;
 }
 
-function titleForPath(path: string): string {
-  if (isDataSourcePath(path)) {
-    return "Источник данных";
-  }
-  if (isMigrationPath(path)) {
-    return "Миграция";
-  }
-  if (isSqlBindingPath(path)) {
-    return "SQL-привязка";
-  }
-  return "SQL-объект";
-}
-
-function descriptionForPath(path: string): string {
-  if (isDataSourcePath(path)) {
-    return "Ссылка на PostgreSQL-схему для отчётов, миграций и bindings.";
-  }
-  if (isMigrationPath(path)) {
-    return "DDL/DML скрипт, применяемый в схему data source.";
-  }
-  if (isSqlBindingPath(path)) {
-    return "Синхронизация результата SELECT с переменной объекта.";
-  }
-  return "";
-}
-
 export default function PlatformSqlObjectPanel({ path, onOpenEditor }: PlatformSqlObjectPanelProps) {
+  const { t } = useTranslation(["platform", "common"]);
+
+  function titleForPath(objectPath: string): string {
+    if (isDataSourcePath(objectPath)) {
+      return t("platform:dataSource.title");
+    }
+    if (isMigrationPath(objectPath)) {
+      return t("platform:migration.title");
+    }
+    if (isSqlBindingPath(objectPath)) {
+      return t("platform:sqlBinding.title");
+    }
+    return t("platform:sqlObject.title");
+  }
+
+  function descriptionForPath(objectPath: string): string {
+    if (isDataSourcePath(objectPath)) {
+      return t("platform:sqlObject.dataSourceDesc");
+    }
+    if (isMigrationPath(objectPath)) {
+      return t("platform:sqlObject.migrationDesc");
+    }
+    if (isSqlBindingPath(objectPath)) {
+      return t("platform:sqlObject.bindingDesc");
+    }
+    return "";
+  }
+
   return (
     <section className="security-users-panel">
       <header className="security-users-header">
@@ -45,11 +48,11 @@ export default function PlatformSqlObjectPanel({ path, onOpenEditor }: PlatformS
           <p className="hint mono small">{path}</p>
         </div>
         <button type="button" className="btn primary" onClick={() => onOpenEditor(path)}>
-          Открыть в редакторе
+          {t("common:action.openInEditor")}
         </button>
       </header>
       <p className="op-muted">
-        Редактор откроется во вкладке workspace. Двойной щелчок по узлу в дереве — тот же эффект.
+        {t("platform:hint.openInEditorWorkspace")}
       </p>
     </section>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   applyModel,
@@ -61,6 +62,7 @@ function ModelDetail({
   canManage: boolean;
   onSelectPath?: (path: string) => void;
 }) {
+  const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
   const [description, setDescription] = useState(model.description);
   const [suitability, setSuitability] = useState(model.suitabilityExpression);
@@ -296,20 +298,20 @@ function ModelDetail({
     <div className="model-detail">
       <div className="model-meta-grid">
         <div>
-          <span className="model-meta-label">Тип модели</span>
+          <span className="model-meta-label">{t("inspector:model.meta.type")}</span>
           <code>{model.type}</code>
         </div>
         <div>
-          <span className="model-meta-label">Целевой ObjectType</span>
+          <span className="model-meta-label">{t("inspector:model.meta.targetObjectType")}</span>
           <code>{model.targetObjectType}</code>
         </div>
         <div>
-          <span className="model-meta-label">Путь в дереве</span>
+          <span className="model-meta-label">{t("inspector:model.meta.treePath")}</span>
           <code>{model.objectPath}</code>
         </div>
         <div>
-          <span className="model-meta-label">Встроенная</span>
-          <span>{isBuiltin ? "да" : "нет"}</span>
+          <span className="model-meta-label">{t("inspector:model.meta.builtin")}</span>
+          <span>{isBuiltin ? t("common:action.yes") : t("common:action.no")}</span>
         </div>
         {model.parameters.modelVersion && (
           <div>
@@ -334,7 +336,7 @@ function ModelDetail({
           }}
         >
           <label>
-            Описание
+            {t("common:field.description")}
             <textarea
               rows={2}
               value={description}
@@ -343,20 +345,20 @@ function ModelDetail({
             />
           </label>
           <label>
-            Условие применимости (CEL)
+            {t("inspector:model.applicabilityCel")}
             <input
               value={suitability}
               onChange={(e) => setSuitability(e.target.value)}
-              placeholder="пусто = по targetObjectType"
+              placeholder={t("inspector:model.applicabilityPlaceholder")}
             />
           </label>
           {!isBuiltin && (
             <button type="submit" className="btn primary" disabled={saveMutation.isPending}>
-              Сохранить метаданные
+              {t("inspector:model.saveMetadata")}
             </button>
           )}
           {!isBuiltin && definitionDirty && (
-            <p className="hint">Изменено определение модели — сохраните изменения.</p>
+            <p className="hint">{t("inspector:model.definitionChanged")}</p>
           )}
           {saveMutation.error && (
             <p className="hint error">{String(saveMutation.error)}</p>
@@ -366,25 +368,25 @@ function ModelDetail({
 
       <section className="model-section">
         <div className="model-section-header">
-          <h4>Переменные ({variables.length})</h4>
+          <h4>{t("inspector:model.variablesTitle", { count: variables.length })}</h4>
           {canManage && !isBuiltin && (
             <button type="button" className="btn small" onClick={addVariable}>
-              + Переменная
+              {t("inspector:variables.add")}
             </button>
           )}
         </div>
         {variables.length === 0 ? (
-          <p className="hint">Нет переменных</p>
+          <p className="hint">{t("inspector:variables.empty")}</p>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Имя</th>
-                <th>Группа</th>
-                <th>Запись</th>
-                <th>История</th>
-                <th>Хранение</th>
-                <th>По умолчанию</th>
+                <th>{t("common:table.name")}</th>
+                <th>{t("inspector:variables.column.group")}</th>
+                <th>{t("inspector:variables.column.record")}</th>
+                <th>{t("inspector:variables.column.history")}</th>
+                <th>{t("inspector:variables.column.storage")}</th>
+                <th>{t("inspector:variables.column.default")}</th>
                 {canManage && !isBuiltin && <th />}
               </tr>
             </thead>
@@ -412,7 +414,7 @@ function ModelDetail({
                     )}
                   </td>
                   <td>{v.group}</td>
-                  <td>{v.writable ? "да" : "нет"}</td>
+                  <td>{v.writable ? t("common:action.yes") : t("common:action.no")}</td>
                   <td>
                     {canManage && !isBuiltin ? (
                       <label className="checkbox-label inline">
@@ -426,10 +428,10 @@ function ModelDetail({
                             })
                           }
                         />
-                        да
+                        {t("common:action.yes")}
                       </label>
                     ) : (
-                      v.historyEnabled ? "да" : "нет"
+                      v.historyEnabled ? t("common:action.yes") : t("common:action.no")
                     )}
                   </td>
                   <td>
@@ -482,7 +484,7 @@ function ModelDetail({
               disabled={!definitionDirty || saveMutation.isPending}
               onClick={() => saveMutation.mutate()}
             >
-              Сохранить определение модели
+              {t("inspector:model.saveDefinition")}
             </button>
           </div>
         )}
@@ -490,7 +492,7 @@ function ModelDetail({
 
       <section className="model-section">
         <div className="model-section-header">
-          <h4>Правила привязки ({bindings.length})</h4>
+          <h4>{t("inspector:model.bindingsTitle", { count: bindings.length })}</h4>
           {canManage && !isBuiltin && (
             <button type="button" className="btn small" onClick={addBinding}>
               + Binding
@@ -498,14 +500,14 @@ function ModelDetail({
           )}
         </div>
         {bindings.length === 0 ? (
-          <p className="hint">Нет вычисляемых привязок</p>
+          <p className="hint">{t("inspector:bindings.computedEmpty")}</p>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Переменная</th>
-                <th>Выражение</th>
+                <th>{t("common:table.id")}</th>
+                <th>{t("inspector:bindings.column.variable")}</th>
+                <th>{t("inspector:bindings.column.expression")}</th>
                 {canManage && !isBuiltin && <th />}
               </tr>
             </thead>
@@ -566,15 +568,15 @@ function ModelDetail({
       <section className="model-section model-section-inline">
         <div>
           <div className="model-section-header">
-            <h4>События ({events.length})</h4>
+            <h4>{t("inspector:model.eventsTitle", { count: events.length })}</h4>
             {canManage && !isBuiltin && (
               <button type="button" className="btn small" onClick={addEvent}>
-                + Событие
+                {t("inspector:events.add")}
               </button>
             )}
           </div>
           {events.length === 0 ? (
-            <p className="hint">Нет событий</p>
+            <p className="hint">{t("inspector:events.empty")}</p>
           ) : (
             <ul className="event-list editable-list">
               {events.map((e, index) => (
@@ -589,7 +591,7 @@ function ModelDetail({
                       <input
                         className="model-inline-input"
                         value={e.description}
-                        placeholder="описание"
+                        placeholder={t("inspector:model.descriptionPlaceholder")}
                         onChange={(ev) => patchEvent(index, { description: ev.target.value })}
                       />
                       <button
@@ -613,15 +615,15 @@ function ModelDetail({
         </div>
         <div>
           <div className="model-section-header">
-            <h4>Функции ({functions.length})</h4>
+            <h4>{t("inspector:model.functionsTitle", { count: functions.length })}</h4>
             {canManage && !isBuiltin && (
               <button type="button" className="btn small" onClick={addFunction}>
-                + Функция
+                {t("inspector:functions.add")}
               </button>
             )}
           </div>
           {functions.length === 0 ? (
-            <p className="hint">Нет функций</p>
+            <p className="hint">{t("inspector:functions.empty")}</p>
           ) : (
             <ul className="event-list editable-list">
               {functions.map((f, index) => (
@@ -636,7 +638,7 @@ function ModelDetail({
                       <input
                         className="model-inline-input"
                         value={f.description}
-                        placeholder="описание"
+                        placeholder={t("inspector:model.descriptionPlaceholder")}
                         onChange={(ev) => patchFunction(index, { description: ev.target.value })}
                       />
                       <button
@@ -662,16 +664,16 @@ function ModelDetail({
 
       {canManage && (
         <section className="model-section model-actions">
-          <h4>Действия</h4>
+          <h4>{t("inspector:model.actionsTitle")}</h4>
           <div className="model-action-block">
             <p className="hint">
-              <strong>Apply</strong> — влить переменные, события и bindings в существующий объект (RELATIVE).
+              {t("inspector:model.applyHint")}
             </p>
             <div className="model-action-row">
               <input
                 value={applyPath}
                 onChange={(e) => setApplyPath(e.target.value)}
-                placeholder="objectPath, напр. root.platform.devices.my-sensor"
+                placeholder={t("inspector:model.applyPathPlaceholder")}
               />
               <button
                 type="button"
@@ -679,7 +681,7 @@ function ModelDetail({
                 disabled={!applyPath.trim() || applyMutation.isPending}
                 onClick={() => applyMutation.mutate()}
               >
-                Применить
+                {t("inspector:model.apply")}
               </button>
             </div>
             {applyMutation.error && (
@@ -689,8 +691,11 @@ function ModelDetail({
 
           <div className="model-action-block">
             <p className="hint">
-              <strong>Upgrade</strong> — пере-применить текущую версию модели к экземплярам (
-              {model.parameters.modelVersion ? `v${model.parameters.modelVersion}` : "без version tag"}).
+              {t("inspector:model.upgradeHint", {
+                version: model.parameters.modelVersion
+                  ? `v${model.parameters.modelVersion}`
+                  : t("inspector:model.upgradeNoVersion"),
+              })}
             </p>
             {instancesQuery.data && instancesQuery.data.length > 0 && (
               <ul className="model-instance-list">
@@ -743,7 +748,7 @@ function ModelDetail({
                   {diffQuery.data.variablesToAdd.length === 0 &&
                     diffQuery.data.eventsToAdd.length === 0 &&
                     diffQuery.data.functionsToAdd.length === 0 && (
-                      <li>Нет новых полей — upgrade пере-применит bindings/definitions.</li>
+                      <li>{t("inspector:model.upgradeNoNewFields")}</li>
                     )}
                 </ul>
               </div>
@@ -773,7 +778,7 @@ function ModelDetail({
             )}
             {upgradeAllMutation.data && (
               <p className="hint">
-                Обновлено экземпляров: {upgradeAllMutation.data.count}
+                {t("inspector:model.upgradeCount", { count: upgradeAllMutation.data.count })}
               </p>
             )}
           </div>
@@ -781,7 +786,7 @@ function ModelDetail({
           {model.type === "INSTANCE" && (
             <div className="model-action-block">
               <p className="hint">
-                <strong>Instantiate</strong> — создать новый дочерний объект по модели.
+                {t("inspector:model.instantiateHint")}
               </p>
               <div className="model-action-row">
                 <input
@@ -792,7 +797,7 @@ function ModelDetail({
                 <input
                   value={instanceName}
                   onChange={(e) => setInstanceName(e.target.value)}
-                  placeholder="имя экземпляра"
+                  placeholder={t("inspector:model.instanceNamePlaceholder")}
                 />
                 <button
                   type="button"
@@ -800,7 +805,7 @@ function ModelDetail({
                   disabled={!parentPath.trim() || !instanceName.trim() || instantiateMutation.isPending}
                   onClick={() => instantiateMutation.mutate()}
                 >
-                  Создать экземпляр
+                  {t("inspector:model.createInstance")}
                 </button>
               </div>
               {instantiateMutation.error && (
@@ -812,7 +817,7 @@ function ModelDetail({
           {model.type === "ABSOLUTE" && (
             <div className="model-action-block">
               <p className="hint">
-                <strong>Singleton</strong> — один объект по пути{" "}
+                {t("inspector:model.singletonHint")}{" "}
                 <code>
                   {model.parameters.absoluteInstancePath ||
                     `root.platform.instances.${model.name}`}
@@ -824,7 +829,7 @@ function ModelDetail({
                 disabled={absoluteSingletonMutation.isPending}
                 onClick={() => absoluteSingletonMutation.mutate()}
               >
-                Открыть singleton
+                {t("inspector:model.openSingleton")}
               </button>
               {absoluteSingletonMutation.error && (
                 <p className="hint error">{String(absoluteSingletonMutation.error)}</p>
@@ -839,12 +844,12 @@ function ModelDetail({
                 className="btn danger"
                 disabled={deleteMutation.isPending}
                 onClick={() => {
-                  if (confirm(`Удалить модель «${model.name}»?`)) {
+                  if (confirm(t("inspector:model.confirmDelete", { name: model.name }))) {
                     deleteMutation.mutate();
                   }
                 }}
               >
-                Удалить модель
+                {t("inspector:model.delete")}
               </button>
             </div>
           )}
@@ -865,6 +870,7 @@ function ModelsCatalog({
   catalogRoot: ModelCatalogRoot;
   onSelectPath?: (path: string) => void;
 }) {
+  const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
   const modelsQuery = useQuery({
     queryKey: ["models", catalogRoot],
@@ -922,7 +928,7 @@ function ModelsCatalog({
   return (
     <div className="models-catalog">
       <p className="hint">
-        Модели — чертежи структуры объектов. Узлы в дереве — закладки; полное определение здесь.
+        {t("inspector:model.listHint")}
       </p>
       {modelsQuery.error && (
         <p className="hint error">{String(modelsQuery.error)}</p>
@@ -930,10 +936,10 @@ function ModelsCatalog({
       <table className="data-table">
         <thead>
           <tr>
-            <th>Имя</th>
-            <th>Тип</th>
+            <th>{t("common:table.name")}</th>
+            <th>{t("common:table.type")}</th>
             <th>ObjectType</th>
-            <th>Переменные</th>
+            <th>{t("inspector:model.variablesColumn")}</th>
             <th></th>
           </tr>
         </thead>
@@ -975,24 +981,24 @@ function ModelsCatalog({
               form.reset();
             }}
           >
-            <h4>Новая пустая модель</h4>
+            <h4>{t("inspector:model.newEmptyTitle")}</h4>
             <div className="model-form-grid">
-              <input name="name" placeholder="имя-модели" required pattern="[a-zA-Z0-9._-]+" />
-              <input name="description" placeholder="описание" />
+              <input name="name" placeholder={t("inspector:model.namePlaceholder")} required pattern="[a-zA-Z0-9._-]+" />
+              <input name="description" placeholder={t("inspector:model.descriptionPlaceholder")} />
               <select name="type" defaultValue={defaultCreateType}>
                 <option value="RELATIVE">RELATIVE</option>
                 <option value="INSTANCE">INSTANCE</option>
                 <option value="ABSOLUTE">ABSOLUTE</option>
               </select>
               <select name="targetObjectType" defaultValue="CUSTOM">
-                {OBJECT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
+                {OBJECT_TYPES.map((objectType) => (
+                  <option key={objectType} value={objectType}>
+                    {objectType}
                   </option>
                 ))}
               </select>
               <button type="submit" className="btn primary" disabled={createMutation.isPending}>
-                Создать
+                {t("common:action.create")}
               </button>
             </div>
             {createMutation.error && (
@@ -1015,13 +1021,13 @@ function ModelsCatalog({
               form.reset();
             }}
           >
-            <h4>Сохранить объект как модель</h4>
+            <h4>{t("inspector:model.exportObjectTitle")}</h4>
             <p className="hint">
-              Снимок переменных, событий, функций и bindings с объекта{" "}
+              {t("inspector:model.exportObjectHint")}{" "}
               {selectedPath !== catalogRoot ? (
                 <code>{selectedPath}</code>
               ) : (
-                "(укажите путь)"
+                t("inspector:model.exportPathMissing")
               )}
             </p>
             <div className="model-form-grid">
@@ -1031,8 +1037,8 @@ function ModelsCatalog({
                 defaultValue={selectedPath !== catalogRoot ? selectedPath : ""}
                 required
               />
-              <input name="modelName" placeholder="имя новой модели" required />
-              <input name="description" placeholder="описание" />
+              <input name="modelName" placeholder={t("inspector:model.newModelNamePlaceholder")} required />
+              <input name="description" placeholder={t("inspector:model.descriptionPlaceholder")} />
               <select
                 name="type"
                 defaultValue={defaultCreateType === "ABSOLUTE" ? "INSTANCE" : defaultCreateType}
@@ -1041,7 +1047,7 @@ function ModelsCatalog({
                 <option value="INSTANCE">INSTANCE</option>
               </select>
               <button type="submit" className="btn" disabled={fromObjectMutation.isPending}>
-                Экспортировать
+                {t("inspector:model.export")}
               </button>
             </div>
             {fromObjectMutation.error && (
@@ -1061,18 +1067,19 @@ export default function ModelEditorPanel({
   onClose,
   title,
 }: ModelEditorPanelProps) {
+  const { t } = useTranslation(["inspector", "common"]);
   const modelName = modelNameFromPath(selectedPath);
   const catalogRoot = isModelCatalogRoot(selectedPath) ? selectedPath : null;
   const isCatalog = catalogRoot != null;
   const headerTitle = isCatalog
     ? catalogRoot === RELATIVE_MODELS_ROOT
-      ? "Относительные модели"
+      ? t("inspector:model.relativeTitle")
       : catalogRoot === ABSOLUTE_MODELS_ROOT
-        ? "Абсолютные модели"
-        : "Типы объектов"
+        ? t("inspector:model.absoluteTitle")
+        : t("inspector:model.objectTypesTitle")
     : modelName
-      ? `Модель ${modelName}`
-      : (title ?? selectedPath.split(".").pop() ?? "Модель");
+      ? t("inspector:model.titleNamed", { name: modelName })
+      : (title ?? selectedPath.split(".").pop() ?? t("inspector:model.titleDefault"));
 
   const modelQuery = useQuery({
     queryKey: ["model", modelName],
@@ -1089,7 +1096,7 @@ export default function ModelEditorPanel({
         </div>
         {onClose && (
           <button type="button" className="btn" onClick={onClose}>
-            Закрыть
+            {t("common:action.close")}
           </button>
         )}
       </header>
@@ -1103,16 +1110,16 @@ export default function ModelEditorPanel({
             onSelectPath={onSelectPath}
           />
         ) : !modelName ? (
-          <p className="hint">Выберите модель в дереве</p>
+          <p className="hint">{t("inspector:model.selectInTree")}</p>
         ) : (
           <>
             {!canManage && (
-              <p className="hint">Редактирование моделей доступно только admin.</p>
+              <p className="hint">{t("inspector:model.adminOnly")}</p>
             )}
-            {modelQuery.isLoading && <p className="hint">Загрузка модели…</p>}
+            {modelQuery.isLoading && <p className="hint">{t("inspector:model.loading")}</p>}
             {modelQuery.error && (
               <p className="hint error">
-                Модель не найдена в реестре. Возможно, узел дерева не синхронизирован.
+                {t("inspector:model.notFound")}
                 <br />
                 {String(modelQuery.error)}
               </p>

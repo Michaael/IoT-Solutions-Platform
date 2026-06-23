@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { setVariable, updateVariableHistory } from "../api";
 import type { DataRecord, VariableDto } from "../types";
@@ -37,6 +38,7 @@ export default function EditVariableDialog({
   onClose,
   onSaved,
 }: EditVariableDialogProps) {
+  const { t } = useTranslation(["inspector", "common"]);
   const [jsonText, setJsonText] = useState("{}");
   const [parseError, setParseError] = useState<string | null>(null);
   const [history, setHistory] = useState<VariableHistoryState>(() => historyFromVariable(variable));
@@ -80,11 +82,13 @@ export default function EditVariableDialog({
       setParseError(null);
       mutation.mutate();
     } catch {
-      setParseError("Некорректный JSON");
+      setParseError(t("common:error.invalidJson"));
     }
   }
 
-  const title = canEditValue ? `Редактировать: ${variable.name}` : `Настройки: ${variable.name}`;
+  const title = canEditValue
+    ? t("variables.editTitle", { name: variable.name })
+    : t("variables.settingsTitle", { name: variable.name });
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -95,12 +99,12 @@ export default function EditVariableDialog({
         </header>
 
         {!variable.writable && (
-          <p className="hint">Вычисляемые значения настраиваются на вкладке «Привязки».</p>
+          <p className="hint">{t("variables.computedSettingsHint")}</p>
         )}
 
         {canManageHistory && (
           <section className="modal-section">
-            <h4>История</h4>
+            <h4>{t("objectEditor.historyBtn")}</h4>
             <VariableHistoryFields
               idPrefix={`edit-${variable.name}`}
               value={history}
@@ -111,7 +115,7 @@ export default function EditVariableDialog({
 
         {canEditValue && (
           <section className="modal-section">
-            <p className="hint">DataRecord (JSON). Схема и строки значений.</p>
+            <p className="hint">{t("variables.dataRecordHint")}</p>
             <textarea
               className="json-editor"
               rows={14}
@@ -122,20 +126,20 @@ export default function EditVariableDialog({
         )}
 
         {!canEditValue && !canManageHistory && !canEditDefinition && (
-          <p className="hint">Нет доступных действий для этой переменной.</p>
+          <p className="hint">{t("variables.noActions")}</p>
         )}
 
         {parseError && <p className="hint error">{parseError}</p>}
         {mutation.error && <p className="hint error">{(mutation.error as Error).message}</p>}
         <footer>
-          <button type="button" className="btn" onClick={onClose}>Отмена</button>
+          <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
           <button
             type="button"
             className="btn primary"
             onClick={handleSave}
             disabled={mutation.isPending || (!canEditValue && !historyDirty)}
           >
-            Сохранить
+            {t("common:action.save")}
           </button>
         </footer>
       </div>

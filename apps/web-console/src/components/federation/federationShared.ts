@@ -22,9 +22,9 @@ export function copyToClipboard(text: string): Promise<void> {
 
 export type FederationTab = "peers" | "tokens" | "tunnel" | "probe";
 
-export const FEDERATION_TAB_LABELS: Record<FederationTab, string> = {
-  peers: "Узлы",
-  tokens: "Токены",
-  tunnel: "Туннель",
-  probe: "Проверка",
+export const FEDERATION_TAB_KEYS: Record<FederationTab, string> = {
+  peers: "tab.peers",
+  tokens: "tab.tokens",
+  tunnel: "tab.tunnel",
+  probe: "tab.probe",
 };

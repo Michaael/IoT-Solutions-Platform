@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { updateSecurityUser, type SecurityUserSummary } from "../api/securityUsers";
 import type { OperatorAppEntry } from "../api/operatorApps";
 
@@ -15,6 +16,7 @@ export default function SecurityUserAutoStartFields({
   serverReady,
   disabled = false,
 }: SecurityUserAutoStartFieldsProps) {
+  const { t } = useTranslation(["security", "common"]);
   const queryClient = useQueryClient();
   const defaultApp = apps[0]?.appId ?? "platform";
   const enabled = user.autoStartEnabled === true;
@@ -24,9 +26,7 @@ export default function SecurityUserAutoStartFields({
     mutationFn: async (payload: Parameters<typeof updateSecurityUser>[1]) => {
       const updated = await updateSecurityUser(user.username, payload);
       if (payload.autoStartEnabled === true && updated.autoStartEnabled !== true) {
-        throw new Error(
-          "Сервер не сохранил автозапуск. Перезапустите ispf-server (миграция V16)."
-        );
+        throw new Error(t("autostart.saveFailed"));
       }
       return updated;
     },
@@ -44,9 +44,9 @@ export default function SecurityUserAutoStartFields({
     <div className="security-user-autostart">
       <div className="security-user-switch-field">
         <div>
-          <span className="field-label">При входе</span>
+          <span className="field-label">{t("autostart.onLogin")}</span>
           <p className="security-user-switch-hint">
-            {enabled ? "Открывать operator-приложение" : "Показывать стандартный экран"}
+            {enabled ? t("autostart.enabledHint") : t("autostart.disabledHint")}
           </p>
         </div>
         <label className="switch">
@@ -67,7 +67,7 @@ export default function SecurityUserAutoStartFields({
       </div>
 
       <label className="security-user-autostart-select">
-        <span className="field-label">Приложение</span>
+        <span className="field-label">{t("autostart.app")}</span>
         <select
           value={user.autoStartApp ?? ""}
           disabled={controlsDisabled || !enabled}
@@ -80,7 +80,7 @@ export default function SecurityUserAutoStartFields({
             mutation.mutate({ autoStartEnabled: true, autoStartApp: appId });
           }}
         >
-          <option value="">— не выбрано —</option>
+          <option value="">{t("autostart.notSelected")}</option>
           {apps.map((app) => (
             <option key={app.appId} value={app.appId}>
               {app.title} ({app.appId})
@@ -90,7 +90,7 @@ export default function SecurityUserAutoStartFields({
       </label>
 
       {!serverReady && (
-        <p className="hint">Автозапуск недоступен без миграции V16 на сервере.</p>
+        <p className="hint">{t("autostart.serverNotReady")}</p>
       )}
       {mutation.error && (
         <p className="hint error">{String(mutation.error)}</p>

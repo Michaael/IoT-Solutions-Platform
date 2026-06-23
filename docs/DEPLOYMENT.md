@@ -120,7 +120,7 @@ logging.level.com.ispf: DEBUG  # local/dev
 3. Кладёт артефакты в `/opt/ispf`:
    - `ispf-server.jar` ← `/tmp/ispf-server.jar`
    - `web-console/` ← `/tmp/ispf-web-console-dist/`
-4. Создаёт `ispf-server.service` (порт **8080**, profile `local`, H2 в `/opt/ispf/data`).
+4. Создаёт `ispf-server.service` (порт **8080**). На **prod VPS** (`ispf.iot-solutions.ru`) datasource задаётся через `/opt/ispf/ispf-server.env` → **PostgreSQL** в Docker (`ispf-postgres`), несмотря на `--spring.profiles.active=local` в unit-файле. Каталог `/opt/ispf/data/` — служебные файлы (auto-update, installation-id), **не** H2.
 5. Настраивает nginx на **80** (`ai.iot-solutions.ru`): static UI + proxy `/api/`, `/ws/`, `/actuator/`.
 6. Опционально: если в `/tmp/snmpd-ispf.conf` — ставит snmpd для demo `snmp-localhost`.
 
@@ -168,30 +168,43 @@ bash deploy/start-snmp-driver.sh
 
 Скрипт логинится (`admin`/`admin`), вызывает `POST /api/v1/drivers/runtime/start?devicePath=...` и печатает status. По умолчанию `API=http://127.0.0.1:8080` (JVM); через nginx: `API=http://127.0.0.1`.
 
-## Обновление до v0.8.0
+## Обновление до v0.8.0+
 
 Breaking change [ADR-0017](decisions/0017-binding-rules-only.md): колонка `binding_expr` удалена (`V41`), checksum `V1` изменён. **Проще пересоздать БД**, чем мигрировать legacy-привязки.
 
-### PostgreSQL (prod / staging)
+### Prod VPS (`ispf.iot-solutions.ru`) — PostgreSQL в Docker
+
+БД: контейнер **`ispf-postgres`** (`timescale/timescaledb`), JDBC из `/opt/ispf/ispf-server.env` (`SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/ispf`).
 
 ```bash
-# 1. Backup (если нужен архив)
-pg_dump ispf > ispf-pre-0.8.0.sql
+# 1. Backup (опционально)
+docker exec ispf-postgres pg_dump -U ispf ispf > ispf-pre-0.8.27.sql
 
-# 2. Пересоздание
-sudo -u postgres psql -c "DROP DATABASE IF EXISTS ispf;"
-sudo -u postgres psql -c "CREATE DATABASE ispf OWNER ispf;"
+# 2. Остановить server, пересоздать БД
+systemctl stop ispf-server
+docker exec ispf-postgres psql -U ispf -d postgres \
+  -c 'DROP DATABASE IF EXISTS ispf;' \
+  -c 'CREATE DATABASE ispf OWNER ispf;'
 
-# 3. Deploy jar + UI (см. deploy/vps-deploy-direct.ps1 или apply-platform-update.sh)
-# 4. Flyway накатит схему с V1 без binding_expr + V41 no-op на fresh DB
-# 5. Проверка
-curl https://ispf.iot-solutions.ru/api/v1/info
+# 3. Deploy jar + UI (deploy/vps-deploy-direct.ps1 или apply-platform-update.sh)
+#    Если jar/UI уже в staging — достаточно systemctl start
+systemctl start ispf-server
+
+# 4. Flyway накатит схему с V1 без binding_expr на чистую БД
+curl -sf https://ispf.iot-solutions.ru/api/v1/info
 ```
 
-После пересоздания: binding rules задайте через Web Console → «Привязки» или `POST /api/v1/objects/by-path/binding-rules`. Mini-TEC поднимется через `MiniTecPlatformBootstrap`.
+После пересоздания: binding rules — Web Console → «Привязки»; mini-TEC — `MiniTecPlatformBootstrap` при старте.
 
-### H2 (local)
+### PostgreSQL (generic / docker compose)
 
-Удалите файл БД или смените `spring.datasource.url` на новый путь. См. [BINDINGS.md](BINDINGS.md#обновление-с-v07x-legacy-bindingexpression).
+```bash
+docker compose exec postgres psql -U ispf -d postgres \
+  -c 'DROP DATABASE IF EXISTS ispf;' -c 'CREATE DATABASE ispf OWNER ispf;'
+```
+
+### H2 (local dev only)
+
+Удалите `./data/ispf-local.mv.db` или смените `spring.datasource.url`. См. [BINDINGS.md](BINDINGS.md#обновление-с-v07x-legacy-bindingexpression).
 
 Phase 18.4 — [ROADMAP.md § Phase 18](ROADMAP.md#phase-18--reference-solutions--v080-rollout).

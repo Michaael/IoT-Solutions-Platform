@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { PanelWidget, DashboardWidget } from "../../../types/dashboard";
 import DashWidgetShell from "../DashWidgetShell";
 import { parseJsonArray } from "../dashboardUtils";
@@ -18,6 +19,7 @@ export default function PanelWidgetView({
   editable,
   depth = 0,
 }: PanelWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const [collapsed, setCollapsed] = useState(false);
   const children = useMemo(
@@ -46,7 +48,7 @@ export default function PanelWidgetView({
       {!collapsed && (
         <div className="dash-panel-body" style={styles.body}>
           {children.length === 0 ? (
-            <p className="hint">Добавьте childrenJson</p>
+            <p className="hint">{t("view.addChildrenJson")}</p>
           ) : (
             renderWidgetList(children, {
               refreshIntervalMs,

@@ -21,8 +21,11 @@ public class WorkQueueController {
     }
 
     @GetMapping
-    public List<WorkQueueService.WorkQueueItem> list(@RequestParam(defaultValue = "50") int limit) {
-        return workQueueService.listOpenTasks(limit);
+    public List<WorkQueueService.WorkQueueItem> list(
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(required = false) String operatorAppId
+    ) {
+        return workQueueService.listOpenTasks(limit, operatorAppId);
     }
 
     @PostMapping("/claim")

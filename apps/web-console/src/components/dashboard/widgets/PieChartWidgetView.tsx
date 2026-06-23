@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { PieChartWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
@@ -21,6 +22,7 @@ export default function PieChartWidgetView({
   refreshIntervalMs,
   editable,
 }: PieChartWidgetViewProps) {
+  const { t } = useTranslation(["widgets", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const { variable, isLoading, isError } = useBoundVariable(
@@ -67,13 +69,13 @@ export default function PieChartWidgetView({
       demo={isDemo}
     >
       {!objectPath && widget.selectionKey ? (
-        <p className="hint">Выберите объект</p>
+        <p className="hint">{t("view.selectObject")}</p>
       ) : isLoading && !isDemo ? (
-        <p className="hint">Загрузка…</p>
+        <p className="hint">{t("common:action.loading")}</p>
       ) : isError && !isDemo ? (
-        <p className="hint">Ошибка привязки</p>
+        <p className="hint">{t("view.bindingError")}</p>
       ) : displaySlices.length === 0 ? (
-        <p className="hint">Нет данных для диаграммы</p>
+        <p className="hint">{t("view.noDataForChart")}</p>
       ) : (
         <div className="dash-pie-chart-body" style={{ ...styles.body, ...styles.chart, height: "100%" }}>
           <ResponsiveContainer width="100%" height="100%">

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { ObjectSummary } from "../types";
 import { useTreeBulkActions, type TreeBulkActionsConfig } from "../hooks/useTreeBulkActions";
 
@@ -17,6 +18,7 @@ export default function TreeBulkContextMenu({
   onClose,
   ...config
 }: TreeBulkContextMenuProps) {
+  const { t } = useTranslation("explorer");
   const menuRef = useRef<HTMLDivElement>(null);
   const actions = useTreeBulkActions(config);
 
@@ -93,25 +95,25 @@ export default function TreeBulkContextMenu({
         style={{ left: menu.x, top: menu.y }}
         onContextMenu={(event) => event.preventDefault()}
       >
-        {item("Выделить все", actions.selectAll)}
-        {item("Снять выделение", actions.clearSelection, { disabled: !actions.hasSelection })}
+        {item(t("bulk.selectAll"), actions.selectAll)}
+        {item(t("bulk.clearSelection"), actions.clearSelection, { disabled: !actions.hasSelection })}
         <div className="tree-context-menu-sep" role="separator" />
-        {item("Удалить объекты", actions.deleteSelected, {
+        {item(t("bulk.deleteObjects"), actions.deleteSelected, {
           disabled: !actions.hasSelection || actions.isDeleting,
           danger: true,
         })}
-        {item("Убрать из группы", actions.removeFromGroup, {
+        {item(t("bulk.removeFromGroup"), actions.removeFromGroup, {
           disabled: !actions.hasGroupRefs || actions.isRemovingFromGroup,
         })}
         <div className="tree-context-menu-group">
-          <span className="tree-context-menu-label">В группу</span>
+          <span className="tree-context-menu-label">{t("bulk.addToGroup")}</span>
           {actions.canonicalPaths.length === 0 ? (
             <button type="button" className="tree-context-menu-item" disabled>
-              Нет выделенных объектов
+              {t("bulk.noSelection")}
             </button>
           ) : actions.visualGroups.length === 0 ? (
             <button type="button" className="tree-context-menu-item" disabled>
-              Нет групп (VISUAL_GROUP)
+              {t("bulk.noVisualGroups")}
             </button>
           ) : (
             actions.visualGroups.map((group: ObjectSummary) => (

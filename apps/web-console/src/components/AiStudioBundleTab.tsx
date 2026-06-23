@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   dryRunAiDeploy,
   generateAiBundle,
@@ -44,6 +45,7 @@ export default function AiStudioBundleTab({
   dryRunText,
   setDryRunText,
 }: AiStudioBundleTabProps) {
+  const { t } = useTranslation("ai");
   const { provider } = useAgentChat();
   const queryClient = useQueryClient();
 
@@ -103,12 +105,12 @@ export default function AiStudioBundleTab({
   return (
     <div className="panel-card">
       <label>
-        ID приложения (appId)
+        {t("bundle.appId")}
         <input value={appId} onChange={(e) => setAppId(e.target.value)} />
       </label>
 
       <label className="full">
-        Промпт
+        {t("bundle.prompt")}
         <textarea
           className="mono"
           rows={4}
@@ -125,7 +127,7 @@ export default function AiStudioBundleTab({
           disabled={generateMutation.isPending || !provider?.available}
           onClick={() => generateMutation.mutate()}
         >
-          {generateMutation.isPending ? "Генерация…" : "Сгенерировать"}
+          {generateMutation.isPending ? t("bundle.generating") : t("bundle.generate")}
         </button>
         <button
           type="button"
@@ -133,7 +135,7 @@ export default function AiStudioBundleTab({
           disabled={validateMutation.isPending}
           onClick={() => validateMutation.mutate()}
         >
-          Проверить
+          {t("bundle.validate")}
         </button>
         <button
           type="button"
@@ -141,7 +143,7 @@ export default function AiStudioBundleTab({
           disabled={dryRunMutation.isPending}
           onClick={() => dryRunMutation.mutate()}
         >
-          Пробный deploy
+          {t("bundle.dryRun")}
         </button>
         <button
           type="button"
@@ -149,16 +151,16 @@ export default function AiStudioBundleTab({
           disabled={publishMutation.isPending || !appId.trim()}
           onClick={() => publishMutation.mutate()}
         >
-          Опубликовать
+          {t("bundle.publish")}
         </button>
         <a className="btn" href={previewUrl} target="_blank" rel="noreferrer">
-          Предпросмотр оператора
+          {t("bundle.operatorPreview")}
         </a>
       </div>
 
       {generateMutation.data && !generateMutation.data.publishable && (
         <div className="op-alert op-alert-error">
-          Сгенерированный пакет нельзя опубликовать — исправьте ошибки валидации или измените промпт.
+          {t("bundle.notPublishable")}
         </div>
       )}
 
@@ -178,10 +180,10 @@ export default function AiStudioBundleTab({
       )}
 
       <section className="ai-studio-history">
-        <h4>История развёртываний</h4>
-        {historyQuery.isLoading && <p className="op-muted">Загрузка истории…</p>}
+        <h4>{t("bundle.deployHistory")}</h4>
+        {historyQuery.isLoading && <p className="op-muted">{t("bundle.loadingHistory")}</p>}
         {historyQuery.data && historyQuery.data.length === 0 && (
-          <p className="op-muted">Для этого appId пока нет истории развёртываний.</p>
+          <p className="op-muted">{t("bundle.noDeployHistory")}</p>
         )}
         {historyQuery.data && historyQuery.data.length > 0 && (
           <ul className="deploy-history-list">
@@ -189,7 +191,7 @@ export default function AiStudioBundleTab({
               <li key={entry.version}>
                 <span>
                   v{entry.version}
-                  {entry.active ? " (активна)" : ""}
+                  {entry.active ? t("bundle.active") : ""}
                   {entry.deployedAt ? ` — ${entry.deployedAt}` : ""}
                 </span>
                 <button
@@ -198,7 +200,7 @@ export default function AiStudioBundleTab({
                   disabled={rollbackMutation.isPending || entry.active}
                   onClick={() => rollbackMutation.mutate(entry.version)}
                 >
-                  Откатить
+                  {t("bundle.rollback")}
                 </button>
               </li>
             ))}
@@ -210,7 +212,7 @@ export default function AiStudioBundleTab({
       </section>
 
       <label className="full">
-        Манифест bundle (JSON)
+        {t("bundle.manifestJson")}
         <textarea
           className="mono"
           rows={16}
@@ -222,14 +224,14 @@ export default function AiStudioBundleTab({
 
       {validationText && (
         <label className="full">
-          Результат проверки
+          {t("bundle.validationResult")}
           <textarea className="mono" rows={8} readOnly value={validationText} />
         </label>
       )}
 
       {dryRunText && (
         <label className="full">
-          Пробный deploy
+          {t("bundle.dryRun")}
           <textarea className="mono" rows={8} readOnly value={dryRunText} />
         </label>
       )}

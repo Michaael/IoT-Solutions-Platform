@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { assertBffOk, bffInvoke, toBffInput } from "../../api/bff";
 import { isActionVisible } from "../../api/manifestVisibility";
@@ -59,6 +60,7 @@ function FieldControl({
   onChange: (next: unknown) => void;
   wireProfile: string;
 }) {
+  const { t } = useTranslation("platform");
   const optionsQuery = useOptionsFrom(field.optionsFrom, wireProfile);
   const options = field.options ?? optionsQuery.data ?? [];
   const locked = Boolean(field.readOnly);
@@ -88,7 +90,7 @@ function FieldControl({
         disabled={locked}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value="">— выберите —</option>
+        <option value="">{t("sqlBinding.selectPlaceholder")}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

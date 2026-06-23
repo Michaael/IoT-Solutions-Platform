@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteReportTemplate,
@@ -28,6 +29,17 @@ import {
   validateColumns,
   validateParameters,
 } from "./reportBuilderUtils";
+
+function validationErrorMessage(code: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  const [key, value] = code.split(":");
+  if (value) {
+    if (key === "error.paramInvalid") return t("report:error.paramInvalid", { name: value });
+    if (key === "error.paramDuplicate") return t("report:error.paramDuplicate", { name: value });
+    if (key === "error.columnLabelRequired") return t("report:error.columnLabelRequired", { field: value });
+    if (key === "error.columnFieldDuplicate") return t("report:error.columnFieldDuplicate", { field: value });
+  }
+  return t(`report:${key}`);
+}
 
 function effectiveDataSourcePath(
   data?: { dataSourcePath?: string; legacyAppId?: string } | null,
@@ -72,24 +84,25 @@ function ColumnsEditor({
   columns: ReportColumn[];
   onChange: (columns: ReportColumn[]) => void;
 }) {
+  const { t } = useTranslation("report");
   return (
     <div className="report-builder-columns full">
       <div className="report-builder-columns-head">
-        <span>Колонки</span>
+        <span>{t("columns.title")}</span>
         <button
           type="button"
           className="btn small"
           onClick={() => onChange([...columns, { field: "", label: "" }])}
         >
-          + Колонка
+          {t("columns.add")}
         </button>
       </div>
-      {columns.length === 0 && <p className="hint">Нет колонок — добавьте field и label.</p>}
+      {columns.length === 0 && <p className="hint">{t("columns.empty")}</p>}
       <table className="report-builder-columns-table">
         <thead>
           <tr>
-            <th>field</th>
-            <th>label</th>
+            <th>{t("columns.field")}</th>
+            <th>{t("columns.label")}</th>
             <th />
           </tr>
         </thead>
@@ -116,7 +129,7 @@ function ColumnsEditor({
                     next[index] = { ...col, label: e.target.value };
                     onChange(next);
                   }}
-                  placeholder="Код"
+                  placeholder={t("columns.placeholder.label")}
                 />
               </td>
               <td>
@@ -143,19 +156,20 @@ function ParametersEditor({
   parameters: string[];
   onChange: (parameters: string[]) => void;
 }) {
+  const { t } = useTranslation("report");
   return (
     <div className="report-builder-parameters">
       <div className="report-builder-columns-head">
-        <span>Параметры SQL (?)</span>
+        <span>{t("parameters.title")}</span>
         <button
           type="button"
           className="btn small"
           onClick={() => onChange([...parameters, ""])}
         >
-          + Параметр
+          {t("parameters.add")}
         </button>
       </div>
-      {parameters.length === 0 && <p className="hint">Без параметров — статический SELECT.</p>}
+      {parameters.length === 0 && <p className="hint">{t("parameters.empty")}</p>}
       <ul className="report-builder-param-list">
         {parameters.map((name, index) => (
           <li key={index}>
@@ -189,6 +203,7 @@ export default function ReportBuilder({
   onOpenProperties,
   operatorMode = false,
 }: ReportBuilderProps) {
+  const { t } = useTranslation(["report", "common", "platform"]);
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"data" | "template">("data");
   const [mode, setMode] = useState<"view" | "edit">(operatorMode ? "view" : "view");
@@ -306,11 +321,11 @@ export default function ReportBuilder({
       if (!reportQuery.data) return;
       if (editKind === "tree-variables") {
         const columnError = validateColumns(columns);
-        if (columnError) throw new Error(columnError);
+        if (columnError) throw new Error(validationErrorMessage(columnError, t));
         const devicePathPattern = (treeDraft?.devicePathPattern ?? reportQuery.data.devicePathPattern ?? "").trim();
         const variableName = (treeDraft?.variableName ?? reportQuery.data.variableName ?? "").trim();
-        if (!devicePathPattern) throw new Error("Укажите devicePathPattern (префикс или glob пути устройств).");
-        if (!variableName) throw new Error("Укажите variableName — имя переменной на устройствах.");
+        if (!devicePathPattern) throw new Error(t("report:error.devicePathPattern"));
+        if (!variableName) throw new Error(t("report:error.variableName"));
         return saveTreeVariablesReportDefinition(path, {
           title: treeDraft?.title ?? reportQuery.data.title,
           devicePathPattern,
@@ -324,18 +339,16 @@ export default function ReportBuilder({
       const dataSourcePath = effectiveDataSourcePath(reportQuery.data, sqlDraft?.dataSourcePath);
       const query = (sqlDraft?.query ?? reportQuery.data.query ?? "").trim();
       if (!dataSourcePath) {
-        throw new Error(
-          "Укажите data source — объект в root.platform.data-sources (импортируйте пакет или создайте вручную)."
-        );
+        throw new Error(t("report:error.dataSource"));
       }
       if (!query) {
-        throw new Error("Укажите SQL-запрос (SELECT или WITH).");
+        throw new Error(t("report:error.sqlQuery"));
       }
       const paramNames = parameters.map((p) => p.trim()).filter(Boolean);
       const paramError = validateParameters(paramNames);
-      if (paramError) throw new Error(paramError);
+      if (paramError) throw new Error(validationErrorMessage(paramError, t));
       const columnError = validateColumns(columns);
-      if (columnError) throw new Error(columnError);
+      if (columnError) throw new Error(validationErrorMessage(columnError, t));
 
       const payload: SaveReportDefinitionPayload = {
         title: sqlDraft?.title ?? reportQuery.data.title,
@@ -401,14 +414,6 @@ export default function ReportBuilder({
     }
   }
 
-  const templateFieldHints = useMemo(() => {
-    const cols = reportQuery.data?.columns ?? columns;
-    if (cols.length === 0) {
-      return ["DEVICEPATH", "VALUE"];
-    }
-    return cols.map((col) => col.field.toUpperCase());
-  }, [reportQuery.data?.columns, columns]);
-
   const title =
     (activeKind === "tree-variables" ? effectiveTree?.title : effectiveSql?.title) ??
     reportQuery.data?.title ??
@@ -435,7 +440,7 @@ export default function ReportBuilder({
             setPreviewRequested(false);
           }}
         >
-          {mode === "edit" ? "Просмотр" : "Редактировать"}
+          {mode === "edit" ? t("report:mode.view") : t("report:mode.edit")}
         </button>
       )}
       <button
@@ -447,7 +452,7 @@ export default function ReportBuilder({
         }}
         disabled={!canRun || runQuery.isFetching}
       >
-        {runQuery.isFetching ? "Выполнение…" : "Выполнить"}
+        {runQuery.isFetching ? t("report:running") : t("report:run")}
       </button>
       <ReportExportControls
         disabled={!canRun}
@@ -463,8 +468,8 @@ export default function ReportBuilder({
       path={path}
       subtitle={
         activeKind === "tree-variables"
-          ? "Отчёт tree-variables — переменные объектов дерева"
-          : "SQL-отчёт"
+          ? t("report:kind.treeVariables")
+          : t("report:subtitle.sql")
       }
       onClose={onClose}
       onOpenProperties={onOpenProperties}
@@ -473,10 +478,10 @@ export default function ReportBuilder({
       {!canRun && !reportQuery.isLoading && (
         <div className="banner warning report-builder-banner">
           {activeKind === "tree-variables"
-            ? "Укажите devicePathPattern и variableName в режиме «Редактировать», затем сохраните."
+            ? t("report:hint.treeVariables")
             : !effectiveSql?.dataSourcePath
-              ? "Укажите data source (root.platform.data-sources.*) и SQL-запрос в режиме «Редактировать», затем сохраните."
-              : "Укажите SQL-запрос (SELECT / WITH) в режиме «Редактировать», затем сохраните."}
+              ? t("report:hint.dataSource")
+              : t("report:hint.sqlQuery")}
         </div>
       )}
 
@@ -486,7 +491,7 @@ export default function ReportBuilder({
           className={`btn ${activeTab === "data" ? "primary" : ""}`}
           onClick={() => setActiveTab("data")}
         >
-          Данные
+          {t("report:tab.data")}
         </button>
         {!operatorMode && (
           <button
@@ -494,7 +499,7 @@ export default function ReportBuilder({
             className={`btn ${activeTab === "template" ? "primary" : ""}`}
             onClick={() => setActiveTab("template")}
           >
-            Шаблон YARG
+            {t("report:tab.template")}
           </button>
         )}
       </div>
@@ -505,46 +510,35 @@ export default function ReportBuilder({
 
       {!hasTemplate && canRun && activeTab === "data" && (
         <div className="banner report-builder-banner">
-          PDF и XLSX с шаблоном .xls/.docx — через YARG; .xlsx-шаблон для таблицы пока ненадёжен (fallback на таблицу).
+          {t("report:template.xlsFallback")}
         </div>
       )}
 
       {activeTab === "template" && !operatorMode && (
         <div className="report-template-panel section-body">
           <p className="hint">
-            Загрузите Excel/Word-шаблон с плейсхолдерами YARG: band <code>Band1</code>, поля{" "}
-            <code>${"{Band1.FIELD}"}</code>. См.{" "}
-            <a href="https://github.com/cuba-platform/yarg" target="_blank" rel="noreferrer">
-              YARG docs
-            </a>
-            .
+            {t("report:template.uploadHint")}
           </p>
           <p className="hint">
-            Статус:{" "}
+            {t("report:template.status")}{" "}
             {hasTemplate
-              ? `шаблон загружен (${reportQuery.data?.templateFormat || "?"})`
-              : "шаблон не задан — CSV, HTML и XLSX (таблица); PDF — таблица через LibreOffice"}
+              ? t("report:template.loaded", { format: reportQuery.data?.templateFormat || "?" })
+              : t("report:template.notSet")}
           </p>
           <p className="hint">
-            Имена полей — <strong>верхний регистр</strong> колонок отчёта. Для Excel (.xls) в диапазоне{" "}
-            <code>Band1</code> можно <code>${"{"}FIELD{"}"}</code> или <code>${"{"}Band1.FIELD{"}"}</code> (сервер
-            перепишет для Excel). Для Word — <code>${"{"}Band1.FIELD{"}"}</code>:{" "}
-            {templateFieldHints.map((field) => (
-              <code key={field}>${"{"}Band1.{field}{"}"}</code>
-            ))}
-            . Формат файла — по расширению (<code>.xls</code>, <code>.xlsx</code>, <code>.docx</code>).
+            {t("report:template.bandHint")}
           </p>
           <label>
-            Формат шаблона (подставится из расширения файла)
+            {t("report:template.formatLabel")}
             <select value={templateFormat} onChange={(e) => setTemplateFormat(e.target.value)}>
-              <option value="xls">xls (рекомендуется)</option>
-              <option value="xlsx">xlsx</option>
-              <option value="docx">docx</option>
-              <option value="html">html</option>
+              <option value="xls">{t("report:format.xls")}</option>
+              <option value="xlsx">{t("report:format.xlsx")}</option>
+              <option value="docx">{t("report:format.docx")}</option>
+              <option value="html">{t("report:format.html")}</option>
             </select>
           </label>
           <label className="full">
-            Файл шаблона
+            {t("report:template.fileLabel")}
             <input
               type="file"
               accept=".xlsx,.xls,.docx,.doc,.html,.htm"
@@ -565,7 +559,7 @@ export default function ReportBuilder({
                   disabled={templateBusy}
                   onClick={() => void downloadReportTemplate(path)}
                 >
-                  Скачать шаблон
+                  {t("report:template.download")}
                 </button>
                 <button
                   type="button"
@@ -573,7 +567,7 @@ export default function ReportBuilder({
                   disabled={templateBusy}
                   onClick={() => void handleTemplateDelete()}
                 >
-                  Удалить шаблон
+                  {t("report:template.delete")}
                 </button>
               </>
             )}
@@ -585,18 +579,18 @@ export default function ReportBuilder({
       {activeTab === "data" && mode === "edit" && !operatorMode && (
         <div className="report-editor-form section-body form-grid">
           <label className="full report-builder-kind">
-            Тип отчёта
+            {t("report:kind.label")}
             <select
               value={editKind}
               onChange={(e) => setEditKind(e.target.value as ReportKind)}
             >
-              <option value="sql">SQL (report-v1)</option>
-              <option value="tree-variables">tree-variables (tree-variables-report-v1)</option>
+              <option value="sql">{t("report:kind.sql")}</option>
+              <option value="tree-variables">{t("report:kind.treeVariablesOption")}</option>
             </select>
           </label>
 
           <label>
-            Заголовок
+            {t("report:title.label")}
             <input
               value={
                 editKind === "tree-variables"
@@ -624,7 +618,7 @@ export default function ReportBuilder({
                     }))
                   }
                 >
-                  <option value="">— выберите —</option>
+                  <option value="">{t("platform:sqlBinding.selectPlaceholder")}</option>
                   {(dataSourcesQuery.data ?? []).map((source) => (
                     <option key={source.path} value={source.path}>
                       {source.displayName} ({source.path})
@@ -633,8 +627,7 @@ export default function ReportBuilder({
                 </select>
               </label>
               <p className="hint full">
-                SQL выполняется в схеме data source. Импорт:{" "}
-                <code>POST /api/v1/platform/packages/import</code>.
+                {t("report:sql.hint")}
               </p>
               <label className="full report-builder-sql">
                 SQL (SELECT / WITH)
@@ -659,9 +652,9 @@ export default function ReportBuilder({
                 }}
               />
               <div className="report-builder-default-params full">
-                <span className="field-caption">Значения по умолчанию</span>
+                <span className="field-caption">{t("report:defaultParams.label")}</span>
                 {parameters.filter((p) => p.trim()).length === 0 && (
-                  <p className="hint">Добавьте параметры выше.</p>
+                  <p className="hint">{t("report:defaultParams.empty")}</p>
                 )}
                 <div className="report-params">
                   {parameters
@@ -691,7 +684,7 @@ export default function ReportBuilder({
                   onChange={(e) =>
                     setTreeDraft((prev) => ({ ...prev, devicePathPattern: e.target.value }))
                   }
-                  placeholder="root.devices.* или root.devices.pump-*"
+                  placeholder={t("report:devicePathPattern.placeholder")}
                 />
               </label>
               <label>
@@ -706,8 +699,7 @@ export default function ReportBuilder({
                 />
               </label>
               <p className="hint full">
-                Собирает значение <code>variableName</code> со всех объектов, чей path совпадает с
-                шаблоном (<code>*</code> и <code>?</code>).
+                {t("report:treeVariables.description")}
               </p>
             </>
           )}
@@ -761,7 +753,7 @@ export default function ReportBuilder({
                 disabled={!canRun}
                 onClick={() => setPreviewRequested(true)}
               >
-                Предпросмотр (сохранённое определение)
+                {t("report:preview.saved")}
               </button>
             )}
             <button
@@ -770,7 +762,7 @@ export default function ReportBuilder({
               disabled={saveMutation.isPending}
               onClick={() => saveMutation.mutate()}
             >
-              Сохранить
+              {t("common:action.save")}
             </button>
             {isDirty && (
               <button
@@ -795,12 +787,12 @@ export default function ReportBuilder({
                   }
                 }}
               >
-                Отмена
+                {t("common:action.cancel")}
               </button>
             )}
           </div>
           {saveError && <div className="banner error full">{saveError}</div>}
-          {saveMutation.isSuccess && <div className="banner success full">Сохранено</div>}
+          {saveMutation.isSuccess && <div className="banner success full">{t("common:action.saved")}</div>}
         </div>
       )}
 
@@ -822,14 +814,13 @@ export default function ReportBuilder({
 
       {activeTab === "data" && (
         <div className="section-body report-builder-results">
-          {reportQuery.isLoading && <p className="hint">Загрузка отчёта…</p>}
+          {reportQuery.isLoading && <p className="hint">{t("report:loading")}</p>}
           {reportQuery.error && (
             <div className="banner error">{(reportQuery.error as Error).message}</div>
           )}
           {mode === "edit" && !previewRequested && !runQuery.data && (
             <p className="hint">
-              В режиме редактирования нажмите «Предпросмотр» или «Выполнить» для запуска сохранённого
-              определения.
+              {t("report:editModeHint")}
             </p>
           )}
           {runQuery.error && <div className="banner error">{(runQuery.error as Error).message}</div>}
@@ -837,13 +828,13 @@ export default function ReportBuilder({
             <>
               {runQuery.data.truncated && (
                 <div className="banner warning">
-                  Показаны первые {runQuery.data.rowCount} строк (truncated)
+                  {t("report:truncatedRows", { count: runQuery.data.rowCount })}
                 </div>
               )}
               <BffDataTable
                 rows={runQuery.data.rows}
                 labels={tableLabels}
-                emptyMessage="Нет строк"
+                emptyMessage={t("report:emptyRows")}
               />
             </>
           )}

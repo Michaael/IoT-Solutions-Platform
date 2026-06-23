@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 interface PlatformSqlEditorShellProps {
   title: string;
@@ -19,6 +20,8 @@ export default function PlatformSqlEditorShell({
   toolbar,
   children,
 }: PlatformSqlEditorShellProps) {
+  const { t } = useTranslation(["common", "inspector"]);
+
   return (
     <div className="dashboard-builder report-builder">
       <header className="dashboard-builder-header">
@@ -31,12 +34,12 @@ export default function PlatformSqlEditorShell({
           {toolbar}
           {onOpenProperties && (
             <button type="button" className="btn" onClick={onOpenProperties}>
-              Свойства объекта
+              {t("inspector:tab.general")}
             </button>
           )}
           {onClose && (
             <button type="button" className="btn" onClick={onClose}>
-              Закрыть
+              {t("common:action.close")}
             </button>
           )}
         </div>

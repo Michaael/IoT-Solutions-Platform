@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useAgentChat } from "../context/AgentChatContext";
 import type { AiAgentStep } from "../api/ai";
 
@@ -36,6 +37,7 @@ function dashboardLink(path: string | undefined): string | null {
 }
 
 export default function AiAgentChat() {
+  const { t } = useTranslation("ai");
   const {
     provider,
     agentApiReady,
@@ -72,7 +74,7 @@ export default function AiAgentChat() {
   }, [isPending, liveSteps.length, messages.length]);
 
   if (loadingSession) {
-    return <p className="op-muted">Загрузка чата…</p>;
+    return <p className="op-muted">{t("agent.loadingChat")}</p>;
   }
 
   const providerReady = provider?.available ?? false;
@@ -90,23 +92,23 @@ export default function AiAgentChat() {
 
       {!providerReady && !agentApiBanner && (
         <div className="op-alert op-alert-error">
-          LLM не настроен — откройте вкладку «Настройки».
+          {t("agent.llmNotConfigured")}
         </div>
       )}
 
-      <div className="ai-agent-toolbar" role="toolbar" aria-label="Чаты агента">
+      <div className="ai-agent-toolbar" role="toolbar" aria-label={t("agent.toolbarAria")}>
         <button
           type="button"
           className="btn primary ai-agent-new-chat"
           disabled={sending || !chatEnabled}
           onClick={() => void startNewChat()}
-          title="Новый чат"
+          title={t("agent.newChatTitle")}
         >
-          <span className="ai-agent-new-chat-label">+ Новый</span>
+          <span className="ai-agent-new-chat-label">{t("agent.newChat")}</span>
         </button>
-        <div className="ai-agent-chat-strip" role="tablist" aria-label="Список чатов">
+        <div className="ai-agent-chat-strip" role="tablist" aria-label={t("agent.toolbarAria")}>
           {chatIndex.chats.length === 0 && (
-            <span className="ai-agent-chat-strip-empty op-muted">Нет чатов</span>
+            <span className="ai-agent-chat-strip-empty op-muted">{t("agent.noChats")}</span>
           )}
           {chatIndex.chats.map((chat) => {
             const active = chat.id === activeSessionId;
@@ -127,13 +129,13 @@ export default function AiAgentChat() {
                 >
                   <span className="ai-agent-chat-title">{chat.title}</span>
                   {isPending && active && (
-                    <span className="ai-agent-chat-pending-dot" title="Выполняется запрос" />
+                    <span className="ai-agent-chat-pending-dot" title={t("agent.pendingTitle")} />
                   )}
                 </button>
                 <button
                   type="button"
                   className="ai-agent-chat-delete"
-                  aria-label={`Удалить чат «${chat.title}»`}
+                  aria-label={t("agent.deleteChatAria", { title: chat.title })}
                   disabled={sending}
                   onClick={() => void deleteChat(chat.id)}
                 >
@@ -149,14 +151,16 @@ export default function AiAgentChat() {
             className="btn danger ai-agent-cancel-run"
             disabled={!chatEnabled}
             onClick={() => void cancelRun()}
-            title="Прервать выполнение"
+            title={t("agent.cancelTitle")}
           >
-            Прервать
+            {t("agent.cancel")}
           </button>
         )}
         {isPending && (
           <span className="ai-agent-toolbar-busy op-muted">
-            {toolStepCount > 0 ? `Шаг ${toolStepCount}…` : "Думаю…"}
+            {toolStepCount > 0
+              ? t("agent.stepProgress", { count: toolStepCount })
+              : t("agent.thinking")}
           </span>
         )}
       </div>
@@ -165,7 +169,7 @@ export default function AiAgentChat() {
         <div className="ai-agent-chat-log">
           {messages.length === 0 && !isPending && (
             <p className="ai-agent-chat-empty op-muted">
-              Опишите задачу — агент выполнит шаги на платформе и ответит текстом.
+              {t("agent.emptyHint")}
             </p>
           )}
           {messages.map((message) => (
@@ -189,8 +193,11 @@ export default function AiAgentChat() {
             <div className="ai-agent-bubble agent ai-agent-bubble-pending">
               <div className="ai-agent-bubble-text">
                 {toolStepCount > 0
-                  ? `Выполняю… (${toolStepCount} ${toolStepLabel(toolStepCount)})`
-                  : "Думаю…"}
+                  ? t("agent.executing", {
+                      count: toolStepCount,
+                      steps: t("agent.step", { count: toolStepCount }),
+                    })
+                  : t("agent.thinking")}
               </div>
               {liveSteps.length > 0 && (
                 <AgentRunDetails steps={liveSteps} status="RUNNING" open />
@@ -211,7 +218,7 @@ export default function AiAgentChat() {
             ref={inputRef}
             rows={1}
             value={input}
-            placeholder="Сообщение агенту…"
+            placeholder={t("agent.placeholder")}
             onChange={(e) => {
               setInput(e.target.value);
               resizeChatInput(e.target);
@@ -229,24 +236,12 @@ export default function AiAgentChat() {
             className="btn primary"
             disabled={sending || !chatEnabled || !input.trim()}
           >
-            Отправить
+            {t("agent.send")}
           </button>
         </form>
       </div>
     </div>
   );
-}
-
-function toolStepLabel(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) {
-    return "шаг";
-  }
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
-    return "шага";
-  }
-  return "шагов";
 }
 
 function stepStatusBadge(status: string | undefined): React.ReactNode {
@@ -272,6 +267,7 @@ function AgentRunDetails({
   result?: Record<string, unknown>;
   open?: boolean;
 }) {
+  const { t } = useTranslation("ai");
   const devicePath = typeof result?.devicePath === "string" ? result.devicePath : undefined;
   const dashboardPath =
     typeof result?.dashboardPath === "string" ? result.dashboardPath : undefined;
@@ -282,10 +278,10 @@ function AgentRunDetails({
     <details className="ai-agent-run-details" open={open || undefined}>
       <summary>
         {isRunning
-          ? "Текущие шаги"
+          ? t("agent.details.running")
           : status === "OK"
-            ? "Подробности"
-            : "Что пошло не так"}
+            ? t("agent.details.ok")
+            : t("agent.details.error")}
         {toolSteps.length > 0 ? ` (${toolSteps.length})` : ""}
       </summary>
       {toolSteps.length > 0 && (
@@ -308,7 +304,7 @@ function AgentRunDetails({
               {step.result?.status === "ERROR" && (
                 <span className="ai-agent-step-error">
                   {" "}
-                  — {String(step.result.error ?? "ошибка")}
+                  — {String(step.result.error ?? t("agent.stepError"))}
                 </span>
               )}
             </li>
@@ -319,12 +315,12 @@ function AgentRunDetails({
         <div className="ai-agent-run-links">
           {devicePath && (
             <a className="btn small" href={dashboardLink(devicePath) ?? "#"}>
-              Открыть устройство
+              {t("agent.openDevice")}
             </a>
           )}
           {dashboardPath && (
             <a className="btn small" href={dashboardLink(dashboardPath) ?? "#"}>
-              Открыть дашборд
+              {t("agent.openDashboard")}
             </a>
           )}
         </div>

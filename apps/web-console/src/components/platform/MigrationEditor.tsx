@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { applyMigration, fetchMigration, updateMigration } from "../../api/platformSql";
 import PlatformSqlEditorShell from "./PlatformSqlEditorShell";
@@ -11,6 +12,7 @@ interface MigrationEditorProps {
 }
 
 export default function MigrationEditor({ path, onClose, onOpenProperties }: MigrationEditorProps) {
+  const { t } = useTranslation(["platform", "common"]);
   const queryClient = useQueryClient();
   const migrationQuery = useQuery({
     queryKey: ["migration", path],
@@ -62,7 +64,7 @@ export default function MigrationEditor({ path, onClose, onOpenProperties }: Mig
   const applied = migrationQuery.data?.applied ?? false;
 
   if (migrationQuery.isLoading) {
-    return <p className="hint">Загрузка миграции…</p>;
+    return <p className="hint">{t("platform:migration.loading")}</p>;
   }
 
   if (migrationQuery.error) {
@@ -71,11 +73,13 @@ export default function MigrationEditor({ path, onClose, onOpenProperties }: Mig
 
   return (
     <PlatformSqlEditorShell
-      title={scriptId || migrationQuery.data?.scriptId || "Миграция"}
+      title={scriptId || migrationQuery.data?.scriptId || t("platform:migration.title")}
       subtitle={
         applied
-          ? `Применена${migrationQuery.data?.appliedAt ? ` — ${migrationQuery.data.appliedAt}` : ""}`
-          : "Ожидает применения (SQL изменён или ещё не выполнялся)"
+          ? t("platform:migration.applied", {
+              at: migrationQuery.data?.appliedAt ? ` — ${migrationQuery.data.appliedAt}` : "",
+            })
+          : t("platform:migration.pending")
       }
       path={path}
       onClose={onClose}
@@ -88,19 +92,19 @@ export default function MigrationEditor({ path, onClose, onOpenProperties }: Mig
             disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isPending ? "Сохранение…" : "Сохранить"}
+            {saveMutation.isPending ? t("common:action.saving") : t("common:action.save")}
           </button>
           <button
             type="button"
             className="btn"
             disabled={applyMutation.isPending || !dataSourcePath.trim() || !sql.trim()}
             onClick={() => {
-              if (confirm("Применить SQL-миграцию в целевой схеме?")) {
+              if (confirm(t("platform:migration.applyConfirm"))) {
                 applyMutation.mutate();
               }
             }}
           >
-            {applyMutation.isPending ? "Применение…" : "Применить миграцию"}
+            {applyMutation.isPending ? t("platform:migration.applying") : t("platform:migration.apply")}
           </button>
         </>
       }
@@ -123,7 +127,7 @@ export default function MigrationEditor({ path, onClose, onOpenProperties }: Mig
         <label className="full">
           Data source *
           <select value={dataSourcePath} onChange={(e) => setDataSourcePath(e.target.value)} required>
-            <option value="">— выберите —</option>
+            <option value="">{t("platform:sqlBinding.selectPlaceholder")}</option>
             {(dataSourcesQuery.data ?? []).map((ds) => (
               <option key={ds.path} value={ds.path}>
                 {ds.displayName} ({ds.path})
@@ -146,8 +150,8 @@ export default function MigrationEditor({ path, onClose, onOpenProperties }: Mig
         )}
         {saveError && <p className="hint error full">{saveError}</p>}
         {applyError && <p className="hint error full">{applyError}</p>}
-        {saveMutation.isSuccess && <p className="hint full">Сохранено</p>}
-        {applyMutation.isSuccess && <p className="hint full">Миграция применена</p>}
+        {saveMutation.isSuccess && <p className="hint full">{t("common:action.saved")}</p>}
+        {applyMutation.isSuccess && <p className="hint full">{t("platform:migration.appliedSuccess")}</p>}
       </form>
     </PlatformSqlEditorShell>
   );

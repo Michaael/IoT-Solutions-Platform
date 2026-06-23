@@ -1,5 +1,6 @@
 import type { DashboardWidget } from "../../types/dashboard";
 import type { TrendPoint } from "../../hooks/useTrendSeries";
+import { useTranslation } from "react-i18next";
 
 export function parseDemoPreview<T>(raw: string | undefined): T | null {
   if (!raw) return null;
@@ -38,5 +39,6 @@ export function buildDemoTrendPoints(
 }
 
 export function WidgetDemoBadge() {
-  return <span className="dash-widget-demo-badge">пример</span>;
+  const { t } = useTranslation("widgets");
+  return <span className="dash-widget-demo-badge">{t("view.demoBadge")}</span>;
 }

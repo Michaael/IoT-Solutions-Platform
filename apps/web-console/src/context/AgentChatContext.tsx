@@ -37,9 +37,11 @@ import {
   upsertChatEntry,
   type AgentChatIndex,
 } from "../utils/agentChatStorage";
+import i18n from "../i18n";
 
-export const WELCOME_TEXT =
-  "Опишите задачу обычным языком — например, создать SNMP-устройство, настроить метрики и дашборд. Контекст чата сохраняется между вкладками и перезагрузкой страницы.";
+export function getWelcomeText(): string {
+  return i18n.t("agent.welcomeExtended", { ns: "ai" });
+}
 
 export interface ChatMessage {
   id: string;
@@ -126,7 +128,7 @@ export function AgentChatProvider({
   const [chatIndex, setChatIndex] = useState<AgentChatIndex>(() => loadAgentChatIndex());
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "agent", text: WELCOME_TEXT },
+    { id: "welcome", role: "agent", text: getWelcomeText() },
   ]);
   const [input, setInput] = useState("");
   const [loadingSession, setLoadingSession] = useState(enabled);
@@ -196,7 +198,7 @@ export function AgentChatProvider({
       setMessages(
         turnMessages.length > 0
           ? turnMessages
-          : [{ id: "welcome", role: "agent", text: WELCOME_TEXT }]
+          : [{ id: "welcome", role: "agent", text: getWelcomeText() }]
       );
     },
     [registerSession]
@@ -262,7 +264,7 @@ export function AgentChatProvider({
               setActiveSessionId(null);
               activeSessionIdRef.current = null;
               setLiveSteps([]);
-              setMessages([{ id: "welcome", role: "agent", text: WELCOME_TEXT }]);
+              setMessages([{ id: "welcome", role: "agent", text: getWelcomeText() }]);
             }
           }
         } else {
@@ -312,7 +314,7 @@ export function AgentChatProvider({
     const session = await createAgentSession(resolveRootPath());
     registerSession(session, loadAgentChatIndex(), session.sessionId);
     turnCountRef.current = 0;
-    setMessages([{ id: "welcome", role: "agent", text: WELCOME_TEXT }]);
+    setMessages([{ id: "welcome", role: "agent", text: getWelcomeText() }]);
     setInput("");
   }, [registerSession]);
 
@@ -349,7 +351,7 @@ export function AgentChatProvider({
           activeSessionIdRef.current = null;
           turnCountRef.current = 0;
           setLiveSteps([]);
-          setMessages([{ id: "welcome", role: "agent", text: WELCOME_TEXT }]);
+          setMessages([{ id: "welcome", role: "agent", text: getWelcomeText() }]);
         }
       }
     },
@@ -385,7 +387,7 @@ export function AgentChatProvider({
         handleAgentResponse(data);
       } catch (error) {
         pendingMessageRef.current = null;
-        handleAgentError(error, "Не удалось отправить сообщение");
+        handleAgentError(error, i18n.t("agent.sendFailed", { ns: "ai" }));
       } finally {
         setIsPending(false);
       }
@@ -401,7 +403,7 @@ export function AgentChatProvider({
     try {
       await cancelAgentRun(sessionId);
     } catch (error) {
-      handleAgentError(error, "Не удалось прервать выполнение");
+      handleAgentError(error, i18n.t("agent.cancelFailed", { ns: "ai" }));
     }
   }, [handleAgentError, isPending]);
 
@@ -414,7 +416,7 @@ export function AgentChatProvider({
     setActiveSessionId(null);
     activeSessionIdRef.current = null;
     turnCountRef.current = 0;
-    setMessages([{ id: "welcome", role: "agent", text: WELCOME_TEXT }]);
+    setMessages([{ id: "welcome", role: "agent", text: getWelcomeText() }]);
   }, []);
 
   const pendingUserMessage = isPending ? pendingMessageRef.current : null;

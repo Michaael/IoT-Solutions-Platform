@@ -13,6 +13,12 @@ public interface WorkflowUserTaskRepository extends JpaRepository<WorkflowUserTa
 
     List<WorkflowUserTaskEntity> findByStatusInOrderByCreatedAtDesc(List<String> statuses, Pageable pageable);
 
+    List<WorkflowUserTaskEntity> findByStatusInAndOperatorAppIdOrderByCreatedAtDesc(
+            List<String> statuses,
+            String operatorAppId,
+            Pageable pageable
+    );
+
     Optional<WorkflowUserTaskEntity> findByInstanceIdAndStatus(String instanceId, String status);
 
     Optional<WorkflowUserTaskEntity> findByInstanceIdAndTaskNodeIdAndStatus(

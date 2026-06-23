@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fetchObjects } from "../api";
 import type { ObjectSummary } from "../types";
 import {
@@ -41,6 +42,7 @@ export default function SystemFolderListPanel({
   onSelectPath,
   onOpenEditor,
 }: SystemFolderListPanelProps) {
+  const { t } = useTranslation(["explorer", "common"]);
   const meta: SystemFolderListMeta = getSystemFolderListMeta(
     folderPath,
     folderType,
@@ -70,14 +72,14 @@ export default function SystemFolderListPanel({
         )}
       </header>
 
-      {childrenQuery.isLoading && <p className="op-muted">Загрузка…</p>}
+      {childrenQuery.isLoading && <p className="op-muted">{t("common:action.loading")}</p>}
       {childrenQuery.error && (
         <div className="op-alert op-alert-error">{String(childrenQuery.error)}</div>
       )}
 
       {!childrenQuery.isLoading && !childrenQuery.error && children.length === 0 && (
         <p className="op-muted">
-          {showCreate ? "Нет объектов. Создайте первый объект кнопкой выше." : "Список пуст."}
+          {showCreate ? t("folderList.emptyCreate") : t("folderList.empty")}
         </p>
       )}
 
@@ -86,11 +88,11 @@ export default function SystemFolderListPanel({
           <thead>
             <tr>
               <th>{meta.idColumnLabel}</th>
-              <th>Название</th>
-              <th>Тип</th>
-              <th>Шаблон</th>
-              <th>Описание</th>
-              {onOpenEditor && <th>Действия</th>}
+              <th>{t("common:field.displayName")}</th>
+              <th>{t("common:table.type")}</th>
+              <th>{t("folderList.template")}</th>
+              <th>{t("common:table.description")}</th>
+              {onOpenEditor && <th>{t("common:table.actions")}</th>}
             </tr>
           </thead>
           <tbody>
@@ -121,8 +123,8 @@ export default function SystemFolderListPanel({
                 <td>
                   <code>{child.type}</code>
                 </td>
-                <td>{child.templateId ? <code>{child.templateId}</code> : "—"}</td>
-                <td>{child.description || "—"}</td>
+                <td>{child.templateId ? <code>{child.templateId}</code> : t("common:empty.dash")}</td>
+                <td>{child.description || t("common:empty.dash")}</td>
                 {onOpenEditor && (
                   <td>
                     {canOpenEditor ? (
@@ -131,10 +133,10 @@ export default function SystemFolderListPanel({
                         className="btn btn-sm"
                         onClick={() => onOpenEditor(child.path)}
                       >
-                        Открыть
+                        {t("common:action.open")}
                       </button>
                     ) : (
-                      "—"
+                      t("common:empty.dash")
                     )}
                   </td>
                 )}

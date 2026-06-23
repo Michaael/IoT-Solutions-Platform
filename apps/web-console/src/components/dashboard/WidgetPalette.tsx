@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type { WidgetType } from "../../types/dashboard";
-import { WIDGET_TYPES } from "../../types/dashboard";
+import { widgetTypeI18nKey } from "./widgetI18n";
 
 interface WidgetPaletteProps {
   onAdd: (type: WidgetType) => void;
@@ -9,19 +10,14 @@ interface WidgetPaletteProps {
 
 interface PaletteGroup {
   id: string;
-  title: string;
+  titleKey: string;
   types: WidgetType[];
 }
-
-const WIDGET_LABELS = Object.fromEntries(WIDGET_TYPES.map((item) => [item.type, item.label])) as Record<
-  WidgetType,
-  string
->;
 
 const PALETTE_GROUPS: PaletteGroup[] = [
   {
     id: "metrics",
-    title: "Показатели",
+    titleKey: "palette.metrics",
     types: [
       "value",
       "indicator",
@@ -35,12 +31,12 @@ const PALETTE_GROUPS: PaletteGroup[] = [
   },
   {
     id: "charts",
-    title: "Графики",
+    titleKey: "palette.charts",
     types: ["chart", "sparkline", "pie-chart", "gantt-chart", "network-graph"],
   },
   {
     id: "tables",
-    title: "Таблицы и списки",
+    titleKey: "palette.tables",
     types: [
       "object-table",
       "event-feed",
@@ -53,22 +49,22 @@ const PALETTE_GROUPS: PaletteGroup[] = [
   },
   {
     id: "navigation",
-    title: "Навигация",
+    titleKey: "palette.navigation",
     types: ["dashboard-link", "sub-dashboard", "nav-menu", "breadcrumbs", "object-tree", "map"],
   },
   {
     id: "containers",
-    title: "Контейнеры",
+    titleKey: "palette.containers",
     types: ["panel", "tab-panel", "drawer-panel", "carousel", "steps-panel", "composite-widget"],
   },
   {
     id: "actions",
-    title: "Действия и формы",
+    titleKey: "palette.actions",
     types: ["function", "function-form", "input-form", "variable-editor", "timer", "context-list"],
   },
   {
     id: "content",
-    title: "Контент",
+    titleKey: "palette.content",
     types: ["label", "image", "html-snippet", "svg-widget"],
   },
 ];
@@ -358,13 +354,15 @@ function WidgetTypeIcon({ type }: { type: WidgetType }) {
 }
 
 export default function WidgetPalette({ onAdd, layout }: WidgetPaletteProps) {
+  const { t } = useTranslation(["dashboard", "widgets"]);
+
   return (
     <div
       className={`dashboard-widget-palette${layout === "sidebar" ? " dashboard-widget-palette--sidebar" : ""}`}
     >
       {layout === "sidebar" && (
         <div className="dashboard-palette-sidebar-head">
-          <h4>Виджеты</h4>
+          <h4>{t("palette.title")}</h4>
         </div>
       )}
       <div className="dashboard-widget-palette-hint" role="note">
@@ -384,24 +382,24 @@ export default function WidgetPalette({ onAdd, layout }: WidgetPaletteProps) {
           <path d="M8 7v4" />
           <circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none" />
         </svg>
-        <span>Перетаскивайте виджет за фон, размер — за угол справа снизу</span>
+        <span>{t("palette.dragHint")}</span>
       </div>
 
       <div className="dashboard-widget-palette-groups">
         {PALETTE_GROUPS.map((group) => (
           <section key={group.id} className="dashboard-widget-palette-group">
-            <h4 className="dashboard-widget-palette-group-title">{group.title}</h4>
+            <h4 className="dashboard-widget-palette-group-title">{t(group.titleKey)}</h4>
             <div className="dashboard-widget-palette-items">
               {group.types.map((type) => (
                 <button
                   key={type}
                   type="button"
                   className="dashboard-widget-palette-item"
-                  title={WIDGET_LABELS[type]}
+                  title={t(widgetTypeI18nKey(type))}
                   onClick={() => onAdd(type)}
                 >
                   <WidgetTypeIcon type={type} />
-                  <span className="dashboard-widget-palette-item-label">{WIDGET_LABELS[type]}</span>
+                  <span className="dashboard-widget-palette-item-label">{t(widgetTypeI18nKey(type))}</span>
                 </button>
               ))}
             </div>

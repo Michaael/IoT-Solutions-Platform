@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchObjects } from "../api";
+import i18n from "../i18n";
 import type { ObjectSummary, TreeNode } from "../types";
 import { buildObjectTree, parentObjectPath } from "../utils/tree";
 import { objectTreeKey } from "../utils/treeRowKey";
@@ -83,7 +84,7 @@ export function useLazyObjectTree(enabled = true) {
           await loadChildren(parent);
         }
       } catch (error) {
-        setTreeLoadError(error instanceof Error ? error.message : "Не удалось загрузить дерево объектов");
+        setTreeLoadError(error instanceof Error ? error.message : i18n.t("common:error.treeLoadFailed"));
       }
     })();
   }, [loadChildren, enabled]);

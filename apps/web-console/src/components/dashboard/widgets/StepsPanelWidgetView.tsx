@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DashboardWidget, StepsPanelWidget } from "../../../types/dashboard";
 import { resolveContextParam } from "../dashboardUtils";
 import { useWidgetSession } from "../../../hooks/useWidgetObjectPath";
@@ -25,6 +26,7 @@ export default function StepsPanelWidgetView({
   editable,
   depth = 0,
 }: StepsPanelWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { params } = useWidgetSession();
   const steps = useMemo(() => {
@@ -69,7 +71,7 @@ export default function StepsPanelWidgetView({
               editable: editable ?? false,
               depth: depth + 1,
             })
-          : <p className="hint">Нет виджетов шага</p>}
+          : <p className="hint">{t("view.noStepWidgets")}</p>}
       </div>
     </DashWidgetShell>
   );

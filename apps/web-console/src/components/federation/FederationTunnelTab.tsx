@@ -1,4 +1,5 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type {
   InboundRegistration,
   OutboundAgent,
@@ -73,22 +74,22 @@ export default function FederationTunnelTab({
   deleteOutboundMutation,
   configureSecretsKeyMutation,
 }: FederationTunnelTabProps) {
+  const { t } = useTranslation(["federation", "common"]);
+
   return (
     <>
       {formError && <div className="op-alert op-alert-error">{formError}</div>}
 
       <section className="panel-card driver-config-form">
-        <h4>Входящие регистрации (hub)</h4>
-        <p className="op-muted">
-          Выпустите одноразовый код регистрации для edge-агента за NAT. Код показывается один раз.
-        </p>
+        <h4>{t("tunnel.inboundTitle")}</h4>
+        <p className="op-muted">{t("tunnel.inboundHint")}</p>
         <div className="form-grid">
           <label>
-            Имя *
+            {t("tunnel.field.name")} *
             <input value={inboundName} onChange={(e) => setInboundName(e.target.value)} />
           </label>
           <label>
-            Префикс пути
+            {t("tunnel.field.prefix")}
             <input value={inboundPathPrefix} onChange={(e) => setInboundPathPrefix(e.target.value)} />
           </label>
         </div>
@@ -99,33 +100,33 @@ export default function FederationTunnelTab({
             disabled={createInboundMutation.isPending}
             onClick={() => createInboundMutation.mutate()}
           >
-            Создать код регистрации
+            {t("tunnel.createRegistrationCode")}
           </button>
         </div>
         {issuedRegistrationCode && (
           <>
-            <p className="hint success">Код регистрации (скопируйте сейчас):</p>
+            <p className="hint success">{t("tunnel.registrationCodeHint")}</p>
             <pre className="mono federation-code-block">{issuedRegistrationCode}</pre>
             <button
               type="button"
               className="btn compact"
               onClick={() =>
                 copyToClipboard(issuedRegistrationCode).then(() =>
-                  setSyncFeedback("Код скопирован")
+                  setSyncFeedback(t("tunnel.codeCopied"))
                 )
               }
             >
-              Копировать код
+              {t("tunnel.copyCode")}
             </button>
           </>
         )}
         <table className="op-table security-users-table security-users-table-compact">
           <thead>
             <tr>
-              <th>Имя</th>
-              <th>Префикс</th>
-              <th>Истекает</th>
-              <th>Статус</th>
+              <th>{t("tunnel.column.name")}</th>
+              <th>{t("tunnel.column.prefix")}</th>
+              <th>{t("tunnel.column.expires")}</th>
+              <th>{t("tunnel.column.status")}</th>
               <th />
             </tr>
           </thead>
@@ -135,7 +136,7 @@ export default function FederationTunnelTab({
                 <td><code>{reg.name}</code></td>
                 <td><code>{reg.pathPrefix}</code></td>
                 <td>{new Date(reg.expiresAt).toLocaleString()}</td>
-                <td>{reg.consumedAt ? "использован" : "ожидает"}</td>
+                <td>{reg.consumedAt ? t("tunnel.registrationUsed") : t("tunnel.registrationPending")}</td>
                 <td>
                   <button
                     type="button"
@@ -143,7 +144,7 @@ export default function FederationTunnelTab({
                     disabled={deleteInboundMutation.isPending}
                     onClick={() => deleteInboundMutation.mutate(reg.id)}
                   >
-                    Удалить
+                    {t("common:action.delete")}
                   </button>
                 </td>
               </tr>
@@ -153,25 +154,21 @@ export default function FederationTunnelTab({
       </section>
 
       <section className="panel-card driver-config-form">
-        <h4>Исходящие агенты (edge / NAT)</h4>
-        <p className="op-muted">
-          Исходящий WebSocket-туннель к public hub. На edge нужен ключ шифрования для хранения кода
-          регистрации и session token (<code>ispf.security.secrets-key</code>).
-        </p>
+        <h4>{t("tunnel.outboundTitle")}</h4>
+        <p className="op-muted">{t("tunnel.outboundHint")}</p>
 
         <section className="panel-card federation-secrets-key">
-          <h5>Ключ шифрования edge (ispf.security.secrets-key)</h5>
+          <h5>{t("tunnel.secretsKeyTitle")}</h5>
           {secretsKeyConfigured ? (
             <div className="op-alert op-alert-success">
-              Ключ настроен
-              {secretsKeySource === "YAML" && " — задан в application.yml или переменной ISPF_SECURITY_SECRETS_KEY"}
-              {secretsKeySource === "DATABASE" && " — сохранён через Web Console"}
+              {t("tunnel.secretsKeyConfigured")}
+              {secretsKeySource === "YAML" && t("tunnel.secretsKeyYaml")}
+              {secretsKeySource === "DATABASE" && t("tunnel.secretsKeyDatabase")}
               .
             </div>
           ) : (
             <div className="op-alert op-alert-error">
-              Ключ не настроен. Укажите его ниже или задайте{" "}
-              <code>ispf.security.secrets-key</code> в конфиге сервера и перезапустите ISPF.
+              {t("tunnel.secretsKeyMissing")}
             </div>
           )}
           {secretsKeyFeedback && <div className="op-alert op-alert-success">{secretsKeyFeedback}</div>}
@@ -180,19 +177,17 @@ export default function FederationTunnelTab({
             <>
               <div className="form-grid">
                 <label>
-                  Ключ шифрования *
+                  {t("tunnel.secretsKeyField")} *
                   <input
                     type="password"
                     autoComplete="new-password"
-                    placeholder="минимум 16 символов"
+                    placeholder={t("tunnel.secretsKeyPlaceholder")}
                     value={secretsKeyInput}
                     onChange={(e) => setSecretsKeyInput(e.target.value)}
                   />
                 </label>
               </div>
-              <p className="hint">
-                Сохраните ключ в надёжном месте. При смене ключа существующие исходящие агенты перестанут работать.
-              </p>
+              <p className="hint">{t("tunnel.secretsKeySaveHint")}</p>
               <div className="form-actions">
                 <button
                   type="button"
@@ -200,35 +195,33 @@ export default function FederationTunnelTab({
                   disabled={configureSecretsKeyMutation.isPending}
                   onClick={() => configureSecretsKeyMutation.mutate()}
                 >
-                  Сохранить ключ
+                  {t("tunnel.secretsKeySave")}
                 </button>
               </div>
             </>
           )}
           {secretsKeyUiConfigurable && secretsKeyConfigured && secretsKeySource === "DATABASE" && (
-            <p className="hint">
-              Чтобы сменить ключ, удалите все исходящие агенты и сохраните новый ключ шифрования.
-            </p>
+            <p className="hint">{t("tunnel.secretsKeyChangeHint")}</p>
           )}
         </section>
 
         <div className="form-grid">
           <label>
-            Имя *
+            {t("tunnel.field.name")} *
             <input
               value={outboundForm.name}
               onChange={(e) => setOutboundForm((prev) => ({ ...prev, name: e.target.value }))}
             />
           </label>
           <label>
-            URL hub *
+            {t("tunnel.field.hubUrl")} *
             <input
               value={outboundForm.hubBaseUrl}
               onChange={(e) => setOutboundForm((prev) => ({ ...prev, hubBaseUrl: e.target.value }))}
             />
           </label>
           <label>
-            Код регистрации *
+            {t("tunnel.field.registrationCode")} *
             <input
               type="password"
               value={outboundForm.registrationCode}
@@ -236,7 +229,7 @@ export default function FederationTunnelTab({
             />
           </label>
           <label>
-            Префикс пути
+            {t("tunnel.field.prefix")}
             <input
               value={outboundForm.pathPrefix}
               onChange={(e) => setOutboundForm((prev) => ({ ...prev, pathPrefix: e.target.value }))}
@@ -250,16 +243,16 @@ export default function FederationTunnelTab({
             disabled={createOutboundMutation.isPending || !secretsKeyConfigured}
             onClick={() => createOutboundMutation.mutate()}
           >
-            Добавить агент
+            {t("tunnel.addAgent")}
           </button>
         </div>
         <table className="op-table security-users-table security-users-table-compact">
           <thead>
             <tr>
-              <th>Имя</th>
-              <th>Hub</th>
-              <th>Статус</th>
-              <th>Узел</th>
+              <th>{t("tunnel.column.name")}</th>
+              <th>{t("tunnel.column.hub")}</th>
+              <th>{t("tunnel.column.status")}</th>
+              <th>{t("tunnel.column.peer")}</th>
               <th />
             </tr>
           </thead>
@@ -272,7 +265,7 @@ export default function FederationTunnelTab({
                   {agent.tunnelStatus}
                   {agent.lastError && <span className="op-muted"> — {agent.lastError}</span>}
                 </td>
-                <td>{agent.linkedPeerId ?? "—"}</td>
+                <td>{agent.linkedPeerId ?? t("common:empty.dash")}</td>
                 <td>
                   <div className="federation-peer-actions">
                     <button
@@ -281,7 +274,7 @@ export default function FederationTunnelTab({
                       disabled={connectOutboundMutation.isPending}
                       onClick={() => connectOutboundMutation.mutate(agent.id)}
                     >
-                      Подключить
+                      {t("tunnel.connect")}
                     </button>
                     <button
                       type="button"
@@ -289,7 +282,7 @@ export default function FederationTunnelTab({
                       disabled={deleteOutboundMutation.isPending}
                       onClick={() => deleteOutboundMutation.mutate(agent.id)}
                     >
-                      Удалить
+                      {t("common:action.delete")}
                     </button>
                   </div>
                 </td>
@@ -299,7 +292,7 @@ export default function FederationTunnelTab({
         </table>
         {(tunnelsQuery.data ?? []).length > 0 && (
           <p className="hint">
-            Активных туннельных сессий на этом hub: {(tunnelsQuery.data ?? []).length}
+            {t("tunnel.activeSessions", { count: (tunnelsQuery.data ?? []).length })}
           </p>
         )}
       </section>

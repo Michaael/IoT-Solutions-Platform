@@ -1,4 +1,5 @@
 import type { DashboardLinkWidget } from "../../../types/dashboard";
+import { useTranslation } from "react-i18next";
 import { parseJsonObject, parseSelectionJson } from "../dashboardUtils";
 import { useDashboardContext, triggerDashboardOpen } from "../DashboardContext";
 import DashWidgetShell from "../DashWidgetShell";
@@ -10,6 +11,7 @@ interface DashboardLinkWidgetViewProps {
 }
 
 export default function DashboardLinkWidgetView({ widget, editable }: DashboardLinkWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const actions = useDashboardContext();
   const targetPath = widget.targetDashboardPath?.trim();
@@ -48,9 +50,9 @@ export default function DashboardLinkWidgetView({ widget, editable }: DashboardL
         disabled={!canAct}
         onClick={handleClick}
       >
-        {widget.buttonLabel ?? (widget.openMode === "modal" ? "Открыть" : "Перейти")}
+        {widget.buttonLabel ?? (widget.openMode === "modal" ? t("view.open") : t("view.navigate"))}
       </button>
-      {!targetPath && <p className="hint">Укажите targetDashboardPath</p>}
+      {!targetPath && <p className="hint">{t("view.specifyTargetDashboard")}</p>}
     </DashWidgetShell>
   );
 }

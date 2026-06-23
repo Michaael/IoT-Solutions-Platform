@@ -1,18 +1,23 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useOperatorAppsRegistry } from "../../hooks/useOperatorAppsRegistry";
 import type { OperatorUi } from "../../types/operatorUi";
 import WorkQueuePanel from "./WorkQueuePanel";
 import EventJournalPanel from "./EventJournalPanel";
 
 interface OperatorSidebarProps {
+  appId?: string;
   operatorId?: string;
   ui?: OperatorUi;
 }
 
 type SidebarTab = "tasks" | "events";
 
-export default function OperatorSidebar({ operatorId = "operator", ui }: OperatorSidebarProps) {
+export default function OperatorSidebar({ appId, operatorId = "operator", ui }: OperatorSidebarProps) {
+  const { t } = useTranslation("operator");
   const [tab, setTab] = useState<SidebarTab>("tasks");
-  const eventObjectPath = ui?.eventJournalObjectPath;
+  const resolvedAppId = appId ?? ui?.appId;
+  const { operatorApps } = useOperatorAppsRegistry(ui);
 
   return (
     <div className="operator-sidebar-inner">
@@ -22,21 +27,32 @@ export default function OperatorSidebar({ operatorId = "operator", ui }: Operato
           className={`btn small ${tab === "tasks" ? "primary" : ""}`}
           onClick={() => setTab("tasks")}
         >
-          Задачи
+          {t("sidebar.tasks")}
         </button>
         <button
           type="button"
           className={`btn small ${tab === "events" ? "primary" : ""}`}
           onClick={() => setTab("events")}
         >
-          События
+          {t("sidebar.events")}
         </button>
       </div>
-      {tab === "tasks" ? (
-        <WorkQueuePanel operatorId={operatorId} />
-      ) : (
-        <EventJournalPanel objectPath={eventObjectPath} />
-      )}
+      <div className="operator-sidebar-content">
+        {tab === "tasks" ? (
+          <WorkQueuePanel
+            operatorId={operatorId}
+            appId={resolvedAppId}
+            ui={ui}
+            operatorApps={operatorApps}
+          />
+        ) : (
+          <EventJournalPanel
+            appId={resolvedAppId}
+            ui={ui}
+            operatorApps={operatorApps}
+          />
+        )}
+      </div>
     </div>
   );
 }

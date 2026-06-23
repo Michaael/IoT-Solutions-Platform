@@ -84,15 +84,19 @@ Agent tool: `create_binding_rule` (path, id, targetVariable, expression, remoteO
 
 Поле `bindingExpression` на переменной и колонка `binding_expr` **удалены** (ADR-0017, v0.8.0). Привязки — только `@bindingRules`.
 
-**Dev/local:** проще пересоздать БД, чем мигрировать legacy-данные:
+**Prod** (`ispf.iot-solutions.ru`): PostgreSQL в Docker (`ispf-postgres`), не H2. **Local dev:** H2 file или docker compose PostgreSQL.
 
 ```bash
-# H2 (local): удалить data/ или задать spring.datasource.url на новый файл
-# PostgreSQL: DROP DATABASE ispf; CREATE DATABASE ispf;
-# Затем обычный старт — Flyway применит схему без binding_expr
+# Prod VPS (Docker postgres)
+systemctl stop ispf-server
+docker exec ispf-postgres psql -U ispf -d postgres -c 'DROP DATABASE IF EXISTS ispf;' -c 'CREATE DATABASE ispf OWNER ispf;'
+systemctl start ispf-server
+
+# Local H2: удалить ./data/ispf-local.mv.db
+# Local/dev compose: docker compose exec postgres psql ...
 ```
 
-Существующая БД без пересоздания: Flyway `V41__drop_binding_expr.sql` снимает колонку; legacy-значения в `binding_expr` **не** переносятся — задайте правила через вкладку «Привязки» или API `/binding-rules`.
+Существующая БД без пересоздания: Flyway `V41__drop_binding_expr.sql` снимает колонку; при **checksum mismatch V1** нужно пересоздание (см. [DEPLOYMENT.md](DEPLOYMENT.md#обновление-до-v080)).
 
 ---
 

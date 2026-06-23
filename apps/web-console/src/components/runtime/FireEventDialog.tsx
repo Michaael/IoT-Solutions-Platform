@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fireEvent } from "../../api";
 import type { EventDescriptor } from "../../types";
 import type { DataRecord, DataSchema } from "../../types";
@@ -23,6 +24,7 @@ function isEmptyPayload(payload: DataRecord): boolean {
 }
 
 export default function FireEventDialog({ objectPath, event, onClose, onFired }: FireEventDialogProps) {
+  const { t } = useTranslation(["runtime", "common"]);
   const [payloadJson, setPayloadJson] = useState(() => defaultPayloadJson(event.payloadSchema));
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +36,7 @@ export default function FireEventDialog({ objectPath, event, onClose, onFired }:
         try {
           payload = JSON.parse(trimmed) as DataRecord;
         } catch {
-          throw new Error("Некорректный JSON payload");
+          throw new Error(t("common:error.invalidJsonPayload"));
         }
         if (isEmptyPayload(payload)) {
           payload = undefined;
@@ -53,18 +55,18 @@ export default function FireEventDialog({ objectPath, event, onClose, onFired }:
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <header className="modal-head">
-          <h3>Опубликовать событие</h3>
+          <h3>{t("runtime:fireEvent.title")}</h3>
           <button type="button" className="btn small" onClick={onClose}>×</button>
         </header>
         <div className="modal-body">
           <p className="hint">
-            Объект: <code>{objectPath}</code>
+            {t("runtime:fireEvent.object")} <code>{objectPath}</code>
           </p>
           <p className="hint">
-            Событие: <code>{event.name}</code> ({event.level})
+            {t("runtime:fireEvent.event")} <code>{event.name}</code> ({event.level})
           </p>
           <label className="full">
-            Payload (JSON DataRecord, опционально)
+            {t("runtime:fireEvent.payload")}
             <textarea
               rows={8}
               value={payloadJson}
@@ -72,18 +74,18 @@ export default function FireEventDialog({ objectPath, event, onClose, onFired }:
               spellCheck={false}
             />
           </label>
-          <p className="hint">Пустой объект или только schema/rows — платформа подставит схему из descriptor.</p>
+          <p className="hint">{t("runtime:fireEvent.payloadHint")}</p>
           {error && <p className="hint error">{error}</p>}
         </div>
         <footer className="modal-foot">
-          <button type="button" className="btn" onClick={onClose}>Отмена</button>
+          <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
           <button
             type="button"
             className="btn primary"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            {mutation.isPending ? "Публикация…" : "Опубликовать"}
+            {mutation.isPending ? t("runtime:fireEvent.publishing") : t("runtime:fireEvent.publish")}
           </button>
         </footer>
       </div>

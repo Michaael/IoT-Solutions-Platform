@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import AiAgentChat from "./AiAgentChat";
 import AiStudioBundleTab, { defaultBundleManifest } from "./AiStudioBundleTab";
 import AiStudioSettingsTab from "./AiStudioSettingsTab";
@@ -7,13 +8,8 @@ import { loadAiStudioPrefs, saveAiStudioPrefs } from "../utils/agentChatStorage"
 
 type StudioMode = "agent" | "bundle" | "settings";
 
-const MODE_LABELS: Record<StudioMode, string> = {
-  agent: "Агент",
-  bundle: "Пакет bundle",
-  settings: "Настройки",
-};
-
 export default function AiStudioPanel() {
+  const { t } = useTranslation("ai");
   const { isPending } = useAgentChat();
   const [mode, setMode] = useState<StudioMode>(() => loadAiStudioPrefs().lastTab);
   const [appId, setAppId] = useState(() => loadAiStudioPrefs().defaultAppId);
@@ -31,29 +27,31 @@ export default function AiStudioPanel() {
     saveAiStudioPrefs({ ...prefs, lastTab: mode });
   }, [mode]);
 
+  const tabs: StudioMode[] = ["agent", "bundle", "settings"];
+
   return (
     <div className="ai-studio-panel">
       <header className="ai-studio-head">
-        <h3>AI Studio</h3>
+        <h3>{t("studio.title")}</h3>
         {backgroundBusy && mode !== "agent" && (
           <div className="ai-studio-background-hint" role="status">
             <span className="ai-agent-status-bar-pulse" aria-hidden />
-            Агент выполняет задачу в фоне — переключитесь на вкладку «Агент»
+            {t("studio.backgroundBusy")}
           </div>
         )}
       </header>
 
-      <nav className="tabs" aria-label="Разделы AI Studio">
-        {(Object.keys(MODE_LABELS) as StudioMode[]).map((tab) => (
+      <nav className="tabs" aria-label={t("studio.sectionsAria")}>
+        {tabs.map((tab) => (
           <button
             key={tab}
             type="button"
             className={mode === tab ? "active" : ""}
             onClick={() => setMode(tab)}
           >
-            {MODE_LABELS[tab]}
+            {t(`studio.tab.${tab}`)}
             {tab === "agent" && backgroundBusy && (
-              <span className="tab-pending-dot" title="Выполняется запрос" />
+              <span className="tab-pending-dot" title={t("agent.pendingTitle")} />
             )}
           </button>
         ))}

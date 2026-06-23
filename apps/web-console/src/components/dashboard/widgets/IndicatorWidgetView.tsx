@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { setVariable } from "../../../api";
 import type { IndicatorWidget } from "../../../types/dashboard";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
@@ -18,6 +19,7 @@ export default function IndicatorWidgetView({
   refreshIntervalMs,
   editable = false,
 }: IndicatorWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const { rawValue, isLoading, isError } = useBoundVariable(
@@ -47,8 +49,8 @@ export default function IndicatorWidgetView({
     dotClass = "idle";
   }
   const label = active
-    ? (widget.trueLabel ?? (alarmMode ? "АВАРИЯ" : "Активно"))
-    : (widget.falseLabel ?? "Норма");
+    ? (widget.trueLabel ?? (alarmMode ? t("view.indicator.alarm") : t("view.indicator.active")))
+    : (widget.falseLabel ?? t("view.indicator.normal"));
 
   return (
     <DashWidgetShell
@@ -59,7 +61,7 @@ export default function IndicatorWidgetView({
       rootStyle={{ borderColor }}
     >
       {!objectPath && widget.selectionKey ? (
-        <p className="hint">Выберите устройство</p>
+        <p className="hint">{t("view.selectDevice")}</p>
       ) : (
         <div className="dash-widget-indicator-body" style={styles.body}>
           <span
@@ -67,7 +69,7 @@ export default function IndicatorWidgetView({
             style={styles.dot}
           />
           <span style={styles.label}>
-            {isLoading ? "…" : isError ? "Ошибка" : label}
+            {isLoading ? "…" : isError ? t("view.errorGeneric") : label}
           </span>
         </div>
       )}
@@ -85,6 +87,7 @@ export function ToggleWidgetView({
   refreshIntervalMs,
   editable = false,
 }: ToggleWidgetViewProps & { editable?: boolean }) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const queryClient = useQueryClient();
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey, widget.contextPathKey);
@@ -117,10 +120,10 @@ export function ToggleWidgetView({
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-toggle"
       editable={editable}
-      footer={!writable ? "только чтение" : undefined}
+      footer={!writable ? t("view.readOnly") : undefined}
     >
       {!objectPath && widget.selectionKey ? (
-        <p className="hint">Выберите устройство</p>
+        <p className="hint">{t("view.selectDevice")}</p>
       ) : (
       <button
         type="button"
@@ -129,7 +132,7 @@ export function ToggleWidgetView({
         disabled={editable || !writable || isLoading || mutation.isPending}
         onClick={() => mutation.mutate(!active)}
       >
-        {active ? (widget.trueLabel ?? "Вкл") : (widget.falseLabel ?? "Выкл")}
+        {active ? (widget.trueLabel ?? t("view.indicator.on")) : (widget.falseLabel ?? t("view.indicator.off"))}
       </button>
       )}
     </DashWidgetShell>

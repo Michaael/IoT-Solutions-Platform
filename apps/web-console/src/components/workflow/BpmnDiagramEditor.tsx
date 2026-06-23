@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import BpmnModeler from "bpmn-js/lib/Modeler";
 import ispfModdle from "../../bpmn/ispf-moddle.json";
 import { EMPTY_BPMN } from "../../bpmn/constants";
@@ -58,6 +59,7 @@ function isIspfTask(element: BpmnElement | undefined): boolean {
 }
 
 export default function BpmnDiagramEditor({ xml, onChange }: BpmnDiagramEditorProps) {
+  const { t } = useTranslation("workflow");
   const containerRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
   const onChangeRef = useRef(onChange);
@@ -181,7 +183,7 @@ export default function BpmnDiagramEditor({ xml, onChange }: BpmnDiagramEditorPr
       <div className="bpmn-editor-wrap">
         {importError && (
           <p className="hint error bpmn-editor-error">
-            Не удалось отобразить BPMN: {importError}. Проверьте XML во вкладке «Исходник».
+            {t("bpmn.importError", { error: importError })}
           </p>
         )}
         <div ref={containerRef} className="bpmn-editor-canvas" />
@@ -190,7 +192,7 @@ export default function BpmnDiagramEditor({ xml, onChange }: BpmnDiagramEditorPr
         <aside className="bpmn-ispf-panel">
           <h4>ISPF task properties</h4>
           <p className="hint">
-            Элемент: <code>{selected.businessObject.$type}</code> ({selected.id})
+            {t("bpmn.element", { type: selected.businessObject.$type, id: selected.id })}
           </p>
           <label>
             ispf:action
@@ -217,7 +219,7 @@ export default function BpmnDiagramEditor({ xml, onChange }: BpmnDiagramEditorPr
             </label>
           ))}
           <details>
-            <summary>Все ISPF-атрибуты</summary>
+            <summary>{t("bpmn.allAttributes")}</summary>
             {ISPF_ATTRS.filter((a) => a !== "action" && !hintAttrs.includes(a)).map((attr) => (
               <label key={attr}>
                 ispf:{attr}
@@ -229,7 +231,7 @@ export default function BpmnDiagramEditor({ xml, onChange }: BpmnDiagramEditorPr
             ))}
           </details>
           <button type="button" className="btn primary" onClick={applyIspfProperties}>
-            Применить к элементу
+            {t("bpmn.applyToElement")}
           </button>
         </aside>
       )}

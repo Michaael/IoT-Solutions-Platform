@@ -1,6 +1,5 @@
 package com.ispf.server.workflow;
 
-import com.ispf.plugin.workflow.UserTaskDefinition;
 import com.ispf.plugin.workflow.WorkflowException;
 import com.ispf.server.persistence.WorkflowUserTaskRepository;
 import com.ispf.server.persistence.entity.WorkflowUserTaskEntity;
@@ -9,10 +8,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class WorkQueueService {
+
+    private static final String PLATFORM_WORKFLOW_PREFIX = "root.platform.workflows";
 
     private final WorkflowUserTaskRepository userTaskRepository;
     private final WorkflowService workflowService;
@@ -24,19 +28,85 @@ public class WorkQueueService {
 
     @Transactional(readOnly = true)
     public List<WorkQueueItem> listOpenTasks(int limit) {
-        return userTaskRepository
-                .findByStatusInOrderByCreatedAtDesc(List.of("OPEN", "CLAIMED"), PageRequest.of(0, Math.max(1, limit)))
-                .stream()
+        return listOpenTasks(limit, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WorkQueueItem> listOpenTasks(int limit, String operatorAppId) {
+        int pageSize = Math.max(1, limit);
+        PageRequest page = PageRequest.of(0, pageSize);
+        List<String> statuses = List.of("OPEN", "CLAIMED");
+        List<WorkflowUserTaskEntity> tasks;
+        if (operatorAppId != null && !operatorAppId.isBlank()) {
+            tasks = listOpenTasksForOperatorApp(statuses, operatorAppId.trim(), pageSize);
+        } else {
+            tasks = userTaskRepository.findByStatusInOrderByCreatedAtDesc(statuses, page);
+        }
+        return tasks.stream()
                 .map(this::toItem)
                 .toList();
+    }
+
+    private List<WorkflowUserTaskEntity> listOpenTasksForOperatorApp(
+            List<String> statuses,
+            String appId,
+            int limit
+    ) {
+        Map<String, WorkflowUserTaskEntity> merged = new LinkedHashMap<>();
+        PageRequest page = PageRequest.of(0, limit);
+        for (WorkflowUserTaskEntity task : userTaskRepository.findByStatusInAndOperatorAppIdOrderByCreatedAtDesc(
+                statuses,
+                appId,
+                page
+        )) {
+            merged.put(task.getId(), task);
+        }
+        if ("platform".equals(appId) && merged.size() < limit) {
+            PageRequest legacyPage = PageRequest.of(0, Math.max(limit * 3, limit));
+            for (WorkflowUserTaskEntity task : userTaskRepository.findByStatusInOrderByCreatedAtDesc(
+                    statuses,
+                    legacyPage
+            )) {
+                if (merged.size() >= limit) {
+                    break;
+                }
+                if (matchesLegacyPlatformTask(task)) {
+                    merged.putIfAbsent(task.getId(), task);
+                }
+            }
+        }
+        return merged.values().stream()
+                .sorted(Comparator.comparing(WorkflowUserTaskEntity::getCreatedAt).reversed())
+                .limit(limit)
+                .toList();
+    }
+
+    private boolean matchesLegacyPlatformTask(WorkflowUserTaskEntity task) {
+        String assigned = task.getOperatorAppId();
+        if (assigned != null && !assigned.isBlank()) {
+            return false;
+        }
+        return task.getWorkflowPath() != null && task.getWorkflowPath().startsWith(PLATFORM_WORKFLOW_PREFIX);
+    }
+
+    private String resolveTaskOperatorAppId(WorkflowUserTaskEntity task) {
+        String assigned = task.getOperatorAppId();
+        if (assigned != null && !assigned.isBlank()) {
+            return assigned;
+        }
+        return workflowService.resolveOperatorAppIdForPath(task.getWorkflowPath());
     }
 
     @Transactional
     public WorkQueueItem claimTask(String taskId, String operatorId) throws WorkflowException {
         WorkflowUserTaskEntity task = userTaskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found: " + taskId));
-        if (!"OPEN".equals(task.getStatus()) && !operatorId.equals(task.getAssignee())) {
-            throw new IllegalStateException("Task is already claimed");
+        if ("COMPLETED".equals(task.getStatus())) {
+            return toItem(task);
+        }
+        if ("CLAIMED".equals(task.getStatus()) && task.getAssignee() != null
+                && !operatorId.equals(task.getAssignee())) {
+            throw new IllegalStateException("Task is assigned to another operator");
         }
         task.setStatus("CLAIMED");
         task.setAssignee(operatorId);
@@ -90,6 +160,7 @@ public class WorkQueueService {
                 task.getId(),
                 task.getInstanceId(),
                 task.getWorkflowPath(),
+                resolveTaskOperatorAppId(task),
                 task.getTaskNodeId(),
                 task.getTitle(),
                 task.getInstructions(),
@@ -106,6 +177,7 @@ public class WorkQueueService {
             String id,
             String instanceId,
             String workflowPath,
+            String operatorAppId,
             String taskNodeId,
             String title,
             String instructions,

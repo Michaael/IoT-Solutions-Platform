@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { SpreadsheetWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
@@ -20,6 +21,7 @@ export default function SpreadsheetWidgetView({
   refreshIntervalMs,
   editable: editMode,
 }: SpreadsheetWidgetViewProps) {
+  const { t } = useTranslation(["widgets", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
   const queryClient = useQueryClient();
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
@@ -61,7 +63,7 @@ export default function SpreadsheetWidgetView({
       demo={isDemo}
     >
       {isLoading && !isDemo ? (
-        <p className="hint">Загрузка…</p>
+        <p className="hint">{t("common:action.loading")}</p>
       ) : (
         <div className="dash-table-wrap" style={styles.body}>
           <table className="dash-object-table">

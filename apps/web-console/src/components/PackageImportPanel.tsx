@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { importPackage } from "../api/packages";
 
@@ -7,6 +8,7 @@ interface PackageImportPanelProps {
 }
 
 export default function PackageImportPanel({ defaultPackageId = "demo" }: PackageImportPanelProps) {
+  const { t } = useTranslation("platform");
   const queryClient = useQueryClient();
   const [packageId, setPackageId] = useState(defaultPackageId);
   const [manifestText, setManifestText] = useState(`{
@@ -28,11 +30,8 @@ export default function PackageImportPanel({ defaultPackageId = "demo" }: Packag
 
   return (
     <div className="package-import-panel">
-      <h3>Импорт пакета</h3>
-      <p className="op-muted">
-        Загрузка bundle в дерево объектов: data source, миграции, отчёты, функции, bindings и
-        schedules. API: <code>POST /api/v1/platform/packages/import</code>.
-      </p>
+      <h3>{t("packageImport.title")}</h3>
+      <p className="op-muted">{t("packageImport.subtitle")}</p>
       <label>
         packageId
         <input value={packageId} onChange={(e) => setPackageId(e.target.value)} />
@@ -54,7 +53,7 @@ export default function PackageImportPanel({ defaultPackageId = "demo" }: Packag
           disabled={importMutation.isPending || !packageId.trim()}
           onClick={() => importMutation.mutate()}
         >
-          Импортировать
+          {t("packageImport.import")}
         </button>
       </div>
       {importMutation.error && (

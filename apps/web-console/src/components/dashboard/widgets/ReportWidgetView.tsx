@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import {
   downloadReportExportByPath,
@@ -55,7 +56,8 @@ export default function ReportWidgetView({
   widget,
   refreshIntervalMs,
   editable = false,
-}: ReportWidgetViewProps) {
+}: ReportWidgetViewProps) {
+  const { t } = useTranslation(["widgets", "common"]);
   const { params: sessionParams } = useDashboardContext();
   const [exportBusy, setExportBusy] = useState(false);
 
@@ -125,23 +127,23 @@ export default function ReportWidgetView({
         )}
       </div>
       <div className="dash-widget-body">
-        {!widget.reportPath?.trim() && <p className="hint">Укажите reportPath</p>}
+        {!widget.reportPath?.trim() && <p className="hint">{t("view.specifyReportPath")}</p>}
         {editable && widget.reportPath?.trim() && (
-          <p className="hint">Превью отчёта (параметры из parametersJson / session).</p>
+          <p className="hint">{t("view.reportPreview")}</p>
         )}
-        {runQuery.isLoading && <p className="hint">Загрузка…</p>}
+        {runQuery.isLoading && <p className="hint">{t("common:action.loading")}</p>}
         {runQuery.error && <p className="hint error">{(runQuery.error as Error).message}</p>}
         {runQuery.data && (
           <>
             {runQuery.data.truncated && widget.showTruncatedWarning !== false && (
               <div className="banner warning report-truncated-banner">
-                Показаны первые {runQuery.data.rowCount} строк (truncated)
+                {t("view.reportTruncated", { count: runQuery.data.rowCount })}
               </div>
             )}
             <BffDataTable
               rows={runQuery.data.rows}
               labels={labels}
-              emptyMessage={widget.emptyMessage ?? "Нет строк"}
+              emptyMessage={widget.emptyMessage ?? t("empty.noRows")}
             />
           </>
         )}

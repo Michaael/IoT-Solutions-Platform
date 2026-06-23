@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchObjects, fetchVariables } from "../../../api";
 import type { CardGridWidget } from "../../../types/dashboard";
@@ -19,6 +20,7 @@ export default function CardGridWidgetView({
   refreshIntervalMs,
   editable,
 }: CardGridWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { setSelection, navigateToDashboard, openDashboardModal } = useDashboardContext();
   const variables = useMemo(() => {
@@ -65,7 +67,7 @@ export default function CardGridWidgetView({
       editable={editable}
     >
       {!widget.parentPath ? (
-        <p className="hint">Укажите parentPath</p>
+        <p className="hint">{t("view.specifyParentPath")}</p>
       ) : (
         <div className="dash-card-grid" style={styles.body}>
           {(children.data ?? []).map((obj) => (

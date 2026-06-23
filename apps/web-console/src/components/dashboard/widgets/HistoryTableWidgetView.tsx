@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchVariableHistory } from "../../../api";
 import type { HistoryTableWidget } from "../../../types/dashboard";
@@ -19,6 +20,7 @@ export default function HistoryTableWidgetView({
   refreshIntervalMs,
   editable,
 }: HistoryTableWidgetViewProps) {
+  const { t } = useTranslation(["widgets", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const field = widget.valueField ?? "value";
@@ -66,25 +68,25 @@ export default function HistoryTableWidgetView({
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-history-table"
       editable={editable}
-      footer="последние 5 мин"
+      footer={t("view.historyTable.footer")}
     >
       {!objectPath && widget.selectionKey ? (
-        <p className="hint">Выберите объект</p>
+        <p className="hint">{t("view.selectObject")}</p>
       ) : !variableName ? (
-        <p className="hint">Укажите переменную</p>
+        <p className="hint">{t("view.specifyVariable")}</p>
       ) : history.isLoading ? (
-        <p className="hint">Загрузка…</p>
+        <p className="hint">{t("common:action.loading")}</p>
       ) : history.isError ? (
-        <p className="hint">Ошибка загрузки истории</p>
+        <p className="hint">{t("view.historyLoadError")}</p>
       ) : rows.length === 0 ? (
-        <p className="hint">Нет точек за 5 минут</p>
+        <p className="hint">{t("view.noHistoryPoints")}</p>
       ) : (
         <div className="dash-table-wrap" style={styles.body}>
           <table className="dash-object-table" style={styles.table}>
             <thead>
               <tr>
-                <th>Время</th>
-                <th>Значение</th>
+                <th>{t("view.historyTable.time")}</th>
+                <th>{t("view.historyTable.value")}</th>
               </tr>
             </thead>
             <tbody>
@@ -102,7 +104,7 @@ export default function HistoryTableWidgetView({
             <tfoot>
               <tr className="dash-history-table-avg">
                 <td>
-                  <strong>Среднее</strong>
+                  <strong>{t("view.historyTable.average")}</strong>
                 </td>
                 <td>
                   <strong>

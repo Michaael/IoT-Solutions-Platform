@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invokeFunction } from "../../../api";
 import type { DataRecord } from "../../../types";
@@ -14,6 +15,7 @@ interface FunctionWidgetViewProps {
 }
 
 export default function FunctionWidgetView({ widget, editable }: FunctionWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const queryClient = useQueryClient();
@@ -24,7 +26,7 @@ export default function FunctionWidgetView({ widget, editable }: FunctionWidgetV
   const mutation = useMutation({
     mutationFn: () => {
       if (!objectPath || !widget.functionName) {
-        throw new Error("Объект и функция обязательны");
+        throw new Error(t("error.objectAndFunctionRequired"));
       }
       let input: DataRecord | undefined;
       if (widget.inputJson?.trim()) {
@@ -35,11 +37,11 @@ export default function FunctionWidgetView({ widget, editable }: FunctionWidgetV
     onSuccess: (result) => {
       const row = result.rows?.[0];
       if (row?.success === false) {
-        setError(String(row.message ?? "Ошибка"));
+        setError(String(row.message ?? t("view.errorGeneric")));
         setMessage(null);
         return;
       }
-      const text = row?.message ? String(row.message) : "Выполнено";
+      const text = row?.message ? String(row.message) : t("view.done");
       setMessage(text);
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["variables"] });

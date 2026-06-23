@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getStoredSession } from "../auth/session";
 import { isFederatedCatalogPath } from "../utils/federationPath";
+import { refreshWorkQueue } from "./workQueueCache";
 
 export interface ObjectWsMessage {
   type: "CREATED" | "UPDATED" | "DELETED" | "VARIABLE_UPDATED" | "EVENT_FIRED" | "presence";
@@ -77,10 +78,12 @@ export function useObjectWebSocket() {
               queryClient.invalidateQueries({ queryKey: ["variables", message.path] });
               queryClient.invalidateQueries({ queryKey: ["events", message.path] });
               queryClient.invalidateQueries({ queryKey: ["events", "all"] });
+              queryClient.invalidateQueries({ queryKey: ["events", "operator-sidebar"] });
               break;
             case "EVENT_FIRED":
               queryClient.invalidateQueries({ queryKey: ["events", message.path] });
               queryClient.invalidateQueries({ queryKey: ["events", "all"] });
+              queryClient.invalidateQueries({ queryKey: ["events", "operator-sidebar"] });
               break;
             case "presence":
               break;
@@ -90,8 +93,11 @@ export function useObjectWebSocket() {
             queryClient.invalidateQueries({ queryKey: ["dashboard", message.path] });
             queryClient.invalidateQueries({ queryKey: ["workflow", message.path] });
           }
+          if (message.type === "UPDATED") {
+            void refreshWorkQueue(queryClient);
+          }
           if (message.type === "VARIABLE_UPDATED" || message.type === "EVENT_FIRED") {
-            queryClient.invalidateQueries({ queryKey: ["work-queue"] });
+            void refreshWorkQueue(queryClient);
           }
         } catch {
           // ignore malformed messages

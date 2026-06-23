@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { updateAlertRule, validateExpression } from "../../api";
 import type { CreateAlertRulePayload } from "../../types/automation";
 import { variableBoolean, variableString } from "../../utils/variableFieldValue";
@@ -11,6 +12,7 @@ interface AlertRuleInspectorProps {
 }
 
 export default function AlertRuleInspector({ path, canManage = false }: AlertRuleInspectorProps) {
+  const { t } = useTranslation(["automation", "common"]);
   const queryClient = useQueryClient();
   const variablesQuery = useInspectorVariables(path);
 
@@ -42,15 +44,15 @@ export default function AlertRuleInspector({ path, canManage = false }: AlertRul
   });
 
   if (inspectorQueryLoading(variablesQuery)) {
-    return <p className="hint">Загрузка правила…</p>;
+    return <p className="hint">{t("automation:alertRule.loading")}</p>;
   }
 
   return (
     <section className="automation-inspector">
       <header className="automation-panel-head">
         <div>
-          <h3>Правило алерта</h3>
-          <p className="hint">CEL-условие на изменение переменной → публикация события</p>
+          <h3>{t("automation:alertRule.title")}</h3>
+          <p className="hint">{t("automation:alertRule.subtitle")}</p>
           <p className="hint">
             <code>{path}</code>
           </p>
@@ -77,19 +79,19 @@ export default function AlertRuleInspector({ path, canManage = false }: AlertRul
         }}
       >
         <label className="full">
-          Объект (targetObjectPath) *
+          {t("automation:alertRule.targetObject")}
           <input name="objectPath" defaultValue={form.objectPath} required readOnly={!canManage} />
         </label>
         <label>
-          Переменная *
+          {t("automation:alertRule.variable")}
           <input name="watchVariable" defaultValue={form.watchVariable} required readOnly={!canManage} />
         </label>
         <label>
-          Событие *
+          {t("automation:alertRule.event")}
           <input name="eventName" defaultValue={form.eventName} required readOnly={!canManage} />
         </label>
         <label className="full">
-          CEL-условие *
+          {t("automation:alertRule.celCondition")}
           <textarea
             name="conditionExpr"
             defaultValue={form.conditionExpr}
@@ -99,7 +101,7 @@ export default function AlertRuleInspector({ path, canManage = false }: AlertRul
           />
         </label>
         <label className="full">
-          Payload variable
+          {t("automation:alertRule.payloadVariable")}
           <input name="payloadVariable" defaultValue={form.payloadVariable} readOnly={!canManage} />
         </label>
         <label className="checkbox">
@@ -109,7 +111,7 @@ export default function AlertRuleInspector({ path, canManage = false }: AlertRul
             defaultChecked={form.enabled}
             disabled={!canManage}
           />
-          Включено
+          {t("automation:alertRule.enabled")}
         </label>
         <label className="checkbox">
           <input
@@ -118,7 +120,7 @@ export default function AlertRuleInspector({ path, canManage = false }: AlertRul
             defaultChecked={form.edgeTrigger}
             disabled={!canManage}
           />
-          Edge trigger
+          {t("automation:alertRule.edgeTrigger")}
         </label>
         {canManage && (
           <div className="form-actions full">
@@ -136,16 +138,16 @@ export default function AlertRuleInspector({ path, canManage = false }: AlertRul
                 }
               }}
             >
-              Проверить CEL
+              {t("automation:alertRule.validateCel")}
             </button>
             <button type="submit" className="btn primary" disabled={saveMutation.isPending}>
-              Сохранить
+              {t("common:action.save")}
             </button>
           </div>
         )}
         {validateMutation.data && (
           <p className={`hint full ${validateMutation.data.valid ? "" : "error"}`}>
-            {validateMutation.data.valid ? "CEL OK" : validateMutation.data.error}
+            {validateMutation.data.valid ? t("automation:alertRule.celOk") : validateMutation.data.error}
           </p>
         )}
         {saveMutation.error && (

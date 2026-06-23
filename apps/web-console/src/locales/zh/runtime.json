@@ -1,0 +1,22 @@
+{
+  "fireEvent.event": "事件：",
+  "fireEvent.object": "对象：",
+  "fireEvent.payload": "负载 (JSON DataRecord，可选)",
+  "fireEvent.payloadHint": "空对象或仅 schema/rows — 平台从描述符填充架构。",
+  "fireEvent.publish": "发布",
+  "fireEvent.publishing": "正在发布…",
+  "fireEvent.title": "发布事件",
+  "functionJournal.empty": "暂无调用",
+  "functionJournal.filter.all": "全部",
+  "functionJournal.filter.error": "错误",
+  "functionJournal.filter.success": "成功",
+  "functionJournal.loadError": "无法加载日志",
+  "functionJournal.subtitle": "通过 API、工作流、调度器和 UI 的所有调用",
+  "functionJournal.title": "函数调用日志",
+  "invokeFunction.input": "输入 (JSON DataRecord)",
+  "invokeFunction.inputHint": "空 rows — 平台从描述符填充 inputSchema。",
+  "invokeFunction.invoke": "调用",
+  "invokeFunction.invoking": "正在调用…",
+  "invokeFunction.result": "结果",
+  "invokeFunction.title": "调用函数"
+}

@@ -1,11 +1,14 @@
 import { lazy, Suspense, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchWorkflow,
   runWorkflow,
   saveWorkflowBpmn,
+  updateWorkflowOperatorApp,
   updateWorkflowStatus,
 } from "../../api";
+import { fetchOperatorApps } from "../../api/operatorApps";
 import type { WorkflowLifecycleStatus } from "../../types/workflow";
 import { parseInstanceState } from "../../types/workflow";
 
@@ -19,10 +22,10 @@ interface WorkflowBuilderProps {
   onOpenProperties?: () => void;
 }
 
-const STATUS_LABELS: Record<WorkflowLifecycleStatus, string> = {
-  DRAFT: "Черновик",
-  ACTIVE: "Активен",
-  STOPPED: "Остановлен",
+const STATUS_KEYS: Record<WorkflowLifecycleStatus, string> = {
+  DRAFT: "status.draft",
+  ACTIVE: "status.active",
+  STOPPED: "status.stopped",
 };
 
 type BpmnTab = "diagram" | "xml";
@@ -32,6 +35,7 @@ export default function WorkflowBuilder({
   onClose,
   onOpenProperties,
 }: WorkflowBuilderProps) {
+  const { t } = useTranslation(["workflow", "common"]);
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [bpmnTab, setBpmnTab] = useState<BpmnTab>("diagram");
@@ -40,6 +44,12 @@ export default function WorkflowBuilder({
   const workflow = useQuery({
     queryKey: ["workflow", path],
     queryFn: () => fetchWorkflow(path),
+  });
+
+  const operatorApps = useQuery({
+    queryKey: ["operator-apps"],
+    queryFn: fetchOperatorApps,
+    staleTime: 60_000,
   });
 
   const bpmnXml = draftBpmn ?? workflow.data?.bpmnXml ?? "";
@@ -70,14 +80,19 @@ export default function WorkflowBuilder({
     },
   });
 
+  const operatorAppMutation = useMutation({
+    mutationFn: (operatorAppId: string) => updateWorkflowOperatorApp(path, operatorAppId),
+    onSuccess: (data) => queryClient.setQueryData(["workflow", path], data),
+  });
+
   if (workflow.isLoading) {
-    return <div className="workflow-shell loading">Загрузка workflow…</div>;
+    return <div className="workflow-shell loading">{t("workflow:loading")}</div>;
   }
 
   if (workflow.error) {
     return (
       <div className="workflow-shell error">
-        Не удалось загрузить workflow: {(workflow.error as Error).message}
+        {t("workflow:loadError", { message: (workflow.error as Error).message })}
       </div>
     );
   }
@@ -88,15 +103,15 @@ export default function WorkflowBuilder({
     <div className="workflow-shell">
       <header className="dashboard-toolbar workflow-toolbar">
         <div>
-          <div className="dashboard-kicker">Workflow · BPMN / NATS</div>
+          <div className="dashboard-kicker">{t("workflow:kicker")}</div>
           <h2>{workflow.data?.title ?? path}</h2>
           <code className="path-code">{path}</code>
           <div className="workflow-status-row">
             <span className={`workflow-pill status-${status.toLowerCase()}`}>
-              {STATUS_LABELS[status]}
+              {t(`workflow:${STATUS_KEYS[status]}`)}
             </span>
             {workflow.data?.lastRunAt && (
-              <span className="hint">Последний запуск: {workflow.data.lastRunAt}</span>
+              <span className="hint">{t("workflow:lastRun", { time: workflow.data.lastRunAt })}</span>
             )}
           </div>
         </div>
@@ -106,7 +121,7 @@ export default function WorkflowBuilder({
             className={`btn ${mode === "view" ? "primary" : ""}`}
             onClick={() => setMode("view")}
           >
-            Просмотр
+            {t("common:action.view")}
           </button>
           <button
             type="button"
@@ -116,7 +131,7 @@ export default function WorkflowBuilder({
               setBpmnTab("diagram");
             }}
           >
-            Редактор
+            {t("common:action.editor")}
           </button>
           {status !== "ACTIVE" && (
             <button
@@ -125,7 +140,7 @@ export default function WorkflowBuilder({
               disabled={statusMutation.isPending}
               onClick={() => statusMutation.mutate("ACTIVE")}
             >
-              Активировать
+              {t("workflow:activate")}
             </button>
           )}
           {status === "ACTIVE" && (
@@ -135,7 +150,7 @@ export default function WorkflowBuilder({
               disabled={statusMutation.isPending}
               onClick={() => statusMutation.mutate("STOPPED")}
             >
-              Остановить
+              {t("workflow:stop")}
             </button>
           )}
           <button
@@ -144,11 +159,11 @@ export default function WorkflowBuilder({
             disabled={runMutation.isPending}
             onClick={() => runMutation.mutate()}
           >
-            Запустить
+            {t("workflow:run")}
           </button>
           {onOpenProperties && (
             <button type="button" className="btn" onClick={onOpenProperties}>
-              Свойства
+              {t("common:action.properties")}
             </button>
           )}
           {dirty && (
@@ -158,18 +173,38 @@ export default function WorkflowBuilder({
               disabled={saveMutation.isPending}
               onClick={() => saveMutation.mutate()}
             >
-              Сохранить BPMN
+              {t("workflow:saveBpmn")}
             </button>
           )}
           <button type="button" className="btn" onClick={onClose}>
-            Закрыть
+            {t("common:action.close")}
           </button>
         </div>
       </header>
 
       <div className="workflow-body">
         <section className="workflow-panel workflow-side-panel">
-          <h3>Триггер</h3>
+          <h3>{t("workflow:operatorApp.title")}</h3>
+          <p className="hint">
+            {t("workflow:operatorApp.hint")}
+          </p>
+          <label className="workflow-operator-app-field">
+            <span className="field-label">{t("workflow:operatorApp.field")}</span>
+            <select
+              value={workflow.data?.operatorAppId ?? ""}
+              disabled={operatorAppMutation.isPending}
+              onChange={(e) => operatorAppMutation.mutate(e.target.value)}
+            >
+              <option value="">{t("common:empty.notAssigned")}</option>
+              {(operatorApps.data ?? []).map((app) => (
+                <option key={app.appId} value={app.appId}>
+                  {app.title} ({app.appId})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <h3>{t("workflow:trigger.title")}</h3>
           <pre className="workflow-code-block">{workflow.data?.triggerJson}</pre>
 
           {mode === "edit" && (
@@ -178,19 +213,19 @@ export default function WorkflowBuilder({
             </Suspense>
           )}
 
-          <h3>Экземпляр</h3>
+          <h3>{t("workflow:instance.title")}</h3>
           <div className="workflow-instance-grid">
             <div>
-              <span className="field-label">ID</span>
-              <div>{instance.instanceId ?? "—"}</div>
+              <span className="field-label">{t("common:table.id")}</span>
+              <div>{instance.instanceId ?? t("common:empty.dash")}</div>
             </div>
             <div>
-              <span className="field-label">Статус</span>
-              <div>{instance.status ?? "—"}</div>
+              <span className="field-label">{t("workflow:instance.status")}</span>
+              <div>{instance.status ?? t("common:empty.dash")}</div>
             </div>
             <div>
-              <span className="field-label">Узел</span>
-              <div className="mono">{instance.currentNodeId ?? "—"}</div>
+              <span className="field-label">{t("workflow:instance.node")}</span>
+              <div className="mono">{instance.currentNodeId ?? t("common:empty.dash")}</div>
             </div>
           </div>
           {instance.history && instance.history.length > 0 && (
@@ -203,7 +238,7 @@ export default function WorkflowBuilder({
 
         <section className="workflow-panel workflow-panel-wide workflow-bpmn-panel">
           <div className="workflow-bpmn-head">
-            <h3>BPMN 2.0</h3>
+            <h3>{t("workflow:bpmn.title")}</h3>
             {mode === "edit" && (
               <div className="workflow-bpmn-tabs">
                 <button
@@ -211,14 +246,14 @@ export default function WorkflowBuilder({
                   className={`btn ${bpmnTab === "diagram" ? "primary" : ""}`}
                   onClick={() => setBpmnTab("diagram")}
                 >
-                  Диаграмма
+                  {t("workflow:bpmn.tab.diagram")}
                 </button>
                 <button
                   type="button"
                   className={`btn ${bpmnTab === "xml" ? "primary" : ""}`}
                   onClick={() => setBpmnTab("xml")}
                 >
-                  Исходник XML
+                  {t("workflow:bpmn.tab.xml")}
                 </button>
               </div>
             )}
@@ -226,19 +261,18 @@ export default function WorkflowBuilder({
 
           {mode === "edit" && bpmnTab === "diagram" && (
             <p className="hint bpmn-hint">
-              ISPF-атрибуты (<code>ispf:*</code>, messageTask) сохраняются при редактировании топологии.
-              Для точной правки атрибутов используйте вкладку «Исходник XML».
+              {t("workflow:bpmn.hint")}
             </p>
           )}
 
           {mode === "view" && (
-            <Suspense fallback={<p className="hint">Загрузка диаграммы…</p>}>
+            <Suspense fallback={<p className="hint">{t("workflow:bpmn.loadingDiagram")}</p>}>
               <BpmnDiagramViewer xml={bpmnXml} />
             </Suspense>
           )}
 
           {mode === "edit" && bpmnTab === "diagram" && (
-            <Suspense fallback={<p className="hint">Загрузка редактора…</p>}>
+            <Suspense fallback={<p className="hint">{t("workflow:bpmn.loadingEditor")}</p>}>
               <BpmnDiagramEditor
                 key={`${path}-diagram`}
                 xml={bpmnXml}

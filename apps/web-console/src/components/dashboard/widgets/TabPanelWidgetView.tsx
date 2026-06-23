@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DashboardWidget, TabPanelWidget, TabPanelTab } from "../../../types/dashboard";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
@@ -17,6 +18,7 @@ export default function TabPanelWidgetView({
   editable,
   depth = 0,
 }: TabPanelWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const tabs = useMemo(() => {
     try {
@@ -38,7 +40,7 @@ export default function TabPanelWidgetView({
       editable={editable}
     >
       {tabs.length === 0 ? (
-        <p className="hint">Укажите tabsJson</p>
+        <p className="hint">{t("view.specifyTabsJson")}</p>
       ) : (
         <div className="dash-tab-panel-body" style={styles.body}>
           <nav className="dash-tab-bar">
@@ -60,7 +62,7 @@ export default function TabPanelWidgetView({
                   editable: editable ?? false,
                   depth: depth + 1,
                 })
-              : <p className="hint">Пустая вкладка</p>}
+              : <p className="hint">{t("view.emptyTab")}</p>}
           </div>
         </div>
       )}

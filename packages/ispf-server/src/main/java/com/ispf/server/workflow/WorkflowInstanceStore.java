@@ -1,6 +1,8 @@
 package com.ispf.server.workflow;
 
 import tools.jackson.databind.ObjectMapper;
+import com.ispf.core.object.PlatformObject;
+import com.ispf.core.object.Variable;
 import com.ispf.plugin.workflow.BpmnProcess;
 import com.ispf.plugin.workflow.ExecutionToken;
 import com.ispf.plugin.workflow.InstanceStatus;
@@ -11,6 +13,7 @@ import com.ispf.server.persistence.WorkflowInstanceRepository;
 import com.ispf.server.persistence.WorkflowUserTaskRepository;
 import com.ispf.server.persistence.entity.WorkflowInstanceEntity;
 import com.ispf.server.persistence.entity.WorkflowUserTaskEntity;
+import com.ispf.server.object.ObjectManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -25,15 +29,18 @@ public class WorkflowInstanceStore {
 
     private final WorkflowInstanceRepository instanceRepository;
     private final WorkflowUserTaskRepository userTaskRepository;
+    private final ObjectManager objectManager;
     private final ObjectMapper objectMapper;
 
     public WorkflowInstanceStore(
             WorkflowInstanceRepository instanceRepository,
             WorkflowUserTaskRepository userTaskRepository,
+            ObjectManager objectManager,
             ObjectMapper objectMapper
     ) {
         this.instanceRepository = instanceRepository;
         this.userTaskRepository = userTaskRepository;
+        this.objectManager = objectManager;
         this.objectMapper = objectMapper;
     }
 
@@ -94,6 +101,7 @@ public class WorkflowInstanceStore {
             }
             task.setInstanceId(instance.instanceId());
             task.setWorkflowPath(instance.workflowPath());
+            task.setOperatorAppId(resolveOperatorAppId(instance.workflowPath()));
             task.setTaskNodeId(pendingUserTask.id());
             task.setTitle(pendingUserTask.title());
             task.setInstructions(pendingUserTask.instructions());
@@ -103,6 +111,23 @@ public class WorkflowInstanceStore {
                 task.setStatus("OPEN");
             }
             userTaskRepository.save(task);
+    }
+
+    private String resolveOperatorAppId(String workflowPath) {
+        try {
+            PlatformObject workflow = objectManager.require(workflowPath);
+            return readString(workflow, "operatorAppId").orElse(null);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static Optional<String> readString(PlatformObject node, String variableName) {
+        return node.getVariable(variableName)
+                .flatMap(Variable::value)
+                .map(record -> record.firstRow().get("value"))
+                .map(Object::toString)
+                .filter(value -> !value.isBlank());
     }
 
     @Transactional(readOnly = true)

@@ -201,6 +201,25 @@ Sprint E–G в [PLATFORM_DEVELOPER_BACKLOG.md §8](PLATFORM_DEVELOPER_BACKLOG.m
 
 См. [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md), [examples/mini-tec/](../examples/mini-tec/).
 
+## Phase 19 — Web Console i18n (UI localization)
+
+Перевод интерфейса Web Console: **выпадающий выбор языка в шапке** (admin + operator + login), сохранение в `localStorage` и `?lang=`, **эталон `en`**, fallback `en`.
+
+| # | Тема | Статус |
+|---|------|--------|
+| 19.1 | ADR-0020 + `react-i18next`, `locales/{en,ru,de,zh}/*.json`, `LocaleSwitcher` | Done |
+| 19.2 | Shell: login, навигация, Explorer, System | Done |
+| 19.3 | Инспекторы, Models, Dashboard/Widget editor, Report Builder | Done |
+| 19.4 | Operator HMI, automation, federation, AI Studio | Done |
+| 19.5 | Языки: **en** (canonical), **ru**, **de**, **zh** | Done |
+| 19.6 | `npm run i18n:check` (ключи vs en) | Done |
+
+**In scope:** статический UI Web Console (labels, buttons, tabs, empty states, validation).
+
+**Out of scope (отдельно):** пользовательский контент дерева (`displayName`, BPMN, bundle dashboards), server error messages, AI agent replies.
+
+Track: **UI** (не REQ-PF — не меняет platform API). См. [ADR-0020](decisions/0020-web-console-i18n.md).
+
 ## Platform baseline
 
 | # | Тема | Статус |

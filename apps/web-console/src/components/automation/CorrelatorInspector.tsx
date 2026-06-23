@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { updateCorrelator } from "../../api";
 import type { CorrelatorActionType, CorrelatorPatternType, CreateCorrelatorPayload } from "../../types/automation";
 import { variableBoolean, variableNumber, variableString } from "../../utils/variableFieldValue";
@@ -11,6 +12,7 @@ interface CorrelatorInspectorProps {
 }
 
 export default function CorrelatorInspector({ path, canManage = false }: CorrelatorInspectorProps) {
+  const { t } = useTranslation(["automation", "common"]);
   const queryClient = useQueryClient();
   const variablesQuery = useInspectorVariables(path);
 
@@ -27,15 +29,15 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
   });
 
   if (inspectorQueryLoading(variablesQuery)) {
-    return <p className="hint">Загрузка коррелятора…</p>;
+    return <p className="hint">{t("automation:correlator.loading")}</p>;
   }
 
   return (
     <section className="automation-inspector">
       <header className="automation-panel-head">
         <div>
-          <h3>Коррелятор событий</h3>
-          <p className="hint">События → workflow (COUNT или SEQUENCE)</p>
+          <h3>{t("automation:correlator.title")}</h3>
+          <p className="hint">{t("automation:correlator.subtitle")}</p>
           <p className="hint">
             <code>{path}</code>
           </p>
@@ -65,7 +67,7 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
         }}
       >
         <label className="full">
-          Фильтр объекта (пусто = любой)
+          {t("automation:correlator.objectFilter")}
           <input
             name="objectPath"
             defaultValue={variableString(variables, "targetObjectPath")}
@@ -73,7 +75,7 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label>
-          Паттерн
+          {t("automation:correlator.pattern")}
           <select name="patternType" defaultValue={patternType} disabled={!canManage}>
             <option value="COUNT">COUNT</option>
             <option value="SEQUENCE">SEQUENCE</option>
@@ -81,14 +83,14 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           </select>
         </label>
         <label>
-          Действие
+          {t("automation:correlator.action")}
           <select name="actionType" defaultValue={actionType} disabled={!canManage}>
             <option value="RUN_WORKFLOW">RUN_WORKFLOW</option>
             <option value="FIRE_EVENT">FIRE_EVENT</option>
           </select>
         </label>
         <label>
-          Событие *
+          {t("automation:correlator.event")}
           <input
             name="eventName"
             defaultValue={variableString(variables, "eventName")}
@@ -97,16 +99,18 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label>
-          {actionType === "FIRE_EVENT" ? "Событие (actionTarget) *" : "Второе событие / цепочка"}
+          {actionType === "FIRE_EVENT"
+            ? t("automation:correlator.actionEvent")
+            : t("automation:correlator.secondEventChain")}
           <input
             name="secondEventName"
             defaultValue={variableString(variables, "secondEventName")}
             readOnly={!canManage}
-            placeholder="eventB или eventA,eventB,eventC"
+            placeholder={t("automation:correlator.secondEventPlaceholder")}
           />
         </label>
         <label>
-          Окно (с)
+          {t("automation:correlator.windowSeconds")}
           <input
             name="windowSeconds"
             type="number"
@@ -116,7 +120,7 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label>
-          Min occurrences
+          {t("automation:correlator.minOccurrences")}
           <input
             name="minOccurrences"
             type="number"
@@ -126,7 +130,7 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label>
-          Cooldown (с)
+          {t("automation:correlator.cooldownSeconds")}
           <input
             name="cooldownSeconds"
             type="number"
@@ -136,7 +140,9 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label className="full">
-          {actionType === "FIRE_EVENT" ? "Имя события (actionTarget) *" : "Workflow (actionTarget) *"}
+          {actionType === "FIRE_EVENT"
+            ? t("automation:correlator.actionEvent")
+            : t("automation:correlator.actionWorkflow")}
           <input
             name="actionTarget"
             defaultValue={variableString(variables, "actionTarget")}
@@ -151,12 +157,12 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
             defaultChecked={variableBoolean(variables, "enabled", true)}
             disabled={!canManage}
           />
-          Включено
+          {t("automation:alertRule.enabled")}
         </label>
         {canManage && (
           <div className="form-actions full">
             <button type="submit" className="btn primary" disabled={saveMutation.isPending}>
-              Сохранить
+              {t("common:action.save")}
             </button>
           </div>
         )}

@@ -1,14 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { login } from "../auth/login";
 import { fetchAuthConfig, startOidcLogin } from "../auth/oidc";
 import type { AuthSession } from "../auth/session";
+import LocaleSwitcher from "./LocaleSwitcher";
 
 interface LoginViewProps {
   onLoggedIn: (session: AuthSession) => void;
 }
 
 export default function LoginView({ onLoggedIn }: LoginViewProps) {
+  const { t } = useTranslation(["shell", "common"]);
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("admin");
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +57,13 @@ export default function LoginView({ onLoggedIn }: LoginViewProps) {
   return (
     <div className="login-shell">
       <form className="login-card" onSubmit={(event) => void submit(event)}>
-        <h1>ISPF</h1>
-        <p className="login-sub">Вход в платформу</p>
+        <div className="login-card-head">
+          <LocaleSwitcher />
+        </div>
+        <h1>{t("shell:login.title")}</h1>
+        <p className="login-sub">{t("shell:login.subtitle")}</p>
 
-        {authConfigQuery.isLoading && <p className="login-hint">Загрузка конфигурации auth…</p>}
+        {authConfigQuery.isLoading && <p className="login-hint">{t("shell:login.loadingAuthConfig")}</p>}
         {authConfigQuery.error && (
           <div className="op-alert op-alert-error">{String(authConfigQuery.error)}</div>
         )}
@@ -65,11 +71,11 @@ export default function LoginView({ onLoggedIn }: LoginViewProps) {
         {showLocalLogin && (
           <>
             <label>
-              Логин
+              {t("shell:login.username")}
               <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
             </label>
             <label>
-              Пароль
+              {t("shell:login.password")}
               <input
                 type="password"
                 value={password}
@@ -78,19 +84,19 @@ export default function LoginView({ onLoggedIn }: LoginViewProps) {
               />
             </label>
             <button type="submit" className="btn primary" disabled={pending}>
-              {pending ? "Вход…" : "Войти"}
+              {pending ? t("shell:login.submitting") : t("shell:login.submit")}
             </button>
-            <p className="login-hint">По умолчанию: admin/admin или operator/operator</p>
+            <p className="login-hint">{t("shell:login.defaultHint")}</p>
           </>
         )}
 
         {showOidcLogin && (
           <>
             <button type="button" className="btn primary" disabled={pending} onClick={() => void loginWithKeycloak()}>
-              {pending ? "Переход…" : "Войти через Keycloak"}
+              {pending ? t("shell:login.oidcRedirecting") : t("shell:login.oidcSubmit")}
             </button>
             <p className="login-hint">
-              OIDC realm <code>{authConfig?.oidc?.issuer ?? "—"}</code>
+              {t("shell:login.oidcRealm")} <code>{authConfig?.oidc?.issuer ?? t("common:empty.dash")}</code>
             </p>
           </>
         )}

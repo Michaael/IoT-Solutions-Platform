@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   CartesianGrid,
   Line,
@@ -15,14 +16,6 @@ import {
   useVariableHistory,
 } from "../hooks/useVariableHistory";
 
-const RANGE_OPTIONS: { id: HistoryRange; label: string }[] = [
-  { id: "1h", label: "1 ч" },
-  { id: "6h", label: "6 ч" },
-  { id: "24h", label: "24 ч" },
-  { id: "7d", label: "7 д" },
-  { id: "all", label: "Всё" },
-];
-
 interface VariableHistoryPanelProps {
   objectPath: string;
   variableName: string;
@@ -37,6 +30,14 @@ export default function VariableHistoryPanel({
   fields = ["value"],
   refreshIntervalMs = 15_000,
 }: VariableHistoryPanelProps) {
+  const { t } = useTranslation("inspector");
+  const rangeOptions: { id: HistoryRange; labelKey: string }[] = [
+    { id: "1h", labelKey: "variables.historyPanel.range1h" },
+    { id: "6h", labelKey: "variables.historyPanel.range6h" },
+    { id: "24h", labelKey: "variables.historyPanel.range24h" },
+    { id: "7d", labelKey: "variables.historyPanel.range7d" },
+    { id: "all", labelKey: "variables.historyPanel.rangeAll" },
+  ];
   const [range, setRange] = useState<HistoryRange>("24h");
   const [field, setField] = useState(fields[0] ?? "value");
   const [exportError, setExportError] = useState<string | null>(null);
@@ -95,13 +96,13 @@ export default function VariableHistoryPanel({
               )}
             </>
           ) : (
-            <span className="hint">Нет данных за выбранный период</span>
+            <span className="hint">{t("variables.historyPanel.noData")}</span>
           )}
         </div>
         <div className="variable-history-controls">
           {fields.length > 1 && (
             <label className="variable-history-field-select">
-              <span className="sr-only">Поле</span>
+              <span className="sr-only">{t("variables.historyPanel.field")}</span>
               <select value={field} onChange={(e) => setField(e.target.value)}>
                 {fields.map((item) => (
                   <option key={item} value={item}>
@@ -112,14 +113,14 @@ export default function VariableHistoryPanel({
             </label>
           )}
           <div className="variable-history-ranges">
-            {RANGE_OPTIONS.map((option) => (
+            {rangeOptions.map((option) => (
               <button
                 key={option.id}
                 type="button"
                 className={`btn tiny ${range === option.id ? "primary" : ""}`}
                 onClick={() => setRange(option.id)}
               >
-                {option.label}
+                {t(option.labelKey)}
               </button>
             ))}
           </div>
@@ -148,11 +149,11 @@ export default function VariableHistoryPanel({
 
       <div className="variable-history-chart">
         {isLoading && points.length === 0 ? (
-          <p className="hint">Загрузка истории…</p>
+          <p className="hint">{t("variables.historyPanel.loading")}</p>
         ) : isError ? (
           <p className="hint error">{(error as Error).message}</p>
         ) : points.length < 2 ? (
-          <p className="hint">Недостаточно точек для графика</p>
+          <p className="hint">{t("variables.historyPanel.notEnoughPoints")}</p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points}>

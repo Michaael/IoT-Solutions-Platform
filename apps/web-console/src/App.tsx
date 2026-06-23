@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fetchPlatformInfo, reorderObjectChildren } from "./api";
 import { logout } from "./auth/login";
 import { getPrimaryRole, getStoredSession, isAdminSession, setStoredSession, type AuthSession } from "./auth/session";
@@ -50,6 +51,7 @@ import AiStudioPanel from "./components/AiStudioPanel";
 import AgentChatStatusBar from "./components/AgentChatStatusBar";
 import LoginView from "./components/LoginView";
 import PlatformUpdateBanner from "./components/PlatformUpdateBanner";
+import LocaleSwitcher from "./components/LocaleSwitcher";
 import ModelEditorPanel from "./components/ModelEditorPanel";
 import { AgentChatProvider, useAgentChatOptional } from "./context/AgentChatContext";
 import { isModelsPath } from "./types/models";
@@ -67,10 +69,11 @@ function AiStudioWorkspaceTabButton({
 }) {
   const chat = useAgentChatOptional();
   const busy = chat?.isPending;
+  const { t } = useTranslation("shell");
   return (
     <button type="button" className={active ? "active" : ""} onClick={onClick}>
-      AI Studio
-      {busy && <span className="tab-pending-dot" title="Агент выполняет задачу" />}
+      {t("admin.tab.aiStudio")}
+      {busy && <span className="tab-pending-dot" title={t("admin.agentBusyTitle")} />}
     </button>
   );
 }
@@ -96,6 +99,7 @@ function useAppMode(session: AuthSession | null): ["admin" | "operator", (mode: 
 }
 
 export default function App() {
+  const { t } = useTranslation(["shell", "common", "explorer"]);
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession());
   const [appMode, setAppMode] = useAppMode(session);
   const queryClient = useQueryClient();
@@ -451,7 +455,7 @@ export default function App() {
     return (
       <div className="login-shell">
         <div className="login-card">
-          <p className="login-sub">Завершение OIDC входа…</p>
+          <p className="login-sub">{t("shell:login.oidcCompleting")}</p>
         </div>
       </div>
     );
@@ -466,6 +470,7 @@ export default function App() {
     return (
       <OperatorView
         appId={operatorAppId}
+        operatorId={session.username}
         onSelectApp={selectOperatorApp}
         onSwitchAdmin={isAdmin ? () => setAppMode("admin") : undefined}
         session={session}
@@ -481,9 +486,9 @@ export default function App() {
         <div className="brand">
           <span className="brand-mark">ISPF</span>
           <div>
-            <strong>Консоль администратора</strong>
+            <strong>{t("shell:admin.title")}</strong>
             <span className="brand-sub">
-              {session.displayName} · {primaryRole ?? "—"}
+              {session.displayName} · {primaryRole ?? t("common:empty.dash")}
               {info.data?.version ? ` · v${info.data.version}` : ""}
               {info.data?.springBootVersion ? ` · Boot ${info.data.springBootVersion}` : ""}
               {info.data?.javaVersion ? ` · Java ${info.data.javaVersion}` : ""}
@@ -491,8 +496,9 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-actions">
+          <LocaleSwitcher />
           <button type="button" className="btn" onClick={() => void handleLogout()}>
-            Выйти
+            {t("common:action.logout")}
           </button>
         </div>
       </header>
@@ -510,7 +516,7 @@ export default function App() {
             }
           }}
         >
-          Обозреватель
+          {t("shell:admin.tab.explorer")}
         </button>
         {isAdmin && (
           <button
@@ -518,7 +524,7 @@ export default function App() {
             className={workspaceTab === "system" ? "active" : ""}
             onClick={() => setWorkspaceTab("system")}
           >
-            Система
+            {t("shell:admin.tab.system")}
           </button>
         )}
         {isAdmin && (
@@ -559,17 +565,19 @@ export default function App() {
         {showObjectTreeSidebar && (
           <aside className="sidebar" ref={sidebarRef}>
             <div className="sidebar-head">
-              <h3>Дерево объектов</h3>
+              <h3>{t("shell:admin.treeTitle")}</h3>
               <input
                 type="search"
-                placeholder="Поиск…"
+                placeholder={t("common:action.search")}
                 value={treeFilter}
                 onChange={(e) => setTreeFilter(e.target.value)}
               />
             </div>
             <div className="sidebar-body">
               {treeLoadError && <p className="sidebar-msg error">{treeLoadError}</p>}
-              {!treeLoadError && objectList.length === 0 && <p className="sidebar-msg">Загрузка…</p>}
+              {!treeLoadError && objectList.length === 0 && (
+                <p className="sidebar-msg">{t("shell:admin.treeLoading")}</p>
+              )}
               {!treeLoadError && tree.length > 0 && (
                 <ObjectTree
                   nodes={tree}

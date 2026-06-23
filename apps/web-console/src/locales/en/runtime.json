@@ -1,0 +1,22 @@
+{
+  "fireEvent.title": "Publish event",
+  "fireEvent.object": "Object:",
+  "fireEvent.event": "Event:",
+  "fireEvent.payload": "Payload (JSON DataRecord, optional)",
+  "fireEvent.payloadHint": "Empty object or schema/rows only — platform fills schema from descriptor.",
+  "fireEvent.publish": "Publish",
+  "fireEvent.publishing": "Publishing…",
+  "invokeFunction.title": "Invoke function",
+  "invokeFunction.input": "Input (JSON DataRecord)",
+  "invokeFunction.inputHint": "Empty rows — platform fills inputSchema from descriptor.",
+  "invokeFunction.result": "Result",
+  "invokeFunction.invoke": "Invoke",
+  "invokeFunction.invoking": "Invoking…",
+  "functionJournal.title": "Function invoke journal",
+  "functionJournal.subtitle": "All invokes via API, workflow, scheduler, and UI",
+  "functionJournal.filter.all": "all",
+  "functionJournal.filter.success": "success",
+  "functionJournal.filter.error": "error",
+  "functionJournal.loadError": "Failed to load journal",
+  "functionJournal.empty": "No invocations yet"
+}

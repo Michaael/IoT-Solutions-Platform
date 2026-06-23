@@ -44,6 +44,27 @@ export async function registerApplication(
   return response.json() as Promise<{ appId: string; displayName: string }>;
 }
 
+export interface ApplicationEventCatalogEntry {
+  id: string;
+  roles?: string[];
+}
+
+export async function fetchApplicationEventCatalog(
+  appId: string
+): Promise<ApplicationEventCatalogEntry[]> {
+  const response = await fetch(`/api/v1/applications/${encodeURIComponent(appId)}/events`, {
+    headers: getAuthHeaders(),
+  });
+  if (response.status === 404 || response.status === 403) {
+    return [];
+  }
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Application events failed: ${response.status}`);
+  }
+  return response.json() as Promise<ApplicationEventCatalogEntry[]>;
+}
+
 export async function fetchDeployHistory(appId: string): Promise<DeployHistoryEntry[]> {
   const response = await fetch(`/api/v1/applications/${encodeURIComponent(appId)}/deploy/history`, {
     headers: getAuthHeaders(),

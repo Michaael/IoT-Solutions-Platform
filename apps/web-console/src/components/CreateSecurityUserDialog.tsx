@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { createSecurityUser } from "../api/securityUsers";
 import { fetchSecurityRoles } from "../api/securityRoles";
 
@@ -12,6 +13,7 @@ export default function CreateSecurityUserDialog({
   onClose,
   onCreated,
 }: CreateSecurityUserDialogProps) {
+  const { t } = useTranslation(["security", "common"]);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +44,7 @@ export default function CreateSecurityUserDialog({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-create-object" onClick={(e) => e.stopPropagation()}>
         <header>
-          <h3>Новый пользователь</h3>
+          <h3>{t("createUser.title")}</h3>
           <button type="button" className="icon-btn" onClick={onClose}>✕</button>
         </header>
         <form
@@ -53,7 +55,7 @@ export default function CreateSecurityUserDialog({
           }}
         >
           <label className="full">
-            Логин
+            {t("users.column.login")}
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -64,7 +66,7 @@ export default function CreateSecurityUserDialog({
             />
           </label>
           <label className="full">
-            Отображаемое имя
+            {t("common:field.displayName")}
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
@@ -72,7 +74,7 @@ export default function CreateSecurityUserDialog({
             />
           </label>
           <label className="full">
-            Пароль
+            {t("createUser.password")}
             <input
               type="password"
               value={password}
@@ -82,7 +84,7 @@ export default function CreateSecurityUserDialog({
             />
           </label>
           <label className="full">
-            Роль
+            {t("user.role")}
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -99,9 +101,9 @@ export default function CreateSecurityUserDialog({
             <p className="hint error full">{String(mutation.error)}</p>
           )}
           <footer className="full form-actions">
-            <button type="button" className="btn" onClick={onClose}>Отмена</button>
+            <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
             <button type="submit" className="btn primary" disabled={mutation.isPending}>
-              Создать
+              {t("common:action.create")}
             </button>
           </footer>
         </form>

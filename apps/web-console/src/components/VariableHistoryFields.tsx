@@ -1,3 +1,6 @@
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
+
 export interface VariableHistoryState {
   historyEnabled: boolean;
   historyRetentionDays: number | null;
@@ -12,9 +15,9 @@ interface VariableHistoryFieldsProps {
 
 export function formatHistoryRetention(days: number | null | undefined): string {
   if (days == null || days <= 0) {
-    return "платформа (90 дн)";
+    return i18n.t("inspector:variables.historyRetentionPlatform");
   }
-  return `${days} дн`;
+  return i18n.t("inspector:variables.historyRetentionDaysShort", { count: days });
 }
 
 export default function VariableHistoryFields({
@@ -23,6 +26,7 @@ export default function VariableHistoryFields({
   disabled = false,
   idPrefix = "var-history",
 }: VariableHistoryFieldsProps) {
+  const { t } = useTranslation("inspector");
   const retentionId = `${idPrefix}-retention`;
 
   return (
@@ -39,16 +43,16 @@ export default function VariableHistoryFields({
             })
           }
         />
-        Хранить историю значений
+        {t("variables.storeHistory")}
       </label>
       <label htmlFor={retentionId}>
-        Срок хранения (дней)
+        {t("variables.retentionDays")}
         <input
           id={retentionId}
           type="number"
           min={1}
           max={3650}
-          placeholder="платформа (90)"
+          placeholder={t("variables.retentionPlaceholder")}
           disabled={disabled || !value.historyEnabled}
           value={value.historyRetentionDays ?? ""}
           onChange={(e) => {
@@ -61,7 +65,7 @@ export default function VariableHistoryFields({
         />
       </label>
       <p className="hint">
-        Пустой срок — используется платформенный default. История пишется только для числовых полей.
+        {t("variables.retentionHint")}
       </p>
     </div>
   );

@@ -785,6 +785,14 @@ public class ModelBootstrap {
                                 true, DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "{}"))
                         ),
                         ModelVariableDefinition.of(
+                                "operatorAppId",
+                                "Operator App that receives user tasks from this workflow",
+                                "config",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true, DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", ""))
+                        ),
+                        ModelVariableDefinition.of(
                                 "instanceState",
                                 "Last workflow instance state JSON",
                                 "runtime",

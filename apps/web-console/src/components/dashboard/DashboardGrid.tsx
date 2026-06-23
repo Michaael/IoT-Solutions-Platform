@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DashboardLayout, DashboardWidget } from "../../types/dashboard";
 import { mergeWidgetLayout } from "../../types/dashboard";
 import renderDashboardWidget from "./renderDashboardWidget";
@@ -84,6 +85,7 @@ export default function DashboardGrid({
   onLayoutChange,
   subDashboardDepth = 0,
 }: DashboardGridProps) {
+  const { t } = useTranslation("dashboard");
   const { containerRef, width } = useContainerWidth();
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
@@ -235,7 +237,7 @@ export default function DashboardGrid({
               {editable && (
                 <div
                   className="dashboard-grid-resize-handle"
-                  title="Изменить размер"
+                  title={t("grid.resize")}
                   onMouseDown={(event) => startDrag(event, widget, "resize")}
                 />
               )}

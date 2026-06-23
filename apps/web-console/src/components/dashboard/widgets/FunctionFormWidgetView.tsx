@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchObjectEditor, fetchObjects, invokeFunction } from "../../../api";
 import type { FunctionFormField, FunctionFormWidget } from "../../../types/dashboard";
@@ -13,6 +14,7 @@ interface FunctionFormWidgetViewProps {
 }
 
 export default function FunctionFormWidgetView({ widget, editable }: FunctionFormWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const queryClient = useQueryClient();
@@ -39,7 +41,7 @@ export default function FunctionFormWidgetView({ widget, editable }: FunctionFor
   const mutation = useMutation({
     mutationFn: async () => {
       if (!objectPath || !widget.functionName) {
-        throw new Error("Объект и функция обязательны");
+        throw new Error(t("error.objectAndFunctionRequired"));
       }
       const fn = editor.data?.functions.find((f) => f.name === widget.functionName);
       const input = buildFunctionInput(parsedFields, values, fn?.inputSchema);
@@ -48,11 +50,11 @@ export default function FunctionFormWidgetView({ widget, editable }: FunctionFor
     onSuccess: (result) => {
       const row = result.rows?.[0];
       if (row?.success === false) {
-        setError(String(row.message ?? "Ошибка"));
+        setError(String(row.message ?? t("view.errorGeneric")));
         setMessage(null);
         return;
       }
-      setMessage(String(row?.message ?? "Выполнено"));
+      setMessage(String(row?.message ?? t("view.done")));
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["variables"] });
       queryClient.invalidateQueries({ queryKey: ["objects"] });
@@ -78,7 +80,7 @@ export default function FunctionFormWidgetView({ widget, editable }: FunctionFor
       className="dash-widget function-form-widget"
       editable={editable}
     >
-      {!objectPath && <p className="hint">Выберите объект в таблице</p>}
+      {!objectPath && <p className="hint">{t("view.selectObjectInTable")}</p>}
       <form className="function-form-fields" style={styles.body} onSubmit={handleSubmit}>
         {parsedFields.map((field) => (
           <FunctionFormFieldInput

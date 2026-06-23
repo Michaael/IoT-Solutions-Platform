@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { CarouselWidget, DashboardWidget } from "../../../types/dashboard";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
@@ -23,6 +24,7 @@ export default function CarouselWidgetView({
   editable,
   depth = 0,
 }: CarouselWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const slides = useMemo(() => {
     try {
@@ -51,7 +53,7 @@ export default function CarouselWidgetView({
       editable={editable}
     >
       {slides.length === 0 ? (
-        <p className="hint">Укажите slidesJson</p>
+        <p className="hint">{t("view.specifySlidesJson")}</p>
       ) : (
         <div className="dash-carousel-body" style={styles.body}>
           <div className="dash-carousel-nav">

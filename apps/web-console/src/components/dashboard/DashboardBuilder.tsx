@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchObjects,
@@ -61,6 +62,7 @@ export default function DashboardBuilder({
   onParamsChange,
   subDashboardDepth = 0,
 }: DashboardBuilderProps) {
+  const { t } = useTranslation(["dashboard", "common"]);
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"view" | "edit">(operatorMode ? "view" : "view");
   const [draftLayout, setDraftLayout] = useState<DashboardLayout | null>(null);
@@ -252,7 +254,7 @@ export default function DashboardBuilder({
             params: {
               clusterPath: WIDGET_SAMPLE_PATHS.devices,
               device: WIDGET_SAMPLE_PATHS.device,
-              zoneLabel: "Зона A",
+              zoneLabel: t("editor.sampleZoneLabel"),
             },
           })
         : currentSession,
@@ -270,13 +272,13 @@ export default function DashboardBuilder({
   }, [isEditorWorkspace]);
 
   if (dashboard.isLoading) {
-    return <div className="dashboard-shell loading">Загрузка дашборда…</div>;
+    return <div className="dashboard-shell loading">{t("loading")}</div>;
   }
 
   if (dashboard.error) {
     return (
       <div className="dashboard-shell error">
-        Не удалось загрузить дашборд: {(dashboard.error as Error).message}
+        {t("loadError", { message: (dashboard.error as Error).message })}
       </div>
     );
   }
@@ -290,7 +292,7 @@ export default function DashboardBuilder({
       {!operatorMode && (
         <header className="dashboard-toolbar">
           <div>
-            <div className="dashboard-kicker">Dashboard · HMI</div>
+            <div className="dashboard-kicker">{t("kicker")}</div>
             {mode === "edit" ? (
               <input
                 className="dashboard-title-input"
@@ -308,17 +310,17 @@ export default function DashboardBuilder({
               className={`btn ${mode === "view" ? "primary" : ""}`}
               onClick={() => setMode("view")}
             >
-              Просмотр
+              {t("mode.view")}
             </button>
             <button
               type="button"
               className={`btn ${mode === "edit" ? "primary" : ""}`}
               onClick={() => setMode("edit")}
             >
-              Редактор
+              {t("mode.edit")}
             </button>
             <button type="button" className="btn" onClick={() => setShowJson((v) => !v)}>
-              JSON
+              {t("json")}
             </button>
             {mode === "edit" && (
               <button
@@ -326,12 +328,12 @@ export default function DashboardBuilder({
                 className={`btn ${showSettings ? "primary" : ""}`}
                 onClick={() => setShowSettings((v) => !v)}
               >
-                Дашборд
+                {t("settings")}
               </button>
             )}
             {onOpenProperties && (
               <button type="button" className="btn" onClick={onOpenProperties}>
-                Свойства
+                {t("common:action.properties")}
               </button>
             )}
             {dirty && (
@@ -341,12 +343,12 @@ export default function DashboardBuilder({
                 disabled={saveMutation.isPending}
                 onClick={() => saveMutation.mutate()}
               >
-                Сохранить
+                {t("common:action.save")}
               </button>
             )}
             {onClose && (
               <button type="button" className="btn" onClick={onClose}>
-                Закрыть
+                {t("common:action.close")}
               </button>
             )}
           </div>

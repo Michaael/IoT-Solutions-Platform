@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ObjectTreeIcon, {
   TREE_ICON_CATALOG,
   isTreeIconId,
@@ -21,22 +22,24 @@ export default function IconPicker({
   onChange,
   disabled = false,
 }: IconPickerProps) {
+  const { t } = useTranslation("explorer");
   const [open, setOpen] = useState(false);
   const categories = useMemo(() => {
     const map = new Map<string, typeof TREE_ICON_CATALOG>();
     for (const item of TREE_ICON_CATALOG) {
-      if (!map.has(item.category)) {
-        map.set(item.category, []);
+      const categoryLabel = t(`icons.category.${item.category}`);
+      if (!map.has(categoryLabel)) {
+        map.set(categoryLabel, []);
       }
-      map.get(item.category)!.push(item);
+      map.get(categoryLabel)!.push(item);
     }
     return [...map.entries()];
-  }, []);
+  }, [t]);
 
   const effective = isTreeIconId(value) ? value : null;
   const label = effective
-    ? TREE_ICON_CATALOG.find((item) => item.id === effective)?.label ?? effective
-    : "Авто (по типу и пути)";
+    ? t(`icons.${effective}`)
+    : t("icons.autoByType");
 
   const selectIcon = (iconId: string | null) => {
     onChange(iconId);
@@ -49,7 +52,7 @@ export default function IconPicker({
         <button
           type="button"
           className={`icon-picker-preview ${disabled ? "disabled" : ""}`}
-          title={disabled ? label : "Нажмите, чтобы выбрать иконку"}
+          title={disabled ? label : t("icons.clickToSelect")}
           disabled={disabled}
           onClick={() => !disabled && setOpen((v) => !v)}
         >
@@ -58,7 +61,7 @@ export default function IconPicker({
         <span className="hint">{label}</span>
         {!disabled && open && effective && (
           <button type="button" className="btn small" onClick={() => selectIcon(null)}>
-            Сбросить
+            {t("icons.reset")}
           </button>
         )}
       </div>
@@ -67,11 +70,11 @@ export default function IconPicker({
           <button
             type="button"
             className={`icon-picker-item ${effective === null ? "selected" : ""}`}
-            title="Авто"
+            title={t("icons.auto")}
             onClick={() => selectIcon(null)}
           >
             <ObjectTreeIcon path={path} type={type} size={18} />
-            <span>Авто</span>
+            <span>{t("icons.auto")}</span>
           </button>
           {categories.map(([category, items]) => (
             <div key={category} className="icon-picker-group">
@@ -82,7 +85,7 @@ export default function IconPicker({
                     key={item.id}
                     type="button"
                     className={`icon-picker-item ${effective === item.id ? "selected" : ""}`}
-                    title={item.label}
+                    title={t(`icons.${item.id}`)}
                     onClick={() => selectIcon(item.id)}
                   >
                     <ObjectTreeIcon
@@ -91,7 +94,7 @@ export default function IconPicker({
                       iconId={item.id as TreeIconKind}
                       size={18}
                     />
-                    <span>{item.label}</span>
+                    <span>{t(`icons.${item.id}`)}</span>
                   </button>
                 ))}
               </div>

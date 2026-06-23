@@ -1,4 +1,5 @@
 import type { MiniTecSldWidget } from "../../../types/dashboard";
+import { useTranslation } from "react-i18next";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
@@ -140,6 +141,7 @@ export default function MiniTecSldWidgetView({
   refreshIntervalMs,
   editable,
 }: MiniTecSldWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
 
   const gpu1p = useMeas(P.gpu1, "activePowerKw", refreshIntervalMs);
@@ -176,7 +178,7 @@ export default function MiniTecSldWidgetView({
         className="mini-tec-sld-svg"
         viewBox="0 0 1200 400"
         role="img"
-        aria-label="Однолинейная схема Мини-ТЭЦ"
+        aria-label={t("miniTec.ariaLabel")}
         style={styles.body}
       >
         <defs>
@@ -211,14 +213,14 @@ export default function MiniTecSldWidgetView({
               fontSize="12"
               fontWeight="600"
             >
-              ОСТРОВНОЙ РЕЖИМ — питание от собственной генерации
+              {t("miniTec.islandMode")}
             </text>
           </g>
         )}
 
         {/* Gas tract */}
         <text x="28" y="128" fill="#f0883e" fontFamily="Segoe UI, system-ui, sans-serif" fontSize="11">
-          Газ
+          {t("miniTec.gas")}
         </text>
         <line
           x1="52"
@@ -249,7 +251,7 @@ export default function MiniTecSldWidgetView({
             fontSize="14"
             fontWeight="600"
           >
-            ГРПБ
+            {t("miniTec.grpb")}
           </text>
           <text
             x="52"
@@ -259,7 +261,7 @@ export default function MiniTecSldWidgetView({
             fontFamily="Segoe UI, system-ui, sans-serif"
             fontSize="10"
           >
-            газорегулирующий пункт
+            {t("miniTec.grpbSub")}
           </text>
           <text
             x="52"
@@ -296,12 +298,12 @@ export default function MiniTecSldWidgetView({
           fontSize="11"
           fontWeight="600"
         >
-          Сборные шины 10 кВ · {fmtHz(freq)} · ΣP {fmtKw(totalGen)}
+          {t("miniTec.busbar", { freq: fmtHz(freq), power: fmtKw(totalGen) })}
         </text>
 
-        <GenBlock x={268} y={24} label="ГПУ-1" ratedKw={1480} powerRaw={gpu1p} runningRaw={gpu1r} />
-        <GenBlock x={418} y={24} label="ГПУ-2" ratedKw={1480} powerRaw={gpu2p} runningRaw={gpu2r} />
-        <GenBlock x={568} y={24} label="ГПУ-3" ratedKw={1480} powerRaw={gpu3p} runningRaw={gpu3r} />
+        <GenBlock x={268} y={24} label={t("miniTec.gpu", { n: 1 })} ratedKw={1480} powerRaw={gpu1p} runningRaw={gpu1r} />
+        <GenBlock x={418} y={24} label={t("miniTec.gpu", { n: 2 })} ratedKw={1480} powerRaw={gpu2p} runningRaw={gpu2r} />
+        <GenBlock x={568} y={24} label={t("miniTec.gpu", { n: 3 })} ratedKw={1480} powerRaw={gpu3p} runningRaw={gpu3r} />
 
         {/* DGU branch */}
         <g transform="translate(488,156)">
@@ -332,7 +334,7 @@ export default function MiniTecSldWidgetView({
             fontSize="14"
             fontWeight="600"
           >
-            ДГУ
+            {t("miniTec.dgu")}
           </text>
           <text
             x="56"
@@ -342,7 +344,7 @@ export default function MiniTecSldWidgetView({
             fontFamily="Segoe UI, system-ui, sans-serif"
             fontSize="10"
           >
-            резерв ~500 kW
+            {t("miniTec.dguReserve")}
           </text>
           <text
             x="56"
@@ -353,7 +355,7 @@ export default function MiniTecSldWidgetView({
             fontSize="11"
             fontWeight="600"
           >
-            {asBool(dguRun) ? "В работе" : "Резерв"}
+            {asBool(dguRun) ? t("miniTec.dguRunning") : t("miniTec.dguStandby")}
           </text>
         </g>
 
@@ -383,7 +385,7 @@ export default function MiniTecSldWidgetView({
             fontSize="14"
             fontWeight="600"
           >
-            РУМБ
+            {t("miniTec.rumb")}
           </text>
           <text
             x="98"
@@ -393,7 +395,7 @@ export default function MiniTecSldWidgetView({
             fontFamily="Segoe UI, system-ui, sans-serif"
             fontSize="10"
           >
-            10 / 0,4 кВ
+            {t("miniTec.rumbVoltage")}
           </text>
           <text
             x="98"
@@ -404,7 +406,7 @@ export default function MiniTecSldWidgetView({
             fontSize="10"
             fontWeight="600"
           >
-            {asBool(breakerClosed) ? "ВК включён" : "ВК отключён"}
+            {asBool(breakerClosed) ? t("miniTec.breakerClosed") : t("miniTec.breakerOpen")}
           </text>
         </g>
 
@@ -430,7 +432,7 @@ export default function MiniTecSldWidgetView({
             fontSize="14"
             fontWeight="600"
           >
-            Нагрузка
+            {t("miniTec.load")}
           </text>
           <text
             x="88"
@@ -440,7 +442,7 @@ export default function MiniTecSldWidgetView({
             fontFamily="Segoe UI, system-ui, sans-serif"
             fontSize="10"
           >
-            нагрузочный модуль
+            {t("miniTec.loadModule")}
           </text>
           <text
             x="88"
@@ -461,7 +463,7 @@ export default function MiniTecSldWidgetView({
             fontFamily="Segoe UI, system-ui, sans-serif"
             fontSize="9"
           >
-            потребители
+            {t("miniTec.consumers")}
           </text>
         </g>
 
@@ -476,33 +478,33 @@ export default function MiniTecSldWidgetView({
             fontSize="12"
             fontWeight="600"
           >
-            Условные обозначения
+            {t("miniTec.legend")}
           </text>
           <circle cx="36" cy="46" r="5" fill="#3fb950" />
           <text x="48" y="50" fill="#8b949e" fontFamily="Segoe UI, system-ui, sans-serif" fontSize="11">
-            генерация / в норме
+            {t("miniTec.legendGeneration")}
           </text>
           <circle cx="210" cy="46" r="5" fill="#f0883e" />
           <text x="222" y="50" fill="#8b949e" fontFamily="Segoe UI, system-ui, sans-serif" fontSize="11">
-            газовый тракт
+            {t("miniTec.legendGas")}
           </text>
           <circle cx="360" cy="46" r="5" fill="#a371f7" />
           <text x="372" y="50" fill="#8b949e" fontFamily="Segoe UI, system-ui, sans-serif" fontSize="11">
-            резерв ДГУ
+            {t("miniTec.legendDgu")}
           </text>
           <line x1="36" y1="68" x2="76" y2="68" stroke="#58a6ff" strokeWidth="3" />
           <text x="86" y="72" fill="#8b949e" fontFamily="Segoe UI, system-ui, sans-serif" fontSize="11">
-            силовая шина 10 кВ
+            {t("miniTec.legendBusbar")}
           </text>
           <rect x="520" y="36" width="14" height="14" rx="2" fill="none" stroke="#d29922" strokeWidth="2" />
           <text x="542" y="48" fill="#8b949e" fontFamily="Segoe UI, system-ui, sans-serif" fontSize="11">
-            нагрузка
+            {t("miniTec.legendLoad")}
           </text>
           <text x="680" y="48" fill="#8b949e" fontFamily="Segoe UI, system-ui, sans-serif" fontSize="11">
-            Номинал: 3×1480 kW ГПУ + резерв ДГУ
+            {t("miniTec.ratedNote")}
           </text>
           <text x="680" y="68" fill="#8b949e" fontFamily="Segoe UI, system-ui, sans-serif" fontSize="11">
-            Значения обновляются в реальном времени
+            {t("miniTec.liveUpdate")}
           </text>
         </g>
       </svg>

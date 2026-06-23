@@ -1,5 +1,6 @@
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { SparklineWidget } from "../../../types/dashboard";
 import { widgetHistoryRangeLabel } from "../../../types/dashboard";
 import { useTrendSeries } from "../../../hooks/useTrendSeries";
@@ -20,6 +21,7 @@ export default function SparklineWidgetView({
   refreshIntervalMs,
   editable = false,
 }: SparklineWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const maxPoints = widget.maxPoints ?? 40;
   const historyRange = widget.historyRange ?? "live";
   const color = widget.color ?? "#3fb950";
@@ -71,7 +73,7 @@ export default function SparklineWidgetView({
     >
       <div className="dash-sparkline-body" style={styles.body}>
         {!objectPath && widget.selectionKey ? (
-          <p className="hint">Выберите устройство</p>
+          <p className="hint">{t("view.selectDevice")}</p>
         ) : (
           <>
             <div className="dash-sparkline-head">

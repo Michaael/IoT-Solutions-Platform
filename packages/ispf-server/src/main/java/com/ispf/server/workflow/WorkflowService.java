@@ -115,9 +115,22 @@ public class WorkflowService {
                 readLifecycleStatus(node),
                 readString(node, "bpmnXml").orElse(""),
                 readString(node, "triggerJson").orElse("{}"),
+                readString(node, "operatorAppId").orElse(null),
                 readString(node, "instanceState").orElse("{}"),
                 readString(node, "lastRunAt").orElse(null)
         );
+    }
+
+    public String resolveOperatorAppIdForPath(String workflowPath) {
+        if (workflowPath == null || workflowPath.isBlank()) {
+            return null;
+        }
+        try {
+            PlatformObject node = objectManager.require(workflowPath);
+            return readString(node, "operatorAppId").orElse(null);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     @Transactional
@@ -137,6 +150,17 @@ public class WorkflowService {
                 path,
                 "status",
                 DataRecord.single(STRING_VALUE, Map.of("value", status.name()))
+        );
+        return getWorkflow(path);
+    }
+
+    @Transactional
+    public WorkflowView updateOperatorAppId(String path, String operatorAppId) {
+        String normalized = operatorAppId != null ? operatorAppId.trim() : "";
+        objectManager.setVariableValue(
+                path,
+                "operatorAppId",
+                DataRecord.single(STRING_VALUE, Map.of("value", normalized))
         );
         return getWorkflow(path);
     }
@@ -571,6 +595,7 @@ public class WorkflowService {
             WorkflowLifecycleStatus status,
             String bpmnXml,
             String triggerJson,
+            String operatorAppId,
             String instanceState,
             String lastRunAt
     ) {

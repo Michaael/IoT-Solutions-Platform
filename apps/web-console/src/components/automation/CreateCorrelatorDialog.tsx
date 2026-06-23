@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { createCorrelator } from "../../api";
 import type { CreateCorrelatorPayload, CorrelatorPatternType } from "../../types/automation";
 
@@ -24,6 +25,7 @@ const DEFAULT: CreateCorrelatorPayload = {
 };
 
 export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCorrelatorDialogProps) {
+  const { t } = useTranslation(["automation", "common"]);
   const [form, setForm] = useState<CreateCorrelatorPayload>({ ...DEFAULT });
   const isSequence = form.patternType === "SEQUENCE";
   const isEventChain = form.patternType === "EVENT_CHAIN";
@@ -43,7 +45,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <header>
-          <h3>Новый коррелятор событий</h3>
+          <h3>{t("automation:correlator.newTitle")}</h3>
           <button type="button" className="icon-btn" onClick={onClose}>✕</button>
         </header>
         <form
@@ -54,7 +56,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
           }}
         >
           <label>
-            Имя *
+            {t("common:table.name")} *
             <input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -62,7 +64,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
             />
           </label>
           <label>
-            Паттерн
+            {t("automation:correlator.pattern")}
             <select
               value={form.patternType ?? "COUNT"}
               onChange={(e) =>
@@ -73,13 +75,13 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
                 }))
               }
             >
-              <option value="COUNT">COUNT — одно событие (N раз за окно)</option>
-              <option value="SEQUENCE">SEQUENCE — A → B за окно</option>
-              <option value="EVENT_CHAIN">EVENT_CHAIN — цепочка 3+ событий (через запятую)</option>
+              <option value="COUNT">{t("automation:correlator.patternCount")}</option>
+              <option value="SEQUENCE">{t("automation:correlator.patternSequence")}</option>
+              <option value="EVENT_CHAIN">{t("automation:correlator.patternEventChain")}</option>
             </select>
           </label>
           <label>
-            {isSequence ? "Событие A *" : "Событие *"}
+            {isSequence ? t("automation:correlator.eventA") : t("automation:correlator.event")}
             <input
               value={form.eventName}
               onChange={(e) => setForm((f) => ({ ...f, eventName: e.target.value }))}
@@ -88,7 +90,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
           </label>
           {needsSecondEvent && (
             <label>
-              {isEventChain ? "Цепочка событий (через запятую) *" : "Событие B *"}
+              {isEventChain ? t("automation:correlator.eventChain") : t("automation:correlator.eventB")}
               <input
                 value={form.secondEventName ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, secondEventName: e.target.value }))}
@@ -98,15 +100,15 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
             </label>
           )}
           <label className="full">
-            Путь объекта
+            {t("automation:correlator.objectPath")}
             <input
               value={form.objectPath ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, objectPath: e.target.value }))}
-              placeholder="* — любой объект"
+              placeholder={t("automation:correlator.objectPathPlaceholder")}
             />
           </label>
           <label>
-            Окно (сек)
+            {t("automation:correlator.windowSec")}
             <input
               type="number"
               min={isSequence ? 1 : 0}
@@ -116,7 +118,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
           </label>
           {!needsSecondEvent && (
             <label>
-              Мин. повторений
+              {t("automation:correlator.minRepetitions")}
               <input
                 type="number"
                 min={1}
@@ -126,7 +128,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
             </label>
           )}
           <label>
-            Cooldown (сек)
+            {t("automation:correlator.cooldownSec")}
             <input
               type="number"
               min={0}
@@ -136,7 +138,7 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
           </label>
           {needsSecondEvent && (
             <label>
-              Max gap между событиями (сек)
+              {t("automation:correlator.maxGapSec")}
               <input
                 type="number"
                 min={0}
@@ -146,19 +148,21 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
             </label>
           )}
           <label>
-            Действие
+            {t("automation:correlator.action")}
             <select
               value={form.actionType}
               onChange={(e) =>
                 setForm((f) => ({ ...f, actionType: e.target.value as CreateCorrelatorPayload["actionType"] }))
               }
             >
-              <option value="RUN_WORKFLOW">RUN_WORKFLOW — запустить workflow</option>
-              <option value="FIRE_EVENT">FIRE_EVENT — опубликовать событие</option>
+              <option value="RUN_WORKFLOW">{t("automation:correlator.actionRunWorkflow")}</option>
+              <option value="FIRE_EVENT">{t("automation:correlator.actionFireEvent")}</option>
             </select>
           </label>
           <label className="full">
-            {form.actionType === "FIRE_EVENT" ? "Имя события (actionTarget) *" : "Цель (путь workflow) *"}
+            {form.actionType === "FIRE_EVENT"
+              ? t("automation:correlator.actionEvent")
+              : t("automation:correlator.workflowTarget")}
             <input
               value={form.actionTarget}
               onChange={(e) => setForm((f) => ({ ...f, actionTarget: e.target.value }))}
@@ -171,15 +175,15 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
               checked={form.enabled}
               onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))}
             />
-            Включено
+            {t("automation:alertRule.enabled")}
           </label>
           {mutation.error && (
             <p className="hint error full">{(mutation.error as Error).message}</p>
           )}
           <footer className="full form-actions">
-            <button type="button" className="btn" onClick={onClose}>Отмена</button>
+            <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
             <button type="submit" className="btn primary" disabled={mutation.isPending || !form.name}>
-              Создать
+              {t("common:action.create")}
             </button>
           </footer>
         </form>

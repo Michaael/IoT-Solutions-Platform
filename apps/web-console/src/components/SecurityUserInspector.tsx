@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   fetchSecurityUsers,
   setSecurityUserPassword,
@@ -36,6 +37,7 @@ export default function SecurityUserInspector({
   canManage,
   onDeleted,
 }: SecurityUserInspectorProps) {
+  const { t } = useTranslation(["security", "common"]);
   const username = usernameFromSecurityUserPath(path);
   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
@@ -103,11 +105,11 @@ export default function SecurityUserInspector({
   });
 
   if (usersQuery.isLoading) {
-    return <div className="inspector-empty">Загрузка пользователя…</div>;
+    return <div className="inspector-empty">{t("user.loading")}</div>;
   }
 
   if (usersQuery.error || !user) {
-    return <div className="inspector-empty error">Пользователь не найден</div>;
+    return <div className="inspector-empty error">{t("user.notFound")}</div>;
   }
 
   const serverReady = serverSupportsAutoStart(usersQuery.data);
@@ -132,7 +134,7 @@ export default function SecurityUserInspector({
                   enabled ? "is-active" : "is-inactive"
                 }`}
               >
-                {enabled ? "Активен" : "Отключён"}
+                {enabled ? t("user.statusActive") : t("user.statusDisabled")}
               </span>
             </div>
             <p className="security-user-meta">
@@ -149,24 +151,24 @@ export default function SecurityUserInspector({
               className="btn danger"
               disabled={deleteMutation.isPending}
               onClick={() => {
-                if (confirm(`Удалить пользователя «${user.username}»?`)) {
+                if (confirm(t("common:action.confirmDeleteUser", { name: user.username }))) {
                   deleteMutation.mutate();
                 }
               }}
             >
-              Удалить
+              {t("common:action.delete")}
             </button>
           </div>
         )}
       </header>
 
       {!canManage && (
-        <p className="hint security-user-readonly-hint">Редактирование доступно только admin.</p>
+        <p className="hint security-user-readonly-hint">{t("role.readonlyHint")}</p>
       )}
 
       <div className="security-user-cards">
         <section className="security-user-card">
-          <h3 className="security-user-card-title">Учётная запись</h3>
+          <h3 className="security-user-card-title">{t("user.account")}</h3>
           <form
             className="security-user-form"
             onSubmit={(event) => {
@@ -178,20 +180,20 @@ export default function SecurityUserInspector({
           >
             <div className="security-user-form-grid">
               <label>
-                <span className="field-label">Логин</span>
+                <span className="field-label">{t("users.column.login")}</span>
                 <input value={user.username} readOnly className="readonly" />
               </label>
               <label>
-                <span className="field-label">Отображаемое имя</span>
+                <span className="field-label">{t("common:field.displayName")}</span>
                 <input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   disabled={!canManage}
-                  placeholder="Имя в интерфейсе"
+                  placeholder={t("user.displayNamePlaceholder")}
                 />
               </label>
               <label>
-                <span className="field-label">Роль</span>
+                <span className="field-label">{t("user.role")}</span>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
@@ -206,9 +208,9 @@ export default function SecurityUserInspector({
               </label>
               <div className="security-user-switch-field">
                 <div>
-                  <span className="field-label">Статус</span>
+                  <span className="field-label">{t("user.status")}</span>
                   <p className="security-user-switch-hint">
-                    {enabled ? "Может входить в систему" : "Вход заблокирован"}
+                    {enabled ? t("user.statusActiveHint") : t("user.statusInactiveHint")}
                   </p>
                 </div>
                 <label className="switch">
@@ -231,18 +233,18 @@ export default function SecurityUserInspector({
                     className="btn primary"
                     disabled={!dirty || saveMutation.isPending}
                   >
-                    {saveMutation.isPending ? "Сохранение…" : "Сохранить"}
+                    {saveMutation.isPending ? t("common:action.saving") : t("common:action.save")}
                   </button>
                   <button
                     type="button"
                     className="btn"
                     onClick={() => setShowPasswordDialog(true)}
                   >
-                    Сменить пароль
+                    {t("user.changePassword")}
                   </button>
                 </div>
                 {saveMutation.isSuccess && !dirty && (
-                  <span className="hint success">Изменения сохранены</span>
+                  <span className="hint success">{t("user.changesSaved")}</span>
                 )}
                 {saveMutation.error && (
                   <span className="hint error">{String(saveMutation.error)}</span>
@@ -253,11 +255,8 @@ export default function SecurityUserInspector({
         </section>
 
         <section className="security-user-card">
-          <h3 className="security-user-card-title">Автозапуск</h3>
-          <p className="security-user-card-desc">
-            Operator-приложение при входе:{" "}
-            <code>?mode=operator&amp;app=…</code>
-          </p>
+          <h3 className="security-user-card-title">{t("user.autoStart")}</h3>
+          <p className="security-user-card-desc">{t("user.autoStartDesc")}</p>
           <SecurityUserAutoStartFields
             user={user}
             apps={appsQuery.data ?? []}
@@ -271,12 +270,12 @@ export default function SecurityUserInspector({
         <div className="modal-backdrop" onClick={() => setShowPasswordDialog(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <header>
-              <h3>Сменить пароль</h3>
+              <h3>{t("user.passwordDialogTitle")}</h3>
               <button type="button" className="icon-btn" onClick={() => setShowPasswordDialog(false)}>
                 ✕
               </button>
             </header>
-            <p className="hint">Пользователь <code>{user.username}</code></p>
+            <p className="hint">{t("user.passwordDialogHint")} <code>{user.username}</code></p>
             <form
               className="form-grid"
               onSubmit={(event) => {
@@ -285,7 +284,7 @@ export default function SecurityUserInspector({
               }}
             >
               <label className="full">
-                Новый пароль
+                {t("user.newPassword")}
                 <input
                   type="password"
                   value={newPassword}
@@ -300,10 +299,10 @@ export default function SecurityUserInspector({
               )}
               <footer className="full form-actions">
                 <button type="button" className="btn" onClick={() => setShowPasswordDialog(false)}>
-                  Отмена
+                  {t("common:action.cancel")}
                 </button>
                 <button type="submit" className="btn primary" disabled={passwordMutation.isPending}>
-                  Сохранить
+                  {t("common:action.save")}
                 </button>
               </footer>
             </form>

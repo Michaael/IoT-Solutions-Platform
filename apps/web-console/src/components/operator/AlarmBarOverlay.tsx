@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { ActiveOperatorAlarm } from "../../types/operatorAlarmBar";
 
 export interface AlarmBarOverlayProps {
@@ -31,6 +32,7 @@ function AlarmBarItem({
   onOpenReport: () => void;
   onOpenObject: () => void;
 }) {
+  const { t } = useTranslation("operator");
   const isCritical = alarm.event.level === "CRITICAL";
   const { colors } = alarm;
 
@@ -63,29 +65,29 @@ function AlarmBarItem({
       <div className="operator-alarm-bar-actions">
         {alarm.dashboardPath && (
           <button type="button" className="btn operator-alarm-bar-btn" onClick={onOpenDashboard}>
-            Дашборд
+            {t("alarmBar.dashboard")}
           </button>
         )}
         {alarm.reportPath && (
           <button type="button" className="btn operator-alarm-bar-btn" onClick={onOpenReport}>
-            Отчёт
+            {t("alarmBar.report")}
           </button>
         )}
         <button type="button" className="btn operator-alarm-bar-btn" onClick={onOpenObject}>
-          К объекту
+          {t("alarmBar.toObject")}
         </button>
         {showMute && (
           <button
             type="button"
             className={`btn operator-alarm-bar-btn${muted ? " operator-alarm-bar-btn-muted" : ""}`}
             onClick={toggleMute}
-            title={muted ? "Включить звук" : "Без звука"}
+            title={muted ? t("alarmBar.unmute") : t("alarmBar.mute")}
           >
             {muted ? "🔇" : "🔊"}
           </button>
         )}
         <button type="button" className="btn primary operator-alarm-bar-btn" onClick={onDismiss}>
-          Подтвердить
+          {t("alarmBar.acknowledge")}
         </button>
       </div>
     </div>

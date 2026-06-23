@@ -1,4 +1,5 @@
 import type { StatusBadgeWidget } from "../../../types/dashboard";
+import { useTranslation } from "react-i18next";
 import {
   DISPATCH_STATUS_COLORS,
   formatDispatchStatus,
@@ -20,6 +21,7 @@ export default function StatusBadgeWidgetView({
   refreshIntervalMs,
   editable,
 }: StatusBadgeWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const objectPath = resolveWidgetPath(widget.objectPath, widget.selectionKey, selection);
@@ -41,7 +43,7 @@ export default function StatusBadgeWidgetView({
       editable={editable}
     >
       {!objectPath ? (
-        <p className="hint">Выберите наряд</p>
+        <p className="hint">{t("view.selectOrder")}</p>
       ) : (
         <span
           className="dash-status-badge"

@@ -1,4 +1,5 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { FederationPeer, FederationPeerPayload } from "../../api/federation";
 import { formatTokenExpiry } from "../../api/federation";
 import { getStoredSession } from "../../auth/session";
@@ -29,28 +30,6 @@ interface FederationPeersTabProps {
   setSyncFeedback: (value: string | null) => void;
 }
 
-function authBadge(peer: FederationPeer): React.ReactNode {
-  if (peer.authMode === "SERVICE_ACCOUNT") {
-    return (
-      <>
-        <span className="badge">авто</span>
-        {" "}
-        <span className="op-muted">{formatTokenExpiry(peer.tokenExpiresAt)}</span>
-        {peer.authStatus === "FAILED" ? (
-          <span className="badge danger" title="Ошибка авторизации">Ошибка</span>
-        ) : (
-          <span className="badge ok">OK</span>
-        )}
-      </>
-    );
-  }
-  return peer.hasAuthToken ? (
-    <span className="badge ok">OK</span>
-  ) : (
-    <span className="badge">нет токена</span>
-  );
-}
-
 export default function FederationPeersTab({
   peersQuery,
   form,
@@ -76,7 +55,30 @@ export default function FederationPeersTab({
   setFormError,
   setSyncFeedback,
 }: FederationPeersTabProps) {
+  const { t } = useTranslation(["federation", "common"]);
   const peers = peersQuery.data ?? [];
+
+  const authBadge = (peer: FederationPeer): React.ReactNode => {
+    if (peer.authMode === "SERVICE_ACCOUNT") {
+      return (
+        <>
+          <span className="badge">{t("peers.authAuto")}</span>
+          {" "}
+          <span className="op-muted">{formatTokenExpiry(peer.tokenExpiresAt)}</span>
+          {peer.authStatus === "FAILED" ? (
+            <span className="badge danger" title={t("peers.authError")}>{t("peers.authError")}</span>
+          ) : (
+            <span className="badge ok">OK</span>
+          )}
+        </>
+      );
+    }
+    return peer.hasAuthToken ? (
+      <span className="badge ok">OK</span>
+    ) : (
+      <span className="badge">{t("peers.noToken")}</span>
+    );
+  };
 
   return (
     <>
@@ -84,19 +86,19 @@ export default function FederationPeersTab({
       {formError && <div className="op-alert op-alert-error">{formError}</div>}
 
       <div className="panel-card">
-        <h4>Зарегистрированные узлы</h4>
+        <h4>{t("peers.registered")}</h4>
         {peers.length === 0 ? (
-          <p className="federation-empty-state">Нет зарегистрированных узлов</p>
+          <p className="federation-empty-state">{t("peers.empty")}</p>
         ) : (
           <table className="op-table security-users-table security-users-table-compact">
             <thead>
               <tr>
-                <th>Имя</th>
-                <th>URL узла</th>
-                <th>Префикс</th>
-                <th>Авторизация</th>
-                <th>Токен</th>
-                <th>Вкл.</th>
+                <th>{t("peers.column.name")}</th>
+                <th>{t("peers.column.url")}</th>
+                <th>{t("peers.column.prefix")}</th>
+                <th>{t("peers.column.auth")}</th>
+                <th>{t("peers.column.token")}</th>
+                <th>{t("peers.column.enabled")}</th>
                 <th />
               </tr>
             </thead>
@@ -107,15 +109,15 @@ export default function FederationPeersTab({
                     <code>{peer.name}</code>
                     {peer.connectionMode === "TUNNEL_INBOUND" && (
                       <span className="badge">
-                        ТУННЕЛЬ{peer.tunnelConnected ? "" : " (офлайн)"}
+                        {t("peers.tunnelBadge")}{peer.tunnelConnected ? "" : t("peers.tunnelOffline")}
                       </span>
                     )}
                   </td>
                   <td>{peer.baseUrl}</td>
-                  <td><code>{peer.pathPrefix || "—"}</code></td>
+                  <td><code>{peer.pathPrefix || t("common:empty.dash")}</code></td>
                   <td>{authBadge(peer)}</td>
-                  <td>{peer.hasAuthToken ? "да" : "нет"}</td>
-                  <td>{peer.enabled ? "да" : "нет"}</td>
+                  <td>{peer.hasAuthToken ? t("common:action.yes") : t("common:action.no")}</td>
+                  <td>{peer.enabled ? t("common:action.yes") : t("common:action.no")}</td>
                   <td>
                     <div className="federation-peer-actions">
                       {peer.authMode === "SERVICE_ACCOUNT" && (
@@ -125,7 +127,7 @@ export default function FederationPeersTab({
                           disabled={refreshTokenMutation.isPending}
                           onClick={() => refreshTokenMutation.mutate(peer.id)}
                         >
-                          Обновить токен
+                          {t("peers.refreshToken")}
                         </button>
                       )}
                       <button
@@ -134,7 +136,7 @@ export default function FederationPeersTab({
                         disabled={syncMutation.isPending}
                         onClick={() => syncMutation.mutate(peer.id)}
                       >
-                        Синхронизировать каталог
+                        {t("peers.syncCatalog")}
                       </button>
                       <button
                         type="button"
@@ -142,7 +144,7 @@ export default function FederationPeersTab({
                         disabled={deleteMutation.isPending}
                         onClick={() => deleteMutation.mutate(peer.id)}
                       >
-                        Удалить
+                        {t("common:action.delete")}
                       </button>
                     </div>
                   </td>
@@ -160,35 +162,32 @@ export default function FederationPeersTab({
           createMutation.mutate();
         }}
       >
-        <h4>Новый узел</h4>
-        <p className="op-muted">
-          Loopback (тот же ISPF): оставьте токен пустым — при синхронизации используется ваш Bearer-токен.
-          Для удалённого узла с RBAC укажите service account token.
-        </p>
+        <h4>{t("peers.newPeer")}</h4>
+        <p className="op-muted">{t("peers.newPeerHint")}</p>
         <div className="form-grid">
           <label>
-            Имя *
+            {t("peers.field.name")} *
             <input
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
             />
           </label>
           <label>
-            URL узла *
+            {t("peers.field.url")} *
             <input
               value={form.baseUrl}
               onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
             />
           </label>
           <label>
-            Префикс пути
+            {t("peers.field.prefix")}
             <input
               value={form.pathPrefix ?? ""}
               onChange={(e) => setForm((prev) => ({ ...prev, pathPrefix: e.target.value }))}
             />
           </label>
           <label>
-            Токен авторизации
+            {t("peers.field.authToken")}
             <input
               type="password"
               value={form.authToken ?? ""}
@@ -196,7 +195,7 @@ export default function FederationPeersTab({
             />
           </label>
           <label className="full">
-            Описание
+            {t("peers.field.description")}
             <input
               value={form.description ?? ""}
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
@@ -209,19 +208,19 @@ export default function FederationPeersTab({
               onChange={(e) => setUseServiceAccount(e.target.checked)}
             />
             {" "}
-            Автообновление токена (service account)
+            {t("peers.autoRefreshToken")}
           </label>
           {useServiceAccount && (
             <>
               <label>
-                Имя пользователя
+                {t("peers.field.username")}
                 <input
                   value={serviceAccountUsername}
                   onChange={(e) => setServiceAccountUsername(e.target.value)}
                 />
               </label>
               <label>
-                Пароль
+                {t("peers.field.password")}
                 <input
                   type="password"
                   value={serviceAccountPassword}
@@ -233,10 +232,8 @@ export default function FederationPeersTab({
         </div>
 
         <section className="federation-remote-token panel-card">
-          <h5>Получить токен авторизации</h5>
-          <p className="op-muted">
-            Loopback: «Текущий сессионный токен». Удалённый узел: логин через сервер (пароль не сохраняется).
-          </p>
+          <h5>{t("peers.getAuthToken")}</h5>
+          <p className="op-muted">{t("peers.getAuthTokenHint")}</p>
           <div className="form-actions">
             <button
               type="button"
@@ -244,27 +241,27 @@ export default function FederationPeersTab({
               onClick={() => {
                 const session = getStoredSession();
                 if (!session?.token) {
-                  setFormError("Нет активной сессии в браузере");
+                  setFormError(t("peers.noSession"));
                   return;
                 }
                 setForm((prev) => ({ ...prev, authToken: session.token }));
                 setFormError(null);
-                setSyncFeedback("Подставлен токен текущей сессии");
+                setSyncFeedback(t("peers.sessionTokenApplied"));
               }}
             >
-              Текущий сессионный токен
+              {t("peers.useSessionToken")}
             </button>
           </div>
           <div className="form-grid">
             <label>
-              Имя пользователя (удалённый)
+              {t("peers.remoteUsername")}
               <input
                 value={remoteLoginUsername}
                 onChange={(e) => setRemoteLoginUsername(e.target.value)}
               />
             </label>
             <label>
-              Пароль (удалённый)
+              {t("peers.remotePassword")}
               <input
                 type="password"
                 value={remoteLoginPassword}
@@ -279,14 +276,14 @@ export default function FederationPeersTab({
               disabled={remoteTokenMutation.isPending || tokenApiMissing}
               onClick={() => remoteTokenMutation.mutate()}
             >
-              {remoteTokenMutation.isPending ? "Получение…" : "Получить токен с удалённого узла"}
+              {remoteTokenMutation.isPending ? t("peers.gettingToken") : t("peers.getRemoteToken")}
             </button>
           </div>
         </section>
 
         <div className="form-actions">
           <button type="submit" className="btn primary" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Добавление…" : "Добавить узел"}
+            {createMutation.isPending ? t("peers.adding") : t("peers.add")}
           </button>
         </div>
       </form>

@@ -1,20 +1,8 @@
+import { useTranslation } from "react-i18next";
 import type { EventLevel } from "../../types/event";
 import type { OperatorAlarmBarConfig, OperatorAlarmRule } from "../../types/operatorAlarmBar";
 
 const EVENT_LEVELS: EventLevel[] = ["WARNING", "ERROR", "CRITICAL"];
-
-function newRule(index: number): OperatorAlarmRule {
-  return {
-    id: `rule-${index}`,
-    minLevel: "ERROR",
-    fields: [
-      { label: "Событие", source: "eventName" },
-      { label: "Объект", source: "objectPath" },
-      { label: "Время", source: "timestamp" },
-    ],
-    persistUntilDismiss: true,
-  };
-}
 
 interface OperatorAlarmBarEditorProps {
   value: OperatorAlarmBarConfig | undefined;
@@ -29,8 +17,20 @@ export default function OperatorAlarmBarEditor({
   disabled,
   dashboardPaths,
 }: OperatorAlarmBarEditorProps) {
+  const { t } = useTranslation(["operator", "common"]);
   const config: OperatorAlarmBarConfig = value ?? { enabled: true, rules: [] };
   const rules = config.rules ?? [];
+
+  const newRule = (index: number): OperatorAlarmRule => ({
+    id: `rule-${index}`,
+    minLevel: "ERROR",
+    fields: [
+      { label: t("alarmBarEditor.field.event"), source: "eventName" },
+      { label: t("alarmBarEditor.field.object"), source: "objectPath" },
+      { label: t("alarmBarEditor.field.time"), source: "timestamp" },
+    ],
+    persistUntilDismiss: true,
+  });
 
   const patch = (partial: Partial<OperatorAlarmBarConfig>) => {
     onChange({ ...config, ...partial });
@@ -51,9 +51,9 @@ export default function OperatorAlarmBarEditor({
 
   return (
     <div className="operator-alarm-bar-editor full">
-      <strong>Тревожная планка</strong>
+      <strong>{t("alarmBarEditor.title")}</strong>
       <p className="hint">
-        Всплывающая полоса со звуком в operator mode при срабатывании событий.
+        {t("alarmBarEditor.hint")}
       </p>
 
       <label className="operator-alarm-bar-toggle">
@@ -63,12 +63,12 @@ export default function OperatorAlarmBarEditor({
           disabled={disabled}
           onChange={(e) => patch({ enabled: e.target.checked })}
         />
-        Включить тревожную планку
+        {t("alarmBarEditor.enable")}
       </label>
 
       <div className="form-grid compact">
         <label>
-          Мин. уровень (глобально)
+          {t("alarmBarEditor.minLevelGlobal")}
           <select
             value={config.minLevel ?? "ERROR"}
             disabled={disabled}
@@ -82,18 +82,18 @@ export default function OperatorAlarmBarEditor({
           </select>
         </label>
         <label>
-          Позиция
+          {t("alarmBarEditor.position")}
           <select
             value={config.position ?? "top"}
             disabled={disabled}
             onChange={(e) => patch({ position: e.target.value as "top" | "bottom" })}
           >
-            <option value="top">Сверху</option>
-            <option value="bottom">Снизу</option>
+            <option value="top">{t("alarmBarEditor.positionTop")}</option>
+            <option value="bottom">{t("alarmBarEditor.positionBottom")}</option>
           </select>
         </label>
         <label>
-          URL звука
+          {t("alarmBarEditor.soundUrl")}
           <input
             value={config.soundUrl ?? "/sounds/alarm.wav"}
             disabled={disabled}
@@ -101,7 +101,7 @@ export default function OperatorAlarmBarEditor({
           />
         </label>
         <label>
-          Повтор звука (мс)
+          {t("alarmBarEditor.soundRepeatMs")}
           <input
             type="number"
             min={1000}
@@ -118,21 +118,21 @@ export default function OperatorAlarmBarEditor({
             disabled={disabled}
             onChange={(e) => patch({ soundEnabled: e.target.checked })}
           />
-          Звук включён
+          {t("alarmBarEditor.soundEnabled")}
         </label>
       </div>
 
       <div className="operator-alarm-bar-rules">
         <div className="operator-alarm-bar-rules-head">
-          <strong>Правила отображения</strong>
+          <strong>{t("alarmBarEditor.rulesTitle")}</strong>
           {!disabled && (
             <button type="button" className="btn small" onClick={addRule}>
-              + Правило
+              {t("alarmBarEditor.addRule")}
             </button>
           )}
         </div>
         {rules.length === 0 && (
-          <p className="hint">Правила не заданы — используется правило по умолчанию (ERROR+).</p>
+          <p className="hint">{t("alarmBarEditor.noRulesHint")}</p>
         )}
         {rules.map((rule, index) => (
           <div key={rule.id} className="operator-alarm-bar-rule-card">
@@ -140,13 +140,13 @@ export default function OperatorAlarmBarEditor({
               <strong>{rule.id}</strong>
               {!disabled && (
                 <button type="button" className="btn small" onClick={() => removeRule(index)}>
-                  Удалить
+                  {t("common:action.delete")}
                 </button>
               )}
             </div>
             <div className="form-grid compact">
               <label>
-                ID правила
+                {t("alarmBarEditor.ruleId")}
                 <input
                   value={rule.id}
                   disabled={disabled}
@@ -154,7 +154,7 @@ export default function OperatorAlarmBarEditor({
                 />
               </label>
               <label>
-                Имена событий (через запятую)
+                {t("alarmBarEditor.eventNames")}
                 <input
                   value={rule.eventNames?.join(", ") ?? ""}
                   disabled={disabled}
@@ -170,7 +170,7 @@ export default function OperatorAlarmBarEditor({
                 />
               </label>
               <label>
-                Префикс objectPath
+                {t("alarmBarEditor.objectPathPrefix")}
                 <input
                   value={rule.objectPathPrefix ?? ""}
                   disabled={disabled}
@@ -178,7 +178,7 @@ export default function OperatorAlarmBarEditor({
                 />
               </label>
               <label>
-                Мин. уровень
+                {t("alarmBarEditor.minLevel")}
                 <select
                   value={rule.minLevel ?? ""}
                   disabled={disabled}
@@ -188,7 +188,7 @@ export default function OperatorAlarmBarEditor({
                     })
                   }
                 >
-                  <option value="">(глобальный)</option>
+                  <option value="">{t("alarmBarEditor.globalLevel")}</option>
                   {EVENT_LEVELS.map((level) => (
                     <option key={level} value={level}>
                       {level}
@@ -197,7 +197,7 @@ export default function OperatorAlarmBarEditor({
                 </select>
               </label>
               <label className="full">
-                Заголовок (шаблон)
+                {t("alarmBarEditor.titleTemplate")}
                 <input
                   value={rule.title ?? ""}
                   disabled={disabled}
@@ -206,7 +206,7 @@ export default function OperatorAlarmBarEditor({
                 />
               </label>
               <label>
-                Дашборд
+                {t("alarmBarEditor.dashboard")}
                 <select
                   value={rule.actions?.dashboardPath ?? ""}
                   disabled={disabled}
@@ -216,7 +216,7 @@ export default function OperatorAlarmBarEditor({
                     })
                   }
                 >
-                  <option value="">(авто)</option>
+                  <option value="">{t("alarmBarEditor.auto")}</option>
                   {dashboardPaths.map((path) => (
                     <option key={path} value={path}>
                       {path}
@@ -225,7 +225,7 @@ export default function OperatorAlarmBarEditor({
                 </select>
               </label>
               <label>
-                ctx-ключ объекта
+                {t("alarmBarEditor.selectionKey")}
                 <input
                   value={rule.actions?.selectionKey ?? "objectPath"}
                   disabled={disabled}
@@ -237,7 +237,7 @@ export default function OperatorAlarmBarEditor({
                 />
               </label>
               <label>
-                Функция подтверждения
+                {t("alarmBarEditor.ackFunction")}
                 <input
                   value={rule.actions?.acknowledgeFunction ?? ""}
                   disabled={disabled}
@@ -250,7 +250,7 @@ export default function OperatorAlarmBarEditor({
                 />
               </label>
               <label>
-                Цвет фона
+                {t("alarmBarEditor.bgColor")}
                 <input
                   type="color"
                   value={rule.colors?.background ?? "#450a0a"}
@@ -261,7 +261,7 @@ export default function OperatorAlarmBarEditor({
                 />
               </label>
               <label>
-                Цвет текста
+                {t("alarmBarEditor.textColor")}
                 <input
                   type="color"
                   value={rule.colors?.text ?? "#fee2e2"}
@@ -272,7 +272,7 @@ export default function OperatorAlarmBarEditor({
                 />
               </label>
               <label>
-                Цвет рамки
+                {t("alarmBarEditor.borderColor")}
                 <input
                   type="color"
                   value={rule.colors?.border ?? "#ef4444"}

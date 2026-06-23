@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   connectOutboundAgent,
   configureFederationSecretsKey,
@@ -28,7 +29,7 @@ import FederationTokensTab from "./federation/FederationTokensTab";
 import FederationTunnelTab from "./federation/FederationTunnelTab";
 import {
   defaultFederationBaseUrl,
-  FEDERATION_TAB_LABELS,
+  FEDERATION_TAB_KEYS,
   type FederationTab,
 } from "./federation/federationShared";
 
@@ -37,6 +38,7 @@ interface FederationPeersPanelProps {
 }
 
 export default function FederationPeersPanel({ canManage }: FederationPeersPanelProps) {
+  const { t } = useTranslation("federation");
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<FederationTab>("peers");
   const [form, setForm] = useState<FederationPeerPayload>({
@@ -136,7 +138,7 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
     mutationFn: () => {
       setFormError(null);
       if (!form.name.trim() || !form.baseUrl.trim()) {
-        throw new Error("Укажите имя и URL узла");
+        throw new Error(t("peers.errorNameUrl"));
       }
       return createFederationPeer({
         ...form,
@@ -150,7 +152,7 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["federation-peers"] });
       setForm((prev) => ({ ...prev, name: "", description: "" }));
-      setSyncFeedback("Узел добавлен");
+      setSyncFeedback(t("peers.peerAdded"));
     },
     onError: (error: Error) => setFormError(error.message),
   });
@@ -164,7 +166,12 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
     mutationFn: (id: string) => syncFederationCatalog(id),
     onSuccess: (result) => {
       setSyncFeedback(
-        `Синхронизация каталога: ${result.localRoot} — создано ${result.created}, обновлено ${result.updated} (удалённо ${result.remoteCount})`
+        t("peers.syncResult", {
+          localRoot: result.localRoot,
+          created: result.created,
+          updated: result.updated,
+          remoteCount: result.remoteCount,
+        }),
       );
       setFormError(null);
       queryClient.invalidateQueries({ queryKey: ["objects"] });
@@ -179,7 +186,7 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
   const probeMutation = useMutation({
     mutationFn: () => {
       if (!probePeerId) {
-        throw new Error("Выберите узел");
+        throw new Error(t("peers.errorSelectPeer"));
       }
       return probeFederationObject(probePeerId, probePath.trim());
     },
@@ -196,9 +203,9 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
     onSuccess: (data) => {
       setIssuedToken(data.token);
       const parts = [
-        data.username ? `пользователь: ${data.username}` : null,
-        data.expiresAt ? `истекает: ${data.expiresAt}` : null,
-        data.roles?.length ? `роли: ${data.roles.join(", ")}` : null,
+        data.username ? t("tokens.metaUser", { username: data.username }) : null,
+        data.expiresAt ? t("tokens.metaExpires", { expiresAt: data.expiresAt }) : null,
+        data.roles?.length ? t("tokens.metaRoles", { roles: data.roles.join(", ") }) : null,
       ].filter(Boolean);
       setIssuedTokenMeta(parts.join(" · "));
       setTokenCopyFeedback(null);
@@ -215,7 +222,7 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
     mutationFn: (peerId: string) => refreshPeerToken(peerId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["federation-peers"] });
-      setSyncFeedback("Токен узла обновлён");
+      setSyncFeedback(t("peers.peerTokenRefreshed"));
     },
     onError: (error: Error) => setFormError(error.message),
   });
@@ -223,7 +230,7 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
   const createInboundMutation = useMutation({
     mutationFn: () => {
       if (!inboundName.trim()) {
-        throw new Error("Укажите имя входящей регистрации");
+        throw new Error(t("peers.errorInboundName"));
       }
       return createInboundRegistration({
         name: inboundName.trim(),
@@ -246,7 +253,7 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
   const createOutboundMutation = useMutation({
     mutationFn: () => {
       if (!outboundForm.name.trim() || !outboundForm.hubBaseUrl.trim() || !outboundForm.registrationCode.trim()) {
-        throw new Error("Укажите имя, URL hub и код регистрации");
+        throw new Error(t("peers.errorOutboundFields"));
       }
       return createOutboundAgent({
         name: outboundForm.name.trim(),
@@ -278,10 +285,10 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
       setSecretsKeyError(null);
       setSecretsKeyFeedback(null);
       if (!secretsKeyInput.trim()) {
-        throw new Error("Укажите ispf.security.secrets-key");
+        throw new Error(t("peers.errorSecretsKey"));
       }
       if (secretsKeyInput.trim().length < 16) {
-        throw new Error("Ключ должен быть не короче 16 символов");
+        throw new Error(t("peers.errorSecretsKeyLength"));
       }
       return configureFederationSecretsKey(secretsKeyInput.trim());
     },
@@ -289,8 +296,8 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
       setSecretsKeyInput("");
       setSecretsKeyFeedback(
         status.source === "YAML"
-          ? "Ключ задан в конфигурации сервера (YAML/env)."
-          : "Ключ шифрования сохранён на edge. Можно добавлять исходящий агент."
+          ? t("tunnel.secretsKeySavedYaml")
+          : t("tunnel.secretsKeySavedEdge"),
       );
       queryClient.invalidateQueries({ queryKey: ["federation-secrets-key"] });
       queryClient.invalidateQueries({ queryKey: ["platform-info"] });
@@ -302,10 +309,10 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
     mutationFn: () => {
       setTokenPanelError(null);
       if (!form.baseUrl.trim()) {
-        throw new Error("Укажите URL узла");
+        throw new Error(t("peers.errorPeerUrl"));
       }
       if (!remoteLoginPassword) {
-        throw new Error("Укажите пароль удалённого пользователя");
+        throw new Error(t("peers.errorRemotePassword"));
       }
       return fetchRemoteFederationToken({
         baseUrl: form.baseUrl.trim(),
@@ -320,15 +327,20 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
       setTokenPanelError(null);
       setSyncFeedback(
         data.expiresAt
-          ? `Токен получен с удалённого узла (${data.username ?? remoteLoginUsername}), истекает ${data.expiresAt}`
-          : `Токен получен с удалённого узла (${data.username ?? remoteLoginUsername})`
+          ? t("peers.remoteTokenReceivedExpiry", {
+              username: data.username ?? remoteLoginUsername,
+              expiresAt: data.expiresAt,
+            })
+          : t("peers.remoteTokenReceived", {
+              username: data.username ?? remoteLoginUsername,
+            }),
       );
     },
     onError: (error: Error) => setTokenPanelError(error.message),
   });
 
   if (!canManage) {
-    return <p className="op-muted">Федерация доступна только администратору.</p>;
+    return <p className="op-muted">{t("panel.adminOnly")}</p>;
   }
 
   const secretsKeyConfigured = secretsKeyQuery.data?.configured ?? platformInfoQuery.data?.federationSecretsKeyConfigured ?? false;
@@ -343,11 +355,8 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
     <section className="federation-peers-panel">
       <header className="security-users-header">
         <div>
-          <h3>Федерация</h3>
-          <p className="op-muted">
-            Реестр удалённых ISPF-инстансов. Путь объекта и service endpoint разделены: для loopback оставьте
-            токен пустым, для удалённого узла укажите service account token или выпустите токен на вкладке «Токены».
-          </p>
+          <h3>{t("panel.title")}</h3>
+          <p className="op-muted">{t("panel.subtitle")}</p>
         </div>
       </header>
 
@@ -355,12 +364,11 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
 
       {tokenApiMissing && (
         <div className="op-alert op-alert-error">
-          Backend без API federation-токенов (нужны capabilities federation-issue-token и federation-remote-token).
-          Пересоберите и перезапустите <code>ispf-server</code>, затем обновите страницу.
+          {t("panel.tokenApiMissing")}
         </div>
       )}
 
-      <nav className="federation-tabs" aria-label="Разделы федерации">
+      <nav className="federation-tabs" aria-label={t("panel.tabsAria")}>
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -372,7 +380,7 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
               setTokenPanelError(null);
             }}
           >
-            {FEDERATION_TAB_LABELS[tab]}
+            {t(FEDERATION_TAB_KEYS[tab])}
           </button>
         ))}
       </nav>

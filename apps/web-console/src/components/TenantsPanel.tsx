@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { assignTenantUser, createTenant, fetchTenants } from "../api/tenants";
 
 interface TenantsPanelProps {
@@ -8,6 +9,7 @@ interface TenantsPanelProps {
 }
 
 export default function TenantsPanel({ canManage, onSelectPath }: TenantsPanelProps) {
+  const { t } = useTranslation(["security", "common"]);
   const queryClient = useQueryClient();
   const [tenantId, setTenantId] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -25,7 +27,7 @@ export default function TenantsPanel({ canManage, onSelectPath }: TenantsPanelPr
     mutationFn: () => {
       setFormError(null);
       if (!tenantId.trim() || !displayName.trim()) {
-        throw new Error("Укажите tenantId и displayName");
+        throw new Error(t("tenants.error.required"));
       }
       return createTenant({
         tenantId: tenantId.trim().toLowerCase(),
@@ -50,28 +52,25 @@ export default function TenantsPanel({ canManage, onSelectPath }: TenantsPanelPr
   });
 
   if (!canManage) {
-    return <p className="op-muted">Multi-tenant доступен только admin.</p>;
+    return <p className="op-muted">{t("tenants.adminOnly")}</p>;
   }
 
   return (
     <section className="tenants-panel">
       <header className="security-users-header">
         <div>
-          <h3>Арендаторы (tenants)</h3>
-          <p className="op-muted">
-            Namespace <code>root.tenant.&#123;id&#125;.platform.*</code>. Пользователю с ролью operator можно
-            назначить tenant — он увидит только своё поддерево.
-          </p>
+          <h3>{t("tenants.title")}</h3>
+          <p className="op-muted">{t("tenants.subtitle")}</p>
         </div>
       </header>
 
       <table className="op-table security-users-table security-users-table-compact">
         <thead>
           <tr>
-            <th>tenantId</th>
-            <th>Имя</th>
-            <th>Platform path</th>
-            <th>Вкл.</th>
+            <th>{t("tenants.column.tenantId")}</th>
+            <th>{t("tenants.column.displayName")}</th>
+            <th>{t("tenants.column.platformPath")}</th>
+            <th>{t("tenants.column.enabled")}</th>
           </tr>
         </thead>
         <tbody>
@@ -88,7 +87,7 @@ export default function TenantsPanel({ canManage, onSelectPath }: TenantsPanelPr
               </td>
               <td>{tenant.displayName}</td>
               <td><code>{tenant.platformPath}</code></td>
-              <td>{tenant.enabled ? "да" : "нет"}</td>
+              <td>{tenant.enabled ? t("common:action.yes") : t("common:action.no")}</td>
             </tr>
           ))}
         </tbody>
@@ -101,7 +100,7 @@ export default function TenantsPanel({ canManage, onSelectPath }: TenantsPanelPr
           createMutation.mutate();
         }}
       >
-        <h4>Новый tenant</h4>
+        <h4>{t("tenants.newTenant")}</h4>
         <div className="form-grid">
           <label>
             tenantId *
@@ -113,24 +112,24 @@ export default function TenantsPanel({ canManage, onSelectPath }: TenantsPanelPr
           </label>
         </div>
         <button type="submit" className="btn primary" disabled={createMutation.isPending}>
-          Создать tenant
+          {t("tenants.createTenant")}
         </button>
       </form>
 
       <section className="federation-probe">
-        <h4>Назначить пользователю</h4>
+        <h4>{t("tenants.assignUser")}</h4>
         <div className="form-grid">
           <label>
-            tenant
+            {t("tenants.field.tenant")}
             <select value={assignTenantId} onChange={(e) => setAssignTenantId(e.target.value)}>
-              <option value="">—</option>
+              <option value="">{t("common:empty.dash")}</option>
               {(tenantsQuery.data ?? []).map((tenant) => (
                 <option key={tenant.tenantId} value={tenant.tenantId}>{tenant.tenantId}</option>
               ))}
             </select>
           </label>
           <label>
-            username
+            {t("tenants.field.username")}
             <input value={assignUsername} onChange={(e) => setAssignUsername(e.target.value)} />
           </label>
         </div>
@@ -140,7 +139,7 @@ export default function TenantsPanel({ canManage, onSelectPath }: TenantsPanelPr
           disabled={assignMutation.isPending || !assignTenantId}
           onClick={() => assignMutation.mutate()}
         >
-          Назначить tenant
+          {t("tenants.assignTenant")}
         </button>
       </section>
 

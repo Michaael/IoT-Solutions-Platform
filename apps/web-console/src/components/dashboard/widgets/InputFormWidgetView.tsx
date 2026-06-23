@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchObjects, fetchVariables, setVariable } from "../../../api";
 import type { InputFormField, InputFormWidget } from "../../../types/dashboard";
@@ -19,6 +20,7 @@ export default function InputFormWidgetView({
   refreshIntervalMs,
   editable,
 }: InputFormWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const queryClient = useQueryClient();
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
@@ -71,7 +73,7 @@ export default function InputFormWidgetView({
       editable={editable}
     >
       {!objectPath ? (
-        <p className="hint">Укажите objectPath</p>
+        <p className="hint">{t("view.specifyObjectPath")}</p>
       ) : (
         <div className="function-form-fields" style={styles.body}>
           {fields.map((field) => (
@@ -127,7 +129,7 @@ export default function InputFormWidgetView({
             disabled={editable || mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            {widget.buttonLabel ?? "Применить"}
+            {widget.buttonLabel ?? t("view.apply")}
           </button>
         </div>
       )}

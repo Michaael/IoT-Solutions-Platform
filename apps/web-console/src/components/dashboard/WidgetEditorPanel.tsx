@@ -1,6 +1,8 @@
+import { useTranslation } from "react-i18next";
 import type { DashboardWidget, WidgetType } from "../../types/dashboard";
 import { newWidget, WIDGET_TYPES } from "../../types/dashboard";
 import { WIDGET_STYLE_KEYS_HINT } from "./widgetStyles";
+import { widgetTypeI18nKey } from "./widgetI18n";
 import {
   FieldPairs,
   WidgetDataSourceFields,
@@ -24,11 +26,13 @@ export default function WidgetEditorPanel({
   onChange,
   onDelete,
 }: WidgetEditorPanelProps) {
+  const { t } = useTranslation(["dashboard", "widgets", "common"]);
+
   if (!widget) {
     return (
       <aside className="dashboard-sidebar">
-        <h4>Виджет</h4>
-        <p className="hint">Выберите виджет на сетке или добавьте новый.</p>
+        <h4>{t("editor.widgetTitle")}</h4>
+        <p className="hint">{t("editor.selectWidgetHint")}</p>
       </aside>
     );
   }
@@ -55,21 +59,21 @@ export default function WidgetEditorPanel({
   return (
     <aside className="dashboard-sidebar">
       <header className="dashboard-sidebar-head">
-        <h4>Редактор виджета</h4>
+        <h4>{t("editor.widgetEditorTitle")}</h4>
         <button type="button" className="btn danger small" onClick={onDelete}>
-          Удалить
+          {t("common:action.delete")}
         </button>
       </header>
 
       <div className="form-grid compact widget-editor-form">
         <FieldPairs>
-          <h5 className="widget-editor-section">Общее</h5>
+          <h5 className="widget-editor-section">{t("editor.general")}</h5>
           <label>
-            <span className="field-caption">Заголовок</span>
+            <span className="field-caption">{t("editor.titleField")}</span>
             <input value={widget.title} onChange={(e) => update({ title: e.target.value })} />
           </label>
           <label>
-            <span className="field-caption">Тип</span>
+            <span className="field-caption">{t("editor.typeField")}</span>
             <select
               value={widget.type}
               onChange={(e) => {
@@ -88,19 +92,19 @@ export default function WidgetEditorPanel({
             >
               {WIDGET_TYPES.map((item) => (
                 <option key={item.type} value={item.type}>
-                  {item.label}
+                  {t(widgetTypeI18nKey(item.type))}
                 </option>
               ))}
             </select>
           </label>
-          <p className="hint full">Позицию и размер меняйте перетаскиванием на сетке.</p>
+          <p className="hint full">{t("editor.layoutHint")}</p>
         </FieldPairs>
 
         <WidgetDataSourceFields {...fieldCtx} />
         <WidgetTypeSpecificFields {...fieldCtx} />
 
         <FieldPairs>
-          <h5 className="widget-editor-section">Оформление</h5>
+          <h5 className="widget-editor-section">{t("editor.styling")}</h5>
           <label className="full">
             stylesJson
             <textarea
@@ -111,12 +115,12 @@ export default function WidgetEditorPanel({
             />
           </label>
           <p className="hint full">
-            Ключи элементов: {WIDGET_STYLE_KEYS_HINT}. CSS в camelCase. Пусто — по умолчанию.
+            {t("editor.stylesHint", { keys: WIDGET_STYLE_KEYS_HINT })}
           </p>
 
-          <h5 className="widget-editor-section">Расширенное</h5>
+          <h5 className="widget-editor-section">{t("editor.advanced")}</h5>
           <label className="full">
-            demoPreviewJson (превью в редакторе)
+            {t("editor.demoPreviewLabel")}
             <textarea
               rows={3}
               value={widget.demoPreviewJson ?? ""}

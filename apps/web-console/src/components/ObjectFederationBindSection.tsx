@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fetchObject } from "../api";
 import type { ObjectSummary } from "../types";
 import FederationBindPanel from "./FederationBindPanel";
@@ -17,6 +18,7 @@ export default function ObjectFederationBindSection({
   object: objectProp,
   className,
 }: ObjectFederationBindSectionProps) {
+  const { t } = useTranslation("federation");
   const queryClient = useQueryClient();
 
   const objectQuery = useQuery({
@@ -29,7 +31,7 @@ export default function ObjectFederationBindSection({
 
   if (path === "root" || !object) {
     if (objectQuery.isLoading && !objectProp) {
-      return <p className="hint">Загрузка federation…</p>;
+      return <p className="hint">{t("loading")}</p>;
     }
     return null;
   }

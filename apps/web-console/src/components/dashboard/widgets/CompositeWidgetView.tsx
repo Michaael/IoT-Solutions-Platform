@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { CompositeWidget, DashboardWidget } from "../../../types/dashboard";
 import DashWidgetShell from "../DashWidgetShell";
 import { parseJsonArray } from "../dashboardUtils";
@@ -18,6 +19,7 @@ export default function CompositeWidgetView({
   editable,
   depth = 0,
 }: CompositeWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const children = useMemo(
     () => parseJsonArray<DashboardWidget>(widget.childrenJson, []),
@@ -32,7 +34,7 @@ export default function CompositeWidgetView({
       editable={editable}
     >
       {children.length === 0 ? (
-        <p className="hint">Укажите childrenJson</p>
+        <p className="hint">{t("view.specifyChildrenJson")}</p>
       ) : (
         <div className="dash-composite-body" style={styles.body}>
           {renderWidgetList(children, {

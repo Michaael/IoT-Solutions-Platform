@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import WidgetDragHandle from "./WidgetDragHandle";
 import { useWidgetStyles } from "./widgetStyles";
 
@@ -25,6 +26,7 @@ export default function DashWidgetShell({
   headerExtra,
   children,
 }: DashWidgetShellProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(stylesJson);
 
   return (
@@ -32,7 +34,7 @@ export default function DashWidgetShell({
       <WidgetDragHandle visible={editable} />
       <div className="dash-widget-title" style={styles.title}>
         {title}
-        {demo ? <span className="dash-widget-demo-badge">пример</span> : null}
+        {demo ? <span className="dash-widget-demo-badge">{t("view.demoBadge")}</span> : null}
         {headerExtra}
       </div>
       {children}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DashboardWidget, DrawerPanelWidget } from "../../../types/dashboard";
 import DashWidgetShell from "../DashWidgetShell";
 import { parseJsonArray } from "../dashboardUtils";
@@ -18,6 +19,7 @@ export default function DrawerPanelWidgetView({
   editable,
   depth = 0,
 }: DrawerPanelWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const [open, setOpen] = useState(false);
   const children = useMemo(
@@ -33,7 +35,7 @@ export default function DrawerPanelWidgetView({
       editable={editable}
     >
       <button type="button" className="btn" onClick={() => setOpen((v) => !v)}>
-        {widget.drawerLabel ?? (open ? "Скрыть" : "Открыть")}
+        {widget.drawerLabel ?? (open ? t("view.drawerHide") : t("view.drawerOpen"))}
       </button>
       {open && (
         <div className="dash-drawer-body" style={styles.body}>

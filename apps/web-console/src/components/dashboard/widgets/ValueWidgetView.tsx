@@ -1,4 +1,5 @@
 import type { ValueWidget } from "../../../types/dashboard";
+import { useTranslation } from "react-i18next";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
 import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
 import { useDashboardContext } from "../DashboardContext";
@@ -16,6 +17,7 @@ export default function ValueWidgetView({
   refreshIntervalMs,
   editable = false,
 }: ValueWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { operatorMode } = useDashboardContext();
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
@@ -71,7 +73,7 @@ export default function ValueWidgetView({
       footer={metaFooter}
     >
       {!objectPath && widget.selectionKey ? (
-        <p className="hint">Выберите устройство</p>
+        <p className="hint">{t("view.selectDevice")}</p>
       ) : (
         <div
           className={`dash-widget-value-body${isMetric ? "" : " is-text"}`}

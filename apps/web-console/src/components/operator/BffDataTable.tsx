@@ -1,3 +1,6 @@
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
+
 interface BffDataTableProps {
   rows: Array<Record<string, unknown>>;
   labels?: Record<string, string>;
@@ -6,6 +9,19 @@ interface BffDataTableProps {
   selectionKey?: string;
   selectedKey?: string | null;
   onSelect?: (row: Record<string, unknown> | null) => void;
+}
+
+function formatCell(value: unknown, t: TFunction<["operator", "common"]>): string {
+  if (value === null || value === undefined) {
+    return t("common:empty.dash");
+  }
+  if (typeof value === "boolean") {
+    return value ? t("common:action.yes") : t("common:action.no");
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value);
 }
 
 export default function BffDataTable({
@@ -17,8 +33,9 @@ export default function BffDataTable({
   selectedKey = null,
   onSelect,
 }: BffDataTableProps) {
+  const { t } = useTranslation(["operator", "common"]);
   if (rows.length === 0) {
-    return <p className="op-muted">{emptyMessage ?? "Нет данных."}</p>;
+    return <p className="op-muted">{emptyMessage ?? t("common:empty.noData")}</p>;
   }
 
   const columns = Object.keys(rows[0]);
@@ -52,11 +69,16 @@ export default function BffDataTable({
               >
                 {selectable && (
                   <td className="op-col-select">
-                    <input type="radio" checked={selected} readOnly aria-label={`Выбрать ${rowKey}`} />
+                    <input
+                      type="radio"
+                      checked={selected}
+                      readOnly
+                      aria-label={t("bff.selectRow", { rowKey })}
+                    />
                   </td>
                 )}
                 {columns.map((column) => (
-                  <td key={column}>{formatCell(row[column])}</td>
+                  <td key={column}>{formatCell(row[column], t)}</td>
                 ))}
               </tr>
             );
@@ -65,17 +87,4 @@ export default function BffDataTable({
       </table>
     </div>
   );
-}
-
-function formatCell(value: unknown): string {
-  if (value === null || value === undefined) {
-    return "—";
-  }
-  if (typeof value === "boolean") {
-    return value ? "да" : "нет";
-  }
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-  return String(value);
 }

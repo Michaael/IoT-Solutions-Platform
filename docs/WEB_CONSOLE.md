@@ -131,7 +131,18 @@ cd apps/web-console
 npm install
 npm run dev      # dev server
 npm run build    # production dist/
+npm run i18n:check   # locale keys vs en (canonical)
+npm run i18n:translate   # regenerate ru/de/zh from en (tools/i18n/generate-locales.py)
 ```
+
+## Localization (Phase 19)
+
+- **Canonical locale:** English (`apps/web-console/src/locales/en/*.json`)
+- **UI locales:** `en`, `ru`, `de`, `zh` — dropdown in admin/operator header and login card
+- **Persistence:** `localStorage` (`ispf.ui.locale`), URL `?lang=`, fallback `en`
+- **Adding strings:** key in `en/{namespace}.json` → `useTranslation` + `t('key')` → `npm run i18n:translate` → `npm run i18n:check`
+
+См. [ADR-0020](decisions/0020-web-console-i18n.md).
 
 ## Федерация
 

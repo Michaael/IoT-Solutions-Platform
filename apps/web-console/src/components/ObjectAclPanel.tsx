@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchObjectAcl, saveObjectAcl, type ObjectAclEntry } from "../api/objectAcl";
 
 interface ObjectAclPanelProps {
@@ -14,6 +15,7 @@ const EMPTY_ENTRY: ObjectAclEntry = {
 };
 
 export default function ObjectAclPanel({ objectPath, canManage }: ObjectAclPanelProps) {
+  const { t } = useTranslation(["security", "common"]);
   const queryClient = useQueryClient();
   const [entries, setEntries] = useState<ObjectAclEntry[]>([]);
 
@@ -49,33 +51,30 @@ export default function ObjectAclPanel({ objectPath, canManage }: ObjectAclPanel
     <section className="security-users-panel">
       <header className="security-users-header">
         <div>
-          <h3>Доступ к объекту</h3>
-          <p className="op-muted">
-            Per-object ACL для <code>{objectPath}</code>. Если правил нет — действует глобальный RBAC.
-            Admin всегда имеет полный доступ.
-          </p>
+          <h3>{t("acl.title")}</h3>
+          <p className="op-muted">{t("acl.subtitle", { path: objectPath })}</p>
         </div>
         {canManage && (
           <button type="button" className="btn" onClick={() => setEntries((current) => [...current, { ...EMPTY_ENTRY }])}>
-            + Правило
+            {t("acl.addRule")}
           </button>
         )}
       </header>
 
-      {aclQuery.isLoading && <p className="op-muted">Загрузка…</p>}
+      {aclQuery.isLoading && <p className="op-muted">{t("common:action.loading")}</p>}
       {aclQuery.error && <div className="op-alert op-alert-error">{String(aclQuery.error)}</div>}
 
       {entries.length === 0 && !aclQuery.isLoading && (
-        <p className="op-muted">Ограничений нет — объект виден всем ролям с глобальным доступом.</p>
+        <p className="op-muted">{t("acl.empty")}</p>
       )}
 
       {entries.length > 0 && (
         <table className="op-table security-users-table security-users-table-compact">
           <thead>
             <tr>
-              <th>Тип</th>
-              <th>Principal</th>
-              <th>Разрешение</th>
+              <th>{t("acl.column.type")}</th>
+              <th>{t("acl.column.principal")}</th>
+              <th>{t("acl.column.permission")}</th>
               {canManage && <th />}
             </tr>
           </thead>
@@ -117,7 +116,7 @@ export default function ObjectAclPanel({ objectPath, canManage }: ObjectAclPanel
                 {canManage && (
                   <td>
                     <button type="button" className="btn danger" onClick={() => removeEntry(index)}>
-                      Удалить
+                      {t("common:action.delete")}
                     </button>
                   </td>
                 )}
@@ -135,7 +134,7 @@ export default function ObjectAclPanel({ objectPath, canManage }: ObjectAclPanel
             disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isPending ? "Сохранение…" : "Сохранить ACL"}
+            {saveMutation.isPending ? t("common:action.saving") : t("acl.save")}
           </button>
           {saveMutation.error && <div className="op-alert op-alert-error">{String(saveMutation.error)}</div>}
         </div>

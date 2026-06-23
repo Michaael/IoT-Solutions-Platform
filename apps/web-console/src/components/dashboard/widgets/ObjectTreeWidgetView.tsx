@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fetchObjects } from "../../../api";
 import type { ObjectTreeWidget } from "../../../types/dashboard";
 import { useDashboardContext } from "../DashboardContext";
@@ -16,6 +17,7 @@ export default function ObjectTreeWidgetView({
   refreshIntervalMs,
   editable,
 }: ObjectTreeWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { selection, setSelection } = useDashboardContext();
   const selectedPath = widget.selectionKey ? selection[widget.selectionKey] : undefined;
@@ -35,7 +37,7 @@ export default function ObjectTreeWidgetView({
       editable={editable}
     >
       {!widget.parentPath ? (
-        <p className="hint">Укажите parentPath</p>
+        <p className="hint">{t("view.specifyParentPath")}</p>
       ) : (
         <ul className="dash-object-tree" style={styles.body}>
           {(children.data ?? []).map((obj) => (

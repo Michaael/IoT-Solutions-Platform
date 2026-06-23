@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createObject } from "../api";
 import { fetchInstanceTypes, instantiateModel } from "../api/models";
@@ -54,6 +55,7 @@ export default function CreateObjectDialog({
   onClose,
   onCreated,
 }: CreateObjectDialogProps) {
+  const { t } = useTranslation(["explorer", "common", "platform"]);
   const mode = resolveCreateDialogMode(parentPath);
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -85,25 +87,25 @@ export default function CreateObjectDialog({
   const dialogTitle = useMemo(() => {
     switch (mode) {
       case "application":
-        return "Новое deploy-приложение";
+        return t("dialog.newDeployApp");
       case "operator-app":
-        return "Новое operator-приложение";
+        return t("dialog.newOperatorApp");
       case "alert-rule":
-        return "Новое правило алерта";
+        return t("dialog.newAlertRule");
       case "correlator":
-        return "Новый коррелятор";
+        return t("dialog.newCorrelator");
       case "report":
-        return "Новый отчёт";
+        return t("dialog.newReport");
       case "data-source":
-        return "Новый источник данных";
+        return t("dialog.newDataSource");
       case "migration":
-        return "Новая миграция";
+        return t("dialog.newMigration");
       case "sql-binding":
-        return "Новая SQL-привязка";
+        return t("dialog.newSqlBinding");
       default:
-        return "Новый объект";
+        return t("dialog.newObject");
     }
-  }, [mode]);
+  }, [mode, t]);
 
   const driversQuery = useQuery({
     queryKey: ["drivers"],
@@ -272,30 +274,20 @@ export default function CreateObjectDialog({
         </header>
         <div className="modal-body">
           <p className="hint">
-            Родитель: <code>{parentPath}</code>
+            {t("dialog.parent")} <code>{parentPath}</code>
           </p>
           {mode === "application" && (
-            <p className="hint">
-              Deploy-приложение: регистрация в <code>Applications</code>, затем{" "}
-              <code>POST /api/v1/applications/&#123;id&#125;/deploy</code> с bundle.
-            </p>
+            <p className="hint">{t("dialog.deployAppHint")}</p>
           )}
           {mode === "operator-app" && (
-            <p className="hint">
-              Operator app для <code>?mode=operator&amp;app=&lt;id&gt;</code>. После создания
-              выберите дашборды в дочернем объекте.
-            </p>
+            <p className="hint">{t("dialog.operatorAppHint")}</p>
           )}
           {(mode === "alert-rule" || mode === "correlator") && (
-            <p className="hint">
-              После создания настройте параметры в панели свойств выбранного объекта.
-            </p>
+            <p className="hint">{t("dialog.alertCorrelatorHint")}</p>
           )}
           {mode === "report" && (
             <>
-              <p className="hint">
-                SQL-отчёт в <code>{parentPath}</code>. После создания откроется редактор с preview и CSV.
-              </p>
+              <p className="hint">{t("dialog.reportHint", { path: parentPath })}</p>
               <label>
                 Data source *
                 <select
@@ -303,7 +295,7 @@ export default function CreateObjectDialog({
                   onChange={(e) => setReportDataSourcePath(e.target.value)}
                   required
                 >
-                  <option value="">— выберите —</option>
+                  <option value="">{t("platform:sqlBinding.selectPlaceholder")}</option>
                   {(dataSourcesQuery.data ?? []).map((source) => (
                     <option key={source.path} value={source.path}>
                       {source.displayName} ({source.path})
@@ -314,19 +306,13 @@ export default function CreateObjectDialog({
             </>
           )}
           {mode === "data-source" && (
-            <p className="hint">
-              Источник данных в <code>{parentPath}</code>. После создания укажите schema и откройте редактор.
-            </p>
+            <p className="hint">{t("dialog.dataSourceHint", { path: parentPath })}</p>
           )}
           {mode === "migration" && (
-            <p className="hint">
-              SQL-миграция в <code>{parentPath}</code>. Применение — кнопкой в редакторе после создания.
-            </p>
+            <p className="hint">{t("dialog.migrationHint", { path: parentPath })}</p>
           )}
           {mode === "sql-binding" && (
-            <p className="hint">
-              Привязка SELECT → переменная объекта. Настройка refresh — в редакторе.
-            </p>
+            <p className="hint">{t("dialog.sqlBindingHint")}</p>
           )}
           <form
             className="form-grid"
@@ -336,7 +322,7 @@ export default function CreateObjectDialog({
             }}
           >
             <label>
-              {mode === "object" ? "Имя (сегмент пути) *" : "Имя / ID *"}
+              {mode === "object" ? t("dialog.namePathSegment") : t("dialog.nameOrId")}
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -345,7 +331,7 @@ export default function CreateObjectDialog({
               />
             </label>
             <label>
-              Отображаемое имя
+              {t("common:field.displayName")}
               <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </label>
 
@@ -368,7 +354,7 @@ export default function CreateObjectDialog({
                   <input
                     value={scriptId}
                     onChange={(e) => setScriptId(e.target.value)}
-                    placeholder="как name, если пусто"
+                    placeholder={t("dialog.scriptIdPlaceholder")}
                   />
                 </label>
                 <label>
@@ -384,7 +370,7 @@ export default function CreateObjectDialog({
                   />
                 </label>
                 <label className="full">
-                  SQL (опционально)
+                  {t("dialog.sqlOptional")}
                   <textarea
                     className="mono"
                     rows={4}
@@ -435,7 +421,7 @@ export default function CreateObjectDialog({
 
             {mode === "object" && (
               <label>
-                Тип
+                {t("dialog.type")}
                 <select
                   value={typeSelection}
                   onChange={(e) => {
@@ -461,7 +447,7 @@ export default function CreateObjectDialog({
                     ))}
                   </optgroup>
                   {(instanceTypesQuery.data?.length ?? 0) > 0 && (
-                    <optgroup label="Типы объектов (INSTANCE)">
+                    <optgroup label={t("dialog.instanceTypes")}>
                       {(instanceTypesQuery.data ?? []).map((model: ModelDto) => (
                         <option key={model.id} value={`${INSTANCE_TYPE_PREFIX}${model.id}`}>
                           {model.name}
@@ -477,7 +463,7 @@ export default function CreateObjectDialog({
             {mode === "object" && type === "DEVICE" && !selectedInstanceModel && (
               <>
                 <label>
-                  Драйвер *
+                  {t("dialog.driver")}
                   <span className="inline-badge-wrap">
                     <select
                       value={driverId}
@@ -494,7 +480,7 @@ export default function CreateObjectDialog({
                   </span>
                 </label>
                 <label>
-                  Интервал опроса (мс)
+                  {t("dialog.pollIntervalMs")}
                   <input
                     type="number"
                     min={500}
@@ -509,7 +495,7 @@ export default function CreateObjectDialog({
                   <p className="hint full">{selectedDriver.description}</p>
                 )}
                 <label className="full">
-                  Конфигурация по умолчанию (driverConfigJson)
+                  {t("dialog.defaultDriverConfig")}
                   <textarea
                     className="mono readonly"
                     rows={4}
@@ -518,16 +504,13 @@ export default function CreateObjectDialog({
                     spellCheck={false}
                   />
                 </label>
-                <p className="hint full">
-                  При создании применяется модель <code>device-driver-v1</code> и сохраняются
-                  настройки драйвера. Запустите драйвер на вкладке «Драйвер» после создания.
-                </p>
+                <p className="hint full">{t("dialog.deviceDriverHint")}</p>
               </>
             )}
 
             {(mode === "object" || mode === "data-source" || mode === "migration" || mode === "sql-binding") && (
               <label className="full">
-                Описание
+                {t("common:field.description")}
                 <textarea
                   rows={2}
                   value={description}
@@ -540,14 +523,14 @@ export default function CreateObjectDialog({
             )}
             <footer className="full form-actions">
               <button type="button" className="btn" onClick={onClose}>
-                Отмена
+                {t("common:action.cancel")}
               </button>
               <button
                 type="submit"
                 className="btn primary"
                 disabled={mutation.isPending || !name || (mode === "data-source" && !schemaName.trim())}
               >
-                Создать
+                {t("common:action.create")}
               </button>
             </footer>
           </form>

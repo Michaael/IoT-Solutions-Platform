@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   applyPlatformUpdate,
   checkPlatformUpdateNow,
@@ -6,6 +7,7 @@ import {
 } from "../api/platformUpdate";
 
 export default function PlatformUpdateBanner() {
+  const { t } = useTranslation("shell");
   const queryClient = useQueryClient();
 
   const statusQuery = useQuery({
@@ -49,9 +51,9 @@ export default function PlatformUpdateBanner() {
   }
 
   const handleApply = () => {
-    const version = status.latestVersion ?? "новой версии";
+    const version = status.latestVersion ?? t("platformUpdate.newVersionFallback");
     const confirmed = window.confirm(
-      `Установить ISPF ${version} и перезапустить сервер?\n\nКонсоль будет недоступна 20–40 секунд.`
+      t("platformUpdate.applyConfirm", { version }),
     );
     if (!confirmed) {
       return;
@@ -68,28 +70,31 @@ export default function PlatformUpdateBanner() {
       <div className="platform-update-banner-body">
         {applying && (
           <>
-            <strong>Обновление платформы…</strong>
-            <span>{status.applyMessage ?? "Перезапуск сервера"}</span>
+            <strong>{t("platformUpdate.updating")}</strong>
+            <span>{status.applyMessage ?? t("platformUpdate.restarting")}</span>
           </>
         )}
         {!applying && failed && (
           <>
-            <strong>Ошибка обновления</strong>
-            <span>{status.applyMessage ?? "Не удалось применить релиз"}</span>
+            <strong>{t("platformUpdate.failed")}</strong>
+            <span>{status.applyMessage ?? t("platformUpdate.failedMessage")}</span>
           </>
         )}
         {!applying && !failed && status.updateAvailable && (
           <>
-            <strong>Доступно обновление ISPF</strong>
+            <strong>{t("platformUpdate.available")}</strong>
             <span>
-              Текущая версия {status.currentVersion} → {status.latestVersion}
+              {t("platformUpdate.versionLine", {
+                current: status.currentVersion,
+                latest: status.latestVersion,
+              })}
               {status.releaseName ? ` (${status.releaseName})` : ""}
             </span>
           </>
         )}
         {!applying && !failed && !status.updateAvailable && status.checkError && (
           <>
-            <strong>Проверка обновлений</strong>
+            <strong>{t("platformUpdate.checkError")}</strong>
             <span>{status.checkError}</span>
           </>
         )}
@@ -102,12 +107,12 @@ export default function PlatformUpdateBanner() {
             disabled={applyMutation.isPending}
             onClick={handleApply}
           >
-            Обновить и перезапустить
+            {t("platformUpdate.apply")}
           </button>
         )}
         {status.updateAvailable && !status.applyEnabled && !applying && status.releaseUrl && (
           <a className="btn small" href={status.releaseUrl} target="_blank" rel="noreferrer">
-            Открыть релиз
+            {t("platformUpdate.openRelease")}
           </a>
         )}
         {!applying && (
@@ -117,7 +122,7 @@ export default function PlatformUpdateBanner() {
             disabled={checkMutation.isPending || statusQuery.isFetching}
             onClick={() => checkMutation.mutate()}
           >
-            Проверить снова
+            {t("platformUpdate.checkAgain")}
           </button>
         )}
       </div>

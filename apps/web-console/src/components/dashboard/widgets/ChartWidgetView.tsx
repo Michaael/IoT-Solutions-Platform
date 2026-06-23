@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Area,
   AreaChart,
@@ -32,6 +33,7 @@ export default function ChartWidgetView({
   refreshIntervalMs,
   editable = false,
 }: ChartWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const maxPoints = widget.maxPoints ?? 120;
   const historyRange = widget.historyRange ?? "live";
   const color = widget.color ?? "#2f81f7";
@@ -79,7 +81,7 @@ export default function ChartWidgetView({
       <div className="dash-widget-chart-head" style={styles.body}>
         <div className="dash-widget-title" style={styles.title}>
           {widget.title}
-          {isDemo ? <span className="dash-widget-demo-badge">пример</span> : null}
+          {isDemo ? <span className="dash-widget-demo-badge">{t("view.demoBadge")}</span> : null}
         </div>
         <div className="dash-chart-head-side">
           <div className="dash-chart-stats">
@@ -112,16 +114,16 @@ export default function ChartWidgetView({
       </div>
       <div className="dash-chart-body" style={styles.chart}>
         {!objectPath && widget.selectionKey ? (
-          <div className="dash-chart-placeholder">Выберите устройство</div>
+          <div className="dash-chart-placeholder">{t("view.selectDevice")}</div>
         ) : isLoading && points.length === 0 && !isDemo ? (
-          <div className="dash-chart-placeholder">Сбор данных…</div>
+          <div className="dash-chart-placeholder">{t("view.collectingData")}</div>
         ) : isError && !isDemo ? (
-          <div className="dash-chart-placeholder error">Ошибка привязки</div>
+          <div className="dash-chart-placeholder error">{t("view.bindingError")}</div>
         ) : points.length < 2 ? (
           <div className="dash-chart-placeholder">
             {variable?.historyEnabled === false
-              ? "История отключена для переменной"
-              : "Ожидание точек тренда…"}
+              ? t("view.historyDisabled")
+              : t("view.waitingTrend")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -151,7 +153,7 @@ export default function ChartWidgetView({
                       widget.title,
                     ];
                   }}
-                  labelFormatter={(label) => `Время: ${label}`}
+                  labelFormatter={(label) => t("view.timeLabel", { label })}
                   contentStyle={{
                     background: "#161b22",
                     border: "1px solid #30363d",
@@ -185,7 +187,7 @@ export default function ChartWidgetView({
                       widget.title,
                     ];
                   }}
-                  labelFormatter={(label) => `Время: ${label}`}
+                  labelFormatter={(label) => t("view.timeLabel", { label })}
                   contentStyle={{
                     background: "#161b22",
                     border: "1px solid #30363d",

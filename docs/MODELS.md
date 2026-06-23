@@ -96,7 +96,7 @@
 
 | Переменная | Описание |
 |------------|----------|
-| `title`, `status`, `bpmnXml`, `triggerJson` | Метаданные |
+| `title`, `status`, `bpmnXml`, `triggerJson`, `operatorAppId` | Метаданные |
 | `instanceState`, `lastRunAt`, `lastAction` | Runtime |
 
 ### snmp-agent-v1

@@ -1,4 +1,5 @@
 import type { ImageWidget } from "../../../types/dashboard";
+import { useTranslation } from "react-i18next";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 
@@ -8,6 +9,7 @@ interface ImageWidgetViewProps {
 }
 
 export default function ImageWidgetView({ widget, editable }: ImageWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const src = widget.imageUrl?.trim();
 
@@ -26,7 +28,7 @@ export default function ImageWidgetView({ widget, editable }: ImageWidgetViewPro
           style={styles.body}
         />
       ) : (
-        <p className="hint">Укажите imageUrl</p>
+        <p className="hint">{t("view.specifyImageUrl")}</p>
       )}
     </DashWidgetShell>
   );

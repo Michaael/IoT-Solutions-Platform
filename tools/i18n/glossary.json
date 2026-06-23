@@ -1,0 +1,9 @@
+{
+  "Binding": { "de": "Bindung", "ru": "Привязка", "zh": "绑定" },
+  "Federation": { "de": "Föderation", "ru": "Федерация", "zh": "联邦" },
+  "Dashboard": { "de": "Dashboard", "ru": "Дашборд", "zh": "仪表板" },
+  "Operator": { "de": "Operator", "ru": "Оператор", "zh": "操作员" },
+  "Variable": { "de": "Variable", "ru": "Переменная", "zh": "变量" },
+  "Workflow": { "de": "Workflow", "ru": "Workflow", "zh": "工作流" },
+  "Explorer": { "de": "Explorer", "ru": "Обозреватель", "zh": "浏览器" }
+}

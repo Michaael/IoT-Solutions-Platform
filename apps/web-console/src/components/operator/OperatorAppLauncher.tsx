@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fetchOperatorApps, type OperatorAppEntry } from "../../api/operatorApps";
+import LocaleSwitcher from "../LocaleSwitcher";
 
 interface OperatorAppLauncherProps {
   onOpenApp: (appId: string) => void;
@@ -15,6 +17,7 @@ async function loadAppsIndex() {
 }
 
 export default function OperatorAppLauncher({ onOpenApp, onSwitchAdmin }: OperatorAppLauncherProps) {
+  const { t } = useTranslation(["operator", "common"]);
   const appsQuery = useQuery({
     queryKey: ["operator-apps"],
     queryFn: loadAppsIndex,
@@ -24,17 +27,20 @@ export default function OperatorAppLauncher({ onOpenApp, onSwitchAdmin }: Operat
     <div className="operator-shell">
       <header className="operator-topbar">
         <div>
-          <strong>Оператор · приложения</strong>
-          <span className="brand-sub">дашборды из дерева объектов (сервер: Operator Apps)</span>
+          <strong>{t("operator:launcher.title")}</strong>
+          <span className="brand-sub">{t("operator:launcher.subtitle")}</span>
         </div>
-        {onSwitchAdmin && (
-          <button type="button" className="btn" onClick={onSwitchAdmin}>
-            Админ-консоль
-          </button>
-        )}
+        <div className="topbar-actions">
+          <LocaleSwitcher />
+          {onSwitchAdmin && (
+            <button type="button" className="btn" onClick={onSwitchAdmin}>
+              {t("operator:launcher.switchAdmin")}
+            </button>
+          )}
+        </div>
       </header>
       <main className="op-launcher">
-        {appsQuery.isLoading && <p className="op-muted">Загрузка…</p>}
+        {appsQuery.isLoading && <p className="op-muted">{t("common:action.loading")}</p>}
         {appsQuery.error && <p className="op-alert op-alert-error">{String(appsQuery.error)}</p>}
         <div className="op-launcher-grid">
           {(appsQuery.data ?? []).map((app: OperatorAppEntry) => (
@@ -49,10 +55,7 @@ export default function OperatorAppLauncher({ onOpenApp, onSwitchAdmin }: Operat
             </button>
           ))}
         </div>
-        <p className="op-muted op-launcher-hint">
-          Приложение — набор дашбордов <code>DASHBOARD</code>. Настройка: дерево →{" "}
-          <code>root.platform.operator-apps</code>.
-        </p>
+        <p className="op-muted op-launcher-hint">{t("operator:launcher.hint")}</p>
       </main>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { createAlertRule, validateExpression } from "../../api";
 import type { CreateAlertRulePayload } from "../../types/automation";
 
@@ -20,6 +21,7 @@ const DEFAULT: CreateAlertRulePayload = {
 };
 
 export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAlertRuleDialogProps) {
+  const { t } = useTranslation(["automation", "common"]);
   const [form, setForm] = useState<CreateAlertRulePayload>({ ...DEFAULT });
   const [exprError, setExprError] = useState<string | null>(null);
 
@@ -41,7 +43,7 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <header>
-          <h3>Новое правило алерта</h3>
+          <h3>{t("automation:alertRule.newTitle")}</h3>
           <button type="button" className="icon-btn" onClick={onClose}>✕</button>
         </header>
         <form
@@ -52,7 +54,7 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
           }}
         >
           <label>
-            Имя *
+            {t("common:table.name")} *
             <input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -60,7 +62,7 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
             />
           </label>
           <label>
-            Событие *
+            {t("automation:alertRule.event")}
             <input
               value={form.eventName}
               onChange={(e) => setForm((f) => ({ ...f, eventName: e.target.value }))}
@@ -68,7 +70,7 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
             />
           </label>
           <label className="full">
-            Путь объекта *
+            {t("automation:alertRule.targetObject")}
             <input
               value={form.objectPath}
               onChange={(e) => setForm((f) => ({ ...f, objectPath: e.target.value }))}
@@ -76,7 +78,7 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
             />
           </label>
           <label>
-            Переменная *
+            {t("automation:alertRule.variable")}
             <input
               value={form.watchVariable}
               onChange={(e) => setForm((f) => ({ ...f, watchVariable: e.target.value }))}
@@ -84,15 +86,15 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
             />
           </label>
           <label>
-            Payload variable
+            {t("automation:alertRule.payloadVariable")}
             <input
               value={form.payloadVariable ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, payloadVariable: e.target.value }))}
-              placeholder="опционально"
+              placeholder={t("automation:alertRule.optionalPlaceholder")}
             />
           </label>
           <label className="full">
-            CEL-условие *
+            {t("automation:alertRule.celCondition")}
             <textarea
               rows={3}
               value={form.conditionExpr}
@@ -111,7 +113,7 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
               checked={form.enabled}
               onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))}
             />
-            Включено
+            {t("automation:alertRule.enabled")}
           </label>
           <label className="checkbox-row">
             <input
@@ -119,19 +121,19 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
               checked={form.edgeTrigger}
               onChange={(e) => setForm((f) => ({ ...f, edgeTrigger: e.target.checked }))}
             />
-            Edge trigger (только при переходе false→true)
+            {t("automation:alertRule.edgeTriggerHint")}
           </label>
           {mutation.error && (
             <p className="hint error full">{(mutation.error as Error).message}</p>
           )}
           <footer className="full form-actions">
-            <button type="button" className="btn" onClick={onClose}>Отмена</button>
+            <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
             <button
               type="submit"
               className="btn primary"
               disabled={mutation.isPending || !form.name || !!exprError}
             >
-              Создать
+              {t("common:action.create")}
             </button>
           </footer>
         </form>

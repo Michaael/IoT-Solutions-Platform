@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fetchSecurityRoles, updateSecurityRole } from "../api/securityRoles";
 import { deleteObject } from "../api";
 import { roleNameFromSecurityRolePath } from "../utils/securityRolePath";
@@ -16,6 +17,7 @@ export default function SecurityRoleInspector({
   canManage,
   onDeleted,
 }: SecurityRoleInspectorProps) {
+  const { t } = useTranslation(["security", "common"]);
   const roleName = roleNameFromSecurityRolePath(path);
   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
@@ -59,11 +61,11 @@ export default function SecurityRoleInspector({
   });
 
   if (rolesQuery.isLoading) {
-    return <div className="inspector-empty">Загрузка роли…</div>;
+    return <div className="inspector-empty">{t("role.loading")}</div>;
   }
 
   if (rolesQuery.error || !role) {
-    return <div className="inspector-empty error">Роль не найдена</div>;
+    return <div className="inspector-empty error">{t("role.notFound")}</div>;
   }
 
   const dirty = displayName !== role.displayName || description !== role.description;
@@ -81,7 +83,7 @@ export default function SecurityRoleInspector({
               </span>
               {role.builtIn && (
                 <span className="security-user-pill security-user-pill--status is-active">
-                  Встроенная
+                  {t("role.builtIn")}
                 </span>
               )}
             </div>
@@ -97,24 +99,24 @@ export default function SecurityRoleInspector({
               className="btn danger"
               disabled={deleteMutation.isPending}
               onClick={() => {
-                if (confirm(`Удалить роль «${role.name}»?`)) {
+                if (confirm(t("common:action.confirmDeleteRole", { name: role.name }))) {
                   deleteMutation.mutate();
                 }
               }}
             >
-              Удалить
+              {t("common:action.delete")}
             </button>
           </div>
         )}
       </header>
 
       {!canManage && (
-        <p className="hint security-user-readonly-hint">Редактирование доступно только admin.</p>
+        <p className="hint security-user-readonly-hint">{t("role.readonlyHint")}</p>
       )}
 
       <div className="security-user-cards">
         <section className="security-user-card">
-          <h3 className="security-user-card-title">Свойства роли</h3>
+          <h3 className="security-user-card-title">{t("role.properties")}</h3>
           <form
             className="security-user-form"
             onSubmit={(event) => {
@@ -126,26 +128,26 @@ export default function SecurityRoleInspector({
           >
             <div className="security-user-form-grid">
               <label>
-                <span className="field-label">Имя</span>
+                <span className="field-label">{t("roles.column.name")}</span>
                 <input value={role.name} readOnly className="readonly" />
               </label>
               <label>
-                <span className="field-label">Отображаемое имя</span>
+                <span className="field-label">{t("common:field.displayName")}</span>
                 <input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   disabled={!canManage}
-                  placeholder="Имя в дереве объектов"
+                  placeholder={t("role.displayNamePlaceholder")}
                 />
               </label>
               <label className="full">
-                <span className="field-label">Описание</span>
+                <span className="field-label">{t("common:field.description")}</span>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={!canManage}
                   rows={3}
-                  placeholder="Назначение роли"
+                  placeholder={t("role.descriptionPlaceholder")}
                 />
               </label>
             </div>
@@ -158,11 +160,11 @@ export default function SecurityRoleInspector({
                     className="btn primary"
                     disabled={!dirty || saveMutation.isPending}
                   >
-                    {saveMutation.isPending ? "Сохранение…" : "Сохранить"}
+                    {saveMutation.isPending ? t("common:action.saving") : t("common:action.save")}
                   </button>
                 </div>
                 {saveMutation.isSuccess && !dirty && (
-                  <span className="hint success">Изменения сохранены</span>
+                  <span className="hint success">{t("user.changesSaved")}</span>
                 )}
                 {saveMutation.error && (
                   <span className="hint error">{String(saveMutation.error)}</span>

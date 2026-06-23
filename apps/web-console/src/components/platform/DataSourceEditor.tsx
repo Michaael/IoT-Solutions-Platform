@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchDataSource, updateDataSource } from "../../api/platformSql";
 import PlatformSqlEditorShell from "./PlatformSqlEditorShell";
@@ -10,6 +11,7 @@ interface DataSourceEditorProps {
 }
 
 export default function DataSourceEditor({ path, onClose, onOpenProperties }: DataSourceEditorProps) {
+  const { t } = useTranslation(["platform", "common"]);
   const queryClient = useQueryClient();
   const dataQuery = useQuery({
     queryKey: ["data-source", path],
@@ -46,7 +48,7 @@ export default function DataSourceEditor({ path, onClose, onOpenProperties }: Da
   });
 
   if (dataQuery.isLoading) {
-    return <p className="hint">Загрузка источника данных…</p>;
+    return <p className="hint">{t("platform:dataSource.loading")}</p>;
   }
 
   if (dataQuery.error) {
@@ -55,8 +57,8 @@ export default function DataSourceEditor({ path, onClose, onOpenProperties }: Da
 
   return (
     <PlatformSqlEditorShell
-      title={displayName || dataQuery.data?.displayName || "Источник данных"}
-      subtitle="SQL-схема для отчётов, миграций, bindings и script-функций"
+      title={displayName || dataQuery.data?.displayName || t("platform:dataSource.title")}
+      subtitle={t("platform:dataSource.subtitle")}
       path={path}
       onClose={onClose}
       onOpenProperties={onOpenProperties}
@@ -67,7 +69,7 @@ export default function DataSourceEditor({ path, onClose, onOpenProperties }: Da
           disabled={saveMutation.isPending || !schemaName.trim()}
           onClick={() => saveMutation.mutate()}
         >
-          {saveMutation.isPending ? "Сохранение…" : "Сохранить"}
+          {saveMutation.isPending ? t("common:action.saving") : t("common:action.save")}
         </button>
       }
     >
@@ -79,24 +81,24 @@ export default function DataSourceEditor({ path, onClose, onOpenProperties }: Da
         }}
       >
         <label>
-          Отображаемое имя
+          {t("platform:dataSource.displayName")}
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
         </label>
         <label>
-          PostgreSQL schema *
+          {t("platform:dataSource.schema")}
           <input
             value={schemaName}
             onChange={(e) => setSchemaName(e.target.value)}
             required
-            placeholder="app_myapp"
+            placeholder={t("platform:dataSource.schemaPlaceholder")}
           />
         </label>
         <label className="full">
-          Описание
+          {t("common:field.description")}
           <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
         {saveError && <p className="hint error full">{saveError}</p>}
-        {saveMutation.isSuccess && <p className="hint full">Сохранено</p>}
+        {saveMutation.isSuccess && <p className="hint full">{t("common:action.saved")}</p>}
       </form>
     </PlatformSqlEditorShell>
   );

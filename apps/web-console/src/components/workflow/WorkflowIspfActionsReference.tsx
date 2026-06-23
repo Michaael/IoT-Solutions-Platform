@@ -1,12 +1,13 @@
+import { useTranslation } from "react-i18next";
 import { WORKFLOW_ISPF_ACTIONS } from "../../types/automation";
 
 export default function WorkflowIspfActionsReference() {
+  const { t } = useTranslation("workflow");
+
   return (
     <section className="workflow-ispf-reference">
-      <h4>ISPF service task actions</h4>
-      <p className="hint">
-        На service task задайте атрибут <code>ispf:action</code> и поля из таблицы (в XML или через редактор).
-      </p>
+      <h4>{t("ispfReference.title")}</h4>
+      <p className="hint">{t("ispfReference.hint")}</p>
       <ul className="workflow-ispf-action-list">
         {WORKFLOW_ISPF_ACTIONS.map((entry) => (
           <li key={entry.action}>

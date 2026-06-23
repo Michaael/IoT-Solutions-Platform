@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { DashboardLayout } from "../../types/dashboard";
 
 interface DashboardSettingsPanelProps {
@@ -8,8 +9,8 @@ interface DashboardSettingsPanelProps {
   onRefreshIntervalChange: (ms: number) => void;
 }
 
-const THEME_OPTIONS = [
-  { id: "", label: "По умолчанию" },
+const THEME_OPTIONS: Array<{ id: string; labelKey?: string; label?: string }> = [
+  { id: "", labelKey: "settings.themeDefault" },
   { id: "btop", label: "BTOP" },
 ];
 
@@ -19,14 +20,16 @@ export default function DashboardSettingsPanel({
   onLayoutChange,
   onRefreshIntervalChange,
 }: DashboardSettingsPanelProps) {
+  const { t } = useTranslation("dashboard");
+
   return (
     <aside className="dashboard-sidebar">
       <header className="dashboard-sidebar-head">
-        <h4>Настройки дашборда</h4>
+        <h4>{t("settings.title")}</h4>
       </header>
       <div className="form-grid compact">
         <label>
-          Интервал опроса (мс)
+          {t("settings.refreshInterval")}
           <input
             type="number"
             min={500}
@@ -34,10 +37,10 @@ export default function DashboardSettingsPanel({
             value={refreshIntervalMs}
             onChange={(e) => onRefreshIntervalChange(Number(e.target.value))}
           />
-          <span className="hint">Сохраняется в переменной refreshIntervalMs объекта</span>
+          <span className="hint">{t("settings.refreshIntervalHint")}</span>
         </label>
         <label>
-          Тема
+          {t("settings.theme")}
           <select
             value={layout.theme ?? ""}
             onChange={(e) =>
@@ -46,13 +49,13 @@ export default function DashboardSettingsPanel({
           >
             {THEME_OPTIONS.map((item) => (
               <option key={item.id || "default"} value={item.id}>
-                {item.label}
+                {item.labelKey ? t(item.labelKey) : item.label}
               </option>
             ))}
           </select>
         </label>
         <label>
-          Колонок сетки
+          {t("settings.gridColumns")}
           <input
             type="number"
             min={4}
@@ -62,7 +65,7 @@ export default function DashboardSettingsPanel({
           />
         </label>
         <label>
-          Высота строки (px)
+          {t("settings.rowHeight")}
           <input
             type="number"
             min={32}

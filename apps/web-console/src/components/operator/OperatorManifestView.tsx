@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useObjectWebSocket } from "../../hooks/useObjectWebSocket";
 import { useOperatorManifest } from "../../hooks/useOperatorManifest";
 import { ANIMA_OPERATOR_WIRE_PROFILE } from "../../types/bff";
 import { resolveOperatorScreen } from "../../types/operatorManifest";
+import LocaleSwitcher from "../LocaleSwitcher";
 import ManifestScreen from "./ManifestScreen";
 import OperatorSidebar from "./OperatorSidebar";
 
@@ -27,6 +29,7 @@ export default function OperatorManifestView({
   session,
   onLogout,
 }: OperatorManifestViewProps) {
+  const { t } = useTranslation(["operator", "common"]);
   useObjectWebSocket();
   const manifestQuery = useOperatorManifest(appId);
   const [screenId, setScreenId] = useState<string | null>(resolveScreenFromUrl);
@@ -53,7 +56,7 @@ export default function OperatorManifestView({
   );
 
   if (manifestQuery.isLoading) {
-    return <div className="operator-shell op-loading">Загрузка manifest…</div>;
+    return <div className="operator-shell op-loading">{t("operator:loadingManifest")}</div>;
   }
 
   if (manifestQuery.error || !manifest || !activeScreen) {
@@ -61,7 +64,7 @@ export default function OperatorManifestView({
       <div className="operator-shell op-loading">
         {manifestQuery.error
           ? String(manifestQuery.error)
-          : `Manifest /operator-apps/${appId}.manifest.json не найден.`}
+          : t("operator:manifestNotFound", { appId })}
       </div>
     );
   }
@@ -77,14 +80,15 @@ export default function OperatorManifestView({
           </span>
         </div>
         <div className="topbar-actions">
+          <LocaleSwitcher />
           {onLogout && (
             <button type="button" className="btn" onClick={onLogout}>
-              Выйти
+              {t("common:action.logout")}
             </button>
           )}
         {onSwitchAdmin && (
           <button type="button" className="btn" onClick={onSwitchAdmin}>
-            Админ-консоль
+            {t("operator:launcher.switchAdmin")}
           </button>
         )}
         </div>

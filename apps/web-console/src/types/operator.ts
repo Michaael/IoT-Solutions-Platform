@@ -2,6 +2,7 @@ export interface WorkQueueItem {
   id: string;
   instanceId: string;
   workflowPath: string;
+  operatorAppId?: string | null;
   taskNodeId: string;
   title: string;
   instructions: string;

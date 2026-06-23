@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import type { ObjectSummary, TreeNode } from "../types";
 import { parentObjectPath, siblingObjectPaths } from "../utils/tree";
 import {
@@ -123,6 +124,7 @@ const TreeRow = memo(function TreeRow({
   onOpenEditor,
   onLoadChildren,
 }: TreeRowProps) {
+  const { t } = useTranslation("explorer");
   const { toggle } = useTreeExpanded();
   const drag = useTreeDrag();
   const path = node.object.path;
@@ -170,7 +172,7 @@ const TreeRow = memo(function TreeRow({
       role="treeitem"
       tabIndex={0}
       aria-selected={isSelected}
-      title={node.object.groupRef ? `Ссылка: ${path}` : path}
+      title={node.object.groupRef ? t("tree.linkTitle", { path }) : path}
       className={`tree-row ${isSelected ? "selected" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""} ${node.object.groupRef ? "group-ref" : ""} ${node.object.groupMemberMissing ? "missing-ref" : ""}`}
       style={{ paddingLeft: `${depth * 16 + 8}px` }}
       draggable={draggable}
@@ -243,7 +245,7 @@ const TreeRow = memo(function TreeRow({
         />
       </span>
       <span className="tree-label">
-        {node.object.groupRef && <span className="group-ref-badge" title="Участник группы">↗</span>}
+        {node.object.groupRef && <span className="group-ref-badge" title={t("tree.groupMember")}>↗</span>}
         {node.object.displayName}
       </span>
       <span className="tree-type">{node.object.type}</span>

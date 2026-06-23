@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   createFederationBind,
   fetchFederationPeers,
@@ -21,6 +22,7 @@ export default function FederationBindPanel({
   canManage,
   onChanged,
 }: FederationBindPanelProps) {
+  const { t } = useTranslation(["federation", "common"]);
   const queryClient = useQueryClient();
   const isMirror = isFederatedCatalogPath(object.path);
   const isBound = Boolean(object.federated);
@@ -116,7 +118,9 @@ export default function FederationBindPanel({
     mutationFn: () => probeFederationBind(peerId, remotePath.trim()),
     onSuccess: (result) => {
       setError(null);
-      setProbeResult(`${result.type}: ${result.displayName} — ${result.description || "без описания"}`);
+      setProbeResult(
+        `${result.type}: ${result.displayName} — ${result.description || t("bind.probeNoDescription")}`
+      );
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -127,12 +131,12 @@ export default function FederationBindPanel({
     }
     return (
       <section className="panel panel-card federation-bind-panel">
-        <h3>Федерация</h3>
-        <span className="badge">Федеративный</span>
-        <p className="hint">Объект привязан к удалённому узлу (только чтение метаданных привязки).</p>
+        <h3>{t("bind.titleReadonly")}</h3>
+        <span className="badge">{t("common:badge.federated")}</span>
+        <p className="hint">{t("bind.readonlyHint")}</p>
         {object.federationRemotePath && (
           <p>
-            Удалённый путь: <code>{object.federationRemotePath}</code>
+            {t("bind.remotePath")}: <code>{object.federationRemotePath}</code>
           </p>
         )}
       </section>
@@ -144,22 +148,18 @@ export default function FederationBindPanel({
 
   return (
     <section className="panel panel-card federation-bind-panel">
-      <h3>Привязка к федерации</h3>
-      {isBound && <span className="badge">Федеративный</span>}
-      <p className="hint">
-        Локальный путь <code>{object.path}</code> — канонический. Удалённый узел — источник данных и поведения.
-      </p>
+      <h3>{t("bind.title")}</h3>
+      {isBound && <span className="badge">{t("common:badge.federated")}</span>}
+      <p className="hint">{t("bind.subtitle", { path: object.path })}</p>
 
       {isMirror && (
-        <div className="federation-bind-callout">
-          Синхронизированный каталог — используйте «Разместить локально», чтобы создать локальную привязку.
-        </div>
+        <div className="federation-bind-callout">{t("bind.mirrorCallout")}</div>
       )}
 
       {isMirror && !showPlaceLocally && (
         <div className="form-actions" style={{ marginBottom: "1rem" }}>
           <button type="button" className="btn primary" onClick={() => setShowPlaceLocally(true)}>
-            Разместить локально…
+            {t("bind.placeLocally")}
           </button>
         </div>
       )}
@@ -173,35 +173,35 @@ export default function FederationBindPanel({
           }}
         >
           <label>
-            Родительский путь
+            {t("bind.parentPath")}
             <input value={placeParentPath} onChange={(e) => setPlaceParentPath(e.target.value)} />
           </label>
           <label>
-            Имя узла
+            {t("bind.nodeName")}
             <input value={placeName} onChange={(e) => setPlaceName(e.target.value)} required />
           </label>
           <label>
-            Узел
+            {t("bind.peer")}
             <select value={peerId} onChange={(e) => setPeerId(e.target.value)} required>
-              <option value="">—</option>
+              <option value="">{t("common:empty.dash")}</option>
               {peerOptions.map((peer) => (
                 <option key={peer.id} value={peer.id}>
                   {peer.name}
-                  {peer.tunnelConnected ? " (туннель)" : ""}
+                  {peer.tunnelConnected ? t("bind.tunnelSuffix") : ""}
                 </option>
               ))}
             </select>
           </label>
           <label className="full">
-            Удалённый путь
+            {t("bind.remotePathLabel")}
             <input value={remotePath} onChange={(e) => setRemotePath(e.target.value)} required />
           </label>
           <div className="full form-actions">
             <button type="submit" className="btn primary" disabled={placeLocallyMutation.isPending}>
-              Создать локальную привязку
+              {t("bind.createLocalBind")}
             </button>
             <button type="button" className="btn" onClick={() => setShowPlaceLocally(false)}>
-              Отмена
+              {t("common:action.cancel")}
             </button>
           </div>
         </form>
@@ -211,19 +211,19 @@ export default function FederationBindPanel({
         <>
           <div className="form-grid">
             <label>
-              Узел
+              {t("bind.peer")}
               <select value={peerId} onChange={(e) => setPeerId(e.target.value)}>
-                <option value="">— выберите узел —</option>
+                <option value="">{t("bind.selectPeer")}</option>
                 {peerOptions.map((peer) => (
                   <option key={peer.id} value={peer.id}>
                     {peer.name}
-                    {peer.tunnelConnected ? " (туннель)" : ""}
+                    {peer.tunnelConnected ? t("bind.tunnelSuffix") : ""}
                   </option>
                 ))}
               </select>
             </label>
             <label className="full">
-              Удалённый путь
+              {t("bind.remotePathLabel")}
               <input
                 value={remotePath}
                 onChange={(e) => setRemotePath(e.target.value)}
@@ -239,7 +239,7 @@ export default function FederationBindPanel({
               disabled={!peerId || !remotePath.trim() || probeMutation.isPending}
               onClick={() => probeMutation.mutate()}
             >
-              Проверить
+              {t("bind.probe")}
             </button>
             {!isBound && !isMirror && (
               <button
@@ -248,7 +248,7 @@ export default function FederationBindPanel({
                 disabled={!peerId || !remotePath.trim() || bindMutation.isPending}
                 onClick={() => bindMutation.mutate()}
               >
-                Привязать к федерации
+                {t("bind.bind")}
               </button>
             )}
             {isBound && (
@@ -259,7 +259,7 @@ export default function FederationBindPanel({
                   disabled={!peerId || !remotePath.trim() || rebindMutation.isPending}
                   onClick={() => rebindMutation.mutate()}
                 >
-                  Перепривязать
+                  {t("bind.rebind")}
                 </button>
                 {!showUnbindConfirm ? (
                   <button
@@ -268,25 +268,25 @@ export default function FederationBindPanel({
                     disabled={unbindMutation.isPending}
                     onClick={() => setShowUnbindConfirm(true)}
                   >
-                    Отвязать
+                    {t("bind.unbind")}
                   </button>
                 ) : (
                   <div className="federation-unbind-confirm">
-                    <span>Снять привязку с «{object.displayName}»?</span>
+                    <span>{t("bind.confirmUnbind", { name: object.displayName })}</span>
                     <button
                       type="button"
                       className="btn danger compact"
                       disabled={unbindMutation.isPending}
                       onClick={() => unbindMutation.mutate()}
                     >
-                      Подтвердить отвязку
+                      {t("bind.confirmUnbindAction")}
                     </button>
                     <button
                       type="button"
                       className="btn compact"
                       onClick={() => setShowUnbindConfirm(false)}
                     >
-                      Отмена
+                      {t("common:action.cancel")}
                     </button>
                   </div>
                 )}
@@ -300,7 +300,7 @@ export default function FederationBindPanel({
 
       {error && <p className="hint error">{error}</p>}
       {(bindMutation.isSuccess || rebindMutation.isSuccess || unbindMutation.isSuccess) && (
-        <p className="hint success">Привязка к федерации обновлена</p>
+        <p className="hint success">{t("bind.updated")}</p>
       )}
     </section>
   );

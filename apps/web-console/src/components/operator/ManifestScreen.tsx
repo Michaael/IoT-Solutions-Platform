@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { assertBffOk, bffInvoke, toBffInput } from "../../api/bff";
 import { downloadReportExport, runReport, type ReportExportFormat } from "../../api/reports";
@@ -18,6 +19,7 @@ interface ManifestScreenProps {
 }
 
 export default function ManifestScreen({ screen, wireProfile, appId, onStatus }: ManifestScreenProps) {
+  const { t } = useTranslation(["operator", "common"]);
   const selectionKey = selectionKeyForTable(screen.table);
   const [selectedRow, setSelectedRow] = useState<Record<string, unknown> | null>(null);
   const selectedKey = selectedRow ? String(selectedRow[selectionKey] ?? "") : null;
@@ -67,7 +69,7 @@ export default function ManifestScreen({ screen, wireProfile, appId, onStatus }:
           Object.entries(screen.report.parameters ?? {}).map(([key, value]) => [key, String(value)])
         );
         await downloadReportExport(appId, screen.report.reportId, format, params);
-        onStatus(`${format.toUpperCase()} экспортирован`);
+        onStatus(t("manifest.exported", { format: format.toUpperCase() }));
       } catch (error) {
         onStatus(String(error));
       } finally {
@@ -96,7 +98,7 @@ export default function ManifestScreen({ screen, wireProfile, appId, onStatus }:
       return { action, result: assertBffOk(wire) };
     },
     onSuccess: ({ action }) => {
-      onStatus(action.successMessage ?? `Выполнено: ${action.label}`);
+      onStatus(action.successMessage ?? t("manifest.actionDone", { label: action.label }));
       tableQuery.refetch();
       setSelectedRow(null);
     },
@@ -157,13 +159,13 @@ export default function ManifestScreen({ screen, wireProfile, appId, onStatus }:
           })}
           {screen.table && (
             <button type="button" className="btn" onClick={() => tableQuery.refetch()}>
-              Обновить
+              {t("manifest.refresh")}
             </button>
           )}
           {screen.report && (
             <>
               <button type="button" className="btn" onClick={() => reportQuery.refetch()}>
-                Обновить
+                {t("manifest.refresh")}
               </button>
               <ReportExportControls busy={exportBusy} onExport={exportReport} />
             </>
@@ -185,15 +187,17 @@ export default function ManifestScreen({ screen, wireProfile, appId, onStatus }:
       {selectable && (
         <p className="op-muted">
           {selectedRow
-            ? `Выбрано: ${String(selectedRow.order_number ?? selectedRow[selectionKey] ?? "—")}`
-            : "Выберите строку в таблице ниже."}
+            ? t("manifest.rowSelected", {
+                value: String(selectedRow.order_number ?? selectedRow[selectionKey] ?? t("common:empty.dash")),
+              })
+            : t("manifest.selectRow")}
         </p>
       )}
 
       {tableQuery.error && <div className="op-alert op-alert-error">{String(tableQuery.error)}</div>}
       {reportQuery.error && <div className="op-alert op-alert-error">{String(reportQuery.error)}</div>}
       {reportQuery.data?.truncated && (
-        <div className="op-alert op-alert-info">Показаны не все строки (лимит отчёта).</div>
+        <div className="op-alert op-alert-info">{t("manifest.reportTruncated")}</div>
       )}
       {tableQuery.data && (
         <BffDataTable

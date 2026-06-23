@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ReportExportFormat } from "../../api/reports";
 import { REPORT_EXPORT_OPTIONS, type ReportExportOption } from "./reportExportOptions";
 
@@ -19,6 +20,7 @@ export default function ReportExportControls({
   size = "default",
   onExport,
 }: ReportExportControlsProps) {
+  const { t } = useTranslation("report");
   const [format, setFormat] = useState<ReportExportFormat>(options[0]?.value ?? "xlsx");
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export default function ReportExportControls({
         className="report-export-format"
         value={format}
         disabled={disabled || busy}
-        aria-label="Формат выгрузки"
+        aria-label={t("export.formatLabel")}
         title={selected.title}
         onChange={(event) => setFormat(event.target.value as ReportExportFormat)}
       >
@@ -64,7 +66,7 @@ export default function ReportExportControls({
         title={selected.title}
         onClick={() => void onExport(format)}
       >
-        {busy ? "Выгрузка…" : "Выгрузить"}
+        {busy ? t("export.exporting") : t("export.export")}
       </button>
     </div>
   );

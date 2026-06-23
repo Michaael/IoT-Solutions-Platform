@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invokeFunction, setVariable } from "../../../api";
 import type { SvgWidget } from "../../../types/dashboard";
@@ -21,6 +22,7 @@ export default function SvgWidgetView({
   refreshIntervalMs,
   editable,
 }: SvgWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { selection } = useDashboardContext();
   const queryClient = useQueryClient();
@@ -41,12 +43,12 @@ export default function SvgWidgetView({
   const functionMutation = useMutation({
     mutationFn: () => {
       if (!functionPath || !widget.functionName) {
-        throw new Error("Объект и функция обязательны");
+        throw new Error(t("error.objectAndFunctionRequired"));
       }
       return invokeFunction(functionPath, widget.functionName);
     },
     onSuccess: () => {
-      setMessage("Выполнено");
+      setMessage(t("view.done"));
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["variables"] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
@@ -115,7 +117,7 @@ export default function SvgWidgetView({
       editable={editable}
     >
       {!svgSrc ? (
-        <p className="hint">Укажите svgUrl</p>
+        <p className="hint">{t("view.specifySvgUrl")}</p>
       ) : (
         <button
           type="button"

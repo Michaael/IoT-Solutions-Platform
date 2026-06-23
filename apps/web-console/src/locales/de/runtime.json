@@ -1,0 +1,22 @@
+{
+  "fireEvent.event": "Ereignis:",
+  "fireEvent.object": "Objekt:",
+  "fireEvent.payload": "Nutzlast (JSON DataRecord, optional)",
+  "fireEvent.payloadHint": "Leeres Objekt oder nur Schema/Zeilen — Plattform füllt Schema aus Deskriptor.",
+  "fireEvent.publish": "Veröffentlichen",
+  "fireEvent.publishing": "Veröffentlichung…",
+  "fireEvent.title": "Ereignis veröffentlichen",
+  "functionJournal.empty": "Noch keine Aufrufe",
+  "functionJournal.filter.all": "alle",
+  "functionJournal.filter.error": "Fehler",
+  "functionJournal.filter.success": "Erfolg",
+  "functionJournal.loadError": "Journal konnte nicht geladen werden",
+  "functionJournal.subtitle": "Alle Aufrufe über API, Workflow, Scheduler und UI",
+  "functionJournal.title": "Funktionsaufrufjournal",
+  "invokeFunction.input": "Eingabe (JSON DataRecord)",
+  "invokeFunction.inputHint": "Leere rows — Plattform füllt inputSchema aus Deskriptor.",
+  "invokeFunction.invoke": "Aufrufen",
+  "invokeFunction.invoking": "Aufruf…",
+  "invokeFunction.result": "Ergebnis",
+  "invokeFunction.title": "Funktion aufrufen"
+}

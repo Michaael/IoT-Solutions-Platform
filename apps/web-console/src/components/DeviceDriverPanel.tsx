@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchVariables } from "../api";
 import {
@@ -44,15 +45,15 @@ function prettyJson(raw: string, fallback: Record<string, unknown>): string {
   }
 }
 
-function parseJsonObject(text: string, label: string): Record<string, string> {
+function parseJsonObject(text: string, invalidJson: string, invalidObject: string): Record<string, string> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error(`${label}: неверный JSON`);
+    throw new Error(invalidJson);
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(`${label}: ожидается JSON-объект`);
+    throw new Error(invalidObject);
   }
   const result: Record<string, string> = {};
   for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
@@ -73,6 +74,7 @@ function statusClass(status: string): string {
 }
 
 export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDriverPanelProps) {
+  const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
   const [driverId, setDriverId] = useState("virtual");
   const [pollIntervalMs, setPollIntervalMs] = useState(5000);
@@ -143,10 +145,20 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
   const saveMutation = useMutation({
     mutationFn: (autoStart: boolean) => {
       setFormError(null);
-      const configuration = parseJsonObject(configJson, "Конфигурация");
-      const pointMappings = parseJsonObject(mappingsJson, "Точки (mappings)");
+      const configLabel = t("inspector:driver.configLabel");
+      const mappingsLabel = t("inspector:driver.mappingsLabel");
+      const configuration = parseJsonObject(
+        configJson,
+        t("common:error.invalidJsonLabel", { label: configLabel }),
+        t("inspector:driver.invalidJsonObject", { label: configLabel }),
+      );
+      const pointMappings = parseJsonObject(
+        mappingsJson,
+        t("common:error.invalidJsonLabel", { label: mappingsLabel }),
+        t("inspector:driver.invalidJsonObject", { label: mappingsLabel }),
+      );
       if (!driverId.trim()) {
-        throw new Error("Укажите driverId");
+        throw new Error(t("inspector:driver.driverIdRequired"));
       }
       return configureDriver(devicePath, {
         driverId: driverId.trim(),
@@ -179,7 +191,7 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
   const lastError = statusQuery.data?.lastError ?? null;
 
   if (variablesQuery.isLoading) {
-    return <p className="hint">Загрузка настроек драйвера…</p>;
+    return <p className="hint">{t("inspector:driver.loading")}</p>;
   }
 
   return (
@@ -187,11 +199,11 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
       <header className="driver-panel-head">
         <div>
           <h3>
-            Драйвер устройства
+            {t("inspector:driver.title")}
             {selectedDriver && <DriverMaturityBadge maturity={selectedDriver.maturity} />}
           </h3>
           <p className="hint">
-            Управление poll loop и конфигурацией. Для SNMP/MQTT/Modbus сначала задайте конфигурацию, затем «Старт».
+            {t("inspector:driver.subtitle")}
           </p>
         </div>
         <span className={statusClass(runtimeStatus)}>{runtimeStatus}</span>
@@ -205,27 +217,26 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
           </code>
         </div>
         <div className="driver-runtime-stat">
-          <span className="driver-runtime-label">Подключение</span>
+          <span className="driver-runtime-label">{t("inspector:driver.connection")}</span>
           <span className={connected ? "driver-connected yes" : "driver-connected no"}>
-            {connected ? "да" : "нет"}
+            {connected ? t("common:action.yes") : t("common:action.no")}
           </span>
         </div>
         <div className="driver-runtime-stat">
-          <span className="driver-runtime-label">Интервал опроса</span>
+          <span className="driver-runtime-label">{t("inspector:driver.pollInterval")}</span>
           <span>{statusQuery.data?.pollIntervalMs ?? pollIntervalMs} ms</span>
         </div>
       </div>
 
       {lastError && (
         <p className="hint error driver-last-error">
-          Последняя ошибка: {lastError}
+          {t("inspector:driver.lastError", { message: lastError })}
         </p>
       )}
 
       {!hasBinding && (
         <p className="hint warning driver-hint-box">
-          У устройства не задан <code>driverId</code>. Примените модель (например <code>snmp-agent-v1</code>) или
-          заполните форму ниже и нажмите «Сохранить и старт».
+          {t("inspector:driver.noDriverId")}
         </p>
       )}
 
@@ -238,7 +249,7 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
               disabled={isBusy || !hasBinding}
               onClick={() => startMutation.mutate()}
             >
-              Старт
+              {t("inspector:driver.start")}
             </button>
             <button
               type="button"
@@ -246,7 +257,7 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
               disabled={isBusy}
               onClick={() => stopMutation.mutate()}
             >
-              Стоп
+              {t("inspector:driver.stop")}
             </button>
             <button
               type="button"
@@ -254,7 +265,7 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
               disabled={isBusy || !hasBinding}
               onClick={() => restartMutation.mutate()}
             >
-              Перезапуск
+              {t("inspector:driver.restart")}
             </button>
           </div>
 
@@ -265,10 +276,10 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
               saveMutation.mutate(false);
             }}
           >
-            <h4>Конфигурация</h4>
+            <h4>{t("inspector:driver.configuration")}</h4>
             <div className="form-grid">
               <label>
-                Драйвер
+                {t("inspector:driver.driverLabel")}
                 <select
                   value={driverId}
                   onChange={(e) => {
@@ -289,7 +300,7 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
                 </select>
               </label>
               <label>
-                Интервал опроса (мс)
+                {t("inspector:driver.pollIntervalMs")}
                 <input
                   type="number"
                   min={500}
@@ -324,7 +335,7 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
             </div>
             <div className="form-actions">
               <button type="submit" className="btn" disabled={isBusy}>
-                Сохранить
+                {t("common:action.save")}
               </button>
               <button
                 type="button"
@@ -332,14 +343,14 @@ export default function DeviceDriverPanel({ devicePath, canManage }: DeviceDrive
                 disabled={isBusy}
                 onClick={() => saveMutation.mutate(true)}
               >
-                Сохранить и старт
+                {t("inspector:driver.saveAndStart")}
               </button>
             </div>
             {formError && <p className="hint error">{formError}</p>}
           </form>
         </>
       ) : (
-        <p className="hint">Запуск и настройка драйвера доступны только роли admin.</p>
+        <p className="hint">{t("common:hint.adminOnly")}</p>
       )}
 
       {actionError && (

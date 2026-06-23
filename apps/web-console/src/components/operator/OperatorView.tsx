@@ -1,4 +1,5 @@
 import type { AuthSession } from "../../auth/session";
+import { useTranslation } from "react-i18next";
 import { useOperatorUi } from "../../hooks/useOperatorUi";
 import OperatorAppLauncher from "./OperatorAppLauncher";
 import OperatorDashboardApp from "./OperatorDashboardApp";
@@ -54,10 +55,11 @@ function OperatorAppEntry({
   session?: AuthSession;
   onLogout?: () => void;
 }) {
+  const { t } = useTranslation("operator");
   const uiQuery = useOperatorUi(appId);
 
   if (uiQuery.isLoading) {
-    return <div className="operator-shell op-loading">Загрузка operator UI…</div>;
+    return <div className="operator-shell op-loading">{t("loadingUi")}</div>;
   }
 
   if (uiQuery.data) {

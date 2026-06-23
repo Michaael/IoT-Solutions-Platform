@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchVariables, setVariable } from "../../../api";
 import type { VariableEditorWidget } from "../../../types/dashboard";
@@ -19,6 +20,7 @@ export default function VariableEditorWidgetView({
   refreshIntervalMs,
   editable,
 }: VariableEditorWidgetViewProps) {
+  const { t } = useTranslation(["widgets", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const queryClient = useQueryClient();
@@ -58,13 +60,13 @@ export default function VariableEditorWidgetView({
     mutationFn: async ({ name, field, raw }: { name: string; field: string; raw: string }) => {
       const variable = variables.find((item) => item.name === name);
       if (!variable?.writable) {
-        throw new Error(`${name}: только чтение`);
+        throw new Error(t("error.readOnlyVariable", { name }));
       }
       const record = setFieldValue(ensureRecord(variable), field, raw);
       return setVariable(objectPath, name, record);
     },
     onSuccess: () => {
-      setMessage("Сохранено");
+      setMessage(t("view.saved"));
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["variables", objectPath] });
     },
@@ -82,11 +84,11 @@ export default function VariableEditorWidgetView({
       editable={editable}
     >
       {!objectPath ? (
-        <p className="hint">Укажите объект</p>
+        <p className="hint">{t("view.specifyObjectGeneric")}</p>
       ) : variablesQuery.isLoading ? (
-        <p className="hint">Загрузка…</p>
+        <p className="hint">{t("common:action.loading")}</p>
       ) : variables.length === 0 ? (
-        <p className="hint">Нет переменных</p>
+        <p className="hint">{t("view.noVariables")}</p>
       ) : (
         <div className="dash-variable-editor-list" style={styles.body}>
           {variables.map((variable) => {
@@ -124,7 +126,7 @@ export default function VariableEditorWidgetView({
                     })
                   }
                 >
-                  Сохранить
+                  {t("common:action.save")}
                 </button>
               </label>
             );

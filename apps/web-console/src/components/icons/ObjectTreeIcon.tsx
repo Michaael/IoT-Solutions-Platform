@@ -31,41 +31,42 @@ export type TreeIconKind =
   | "layers"
   | "box";
 
+export type TreeIconCategory = "general" | "platform" | "objects" | "application";
+
 export interface TreeIconDefinition {
   id: TreeIconKind;
-  label: string;
-  category: string;
+  category: TreeIconCategory;
 }
 
 export const TREE_ICON_CATALOG: TreeIconDefinition[] = [
-  { id: "folder", label: "Папка", category: "Общие" },
-  { id: "box", label: "Контейнер", category: "Общие" },
-  { id: "layers", label: "Слои", category: "Общие" },
-  { id: "star", label: "Звезда", category: "Общие" },
-  { id: "tag", label: "Метка", category: "Общие" },
-  { id: "bookmark", label: "Закладка", category: "Общие" },
-  { id: "gear", label: "Настройки", category: "Общие" },
-  { id: "database", label: "База данных", category: "Общие" },
-  { id: "cloud", label: "Облако", category: "Общие" },
-  { id: "root", label: "Корень", category: "Платформа" },
-  { id: "tenant", label: "Арендатор", category: "Платформа" },
-  { id: "security", label: "Безопасность", category: "Платформа" },
-  { id: "users-folder", label: "Пользователи", category: "Платформа" },
-  { id: "roles-folder", label: "Роли", category: "Платформа" },
-  { id: "device", label: "Устройство", category: "Объекты" },
-  { id: "driver", label: "Драйвер", category: "Объекты" },
-  { id: "model", label: "Модель", category: "Объекты" },
-  { id: "dashboard", label: "Дашборд", category: "Объекты" },
-  { id: "workflow", label: "Workflow", category: "Объекты" },
-  { id: "application", label: "Приложение", category: "Объекты" },
-  { id: "report", label: "Отчёт", category: "Объекты" },
-  { id: "user", label: "Пользователь", category: "Объекты" },
-  { id: "agent", label: "Агент", category: "Объекты" },
-  { id: "alert", label: "Алерт", category: "Объекты" },
-  { id: "functions", label: "Функции", category: "Приложение" },
-  { id: "schedules", label: "Расписания", category: "Приложение" },
-  { id: "bindings", label: "Привязки", category: "Приложение" },
-  { id: "screens", label: "Экраны", category: "Приложение" },
+  { id: "folder", category: "general" },
+  { id: "box", category: "general" },
+  { id: "layers", category: "general" },
+  { id: "star", category: "general" },
+  { id: "tag", category: "general" },
+  { id: "bookmark", category: "general" },
+  { id: "gear", category: "general" },
+  { id: "database", category: "general" },
+  { id: "cloud", category: "general" },
+  { id: "root", category: "platform" },
+  { id: "tenant", category: "platform" },
+  { id: "security", category: "platform" },
+  { id: "users-folder", category: "platform" },
+  { id: "roles-folder", category: "platform" },
+  { id: "device", category: "objects" },
+  { id: "driver", category: "objects" },
+  { id: "model", category: "objects" },
+  { id: "dashboard", category: "objects" },
+  { id: "workflow", category: "objects" },
+  { id: "application", category: "objects" },
+  { id: "report", category: "objects" },
+  { id: "user", category: "objects" },
+  { id: "agent", category: "objects" },
+  { id: "alert", category: "objects" },
+  { id: "functions", category: "application" },
+  { id: "schedules", category: "application" },
+  { id: "bindings", category: "application" },
+  { id: "screens", category: "application" },
 ];
 
 const ICON_IDS = new Set<string>(TREE_ICON_CATALOG.map((item) => item.id));

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { invokeFunction } from "../../api";
 import type { DataRecord, DataSchema, FunctionDescriptor } from "../../types";
 
@@ -27,6 +28,7 @@ export default function InvokeFunctionDialog({
   onClose,
   onInvoked,
 }: InvokeFunctionDialogProps) {
+  const { t } = useTranslation(["runtime", "common"]);
   const [inputJson, setInputJson] = useState(() => defaultInputJson(fn.inputSchema));
   const [resultJson, setResultJson] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export default function InvokeFunctionDialog({
         try {
           input = JSON.parse(trimmed) as DataRecord;
         } catch {
-          throw new Error("Некорректный JSON input");
+          throw new Error(t("common:error.invalidJsonInput"));
         }
         if (isEmptyInput(input)) {
           input = undefined;
@@ -62,7 +64,7 @@ export default function InvokeFunctionDialog({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <header className="modal-head">
-          <h3>Вызов функции</h3>
+          <h3>{t("runtime:invokeFunction.title")}</h3>
           <button type="button" className="btn small" onClick={onClose}>×</button>
         </header>
         <div className="modal-body">
@@ -71,7 +73,7 @@ export default function InvokeFunctionDialog({
           </p>
           {fn.description && <p className="hint">{fn.description}</p>}
           <label className="full">
-            Input (JSON DataRecord)
+            {t("runtime:invokeFunction.input")}
             <textarea
               rows={6}
               value={inputJson}
@@ -79,24 +81,24 @@ export default function InvokeFunctionDialog({
               spellCheck={false}
             />
           </label>
-          <p className="hint">Пустой rows — платформа подставит inputSchema из descriptor.</p>
+          <p className="hint">{t("runtime:invokeFunction.inputHint")}</p>
           {error && <p className="hint error">{error}</p>}
           {resultJson && (
             <label className="full">
-              Результат
+              {t("runtime:invokeFunction.result")}
               <textarea rows={8} readOnly value={resultJson} spellCheck={false} />
             </label>
           )}
         </div>
         <footer className="modal-foot">
-          <button type="button" className="btn" onClick={onClose}>Закрыть</button>
+          <button type="button" className="btn" onClick={onClose}>{t("common:action.close")}</button>
           <button
             type="button"
             className="btn primary"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            {mutation.isPending ? "Вызов…" : "Вызвать"}
+            {mutation.isPending ? t("runtime:invokeFunction.invoking") : t("runtime:invokeFunction.invoke")}
           </button>
         </footer>
       </div>

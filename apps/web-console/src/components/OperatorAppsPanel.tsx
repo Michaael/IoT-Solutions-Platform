@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchObjects } from "../api";
 import {
   createOperatorApp,
@@ -23,6 +24,7 @@ interface OperatorAppsPanelProps {
 const DASHBOARD_PARENT = "root.platform.dashboards";
 
 export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorAppsPanelProps) {
+  const { t } = useTranslation(["operator", "common"]);
   const queryClient = useQueryClient();
   const pathLeaf = operatorAppLeafFromPath(selectedPath);
 
@@ -148,30 +150,33 @@ export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorA
         <div>
           <h2>{title || selectedAppId}</h2>
           <p className="hint">
-            Operator UI · <code>?mode=operator&amp;app={selectedAppId}</code> · объект{" "}
-            <code>{selectedPath}</code>
+            {t("operatorApps.uiHint", {
+              query: `?mode=operator&app=${selectedAppId}`,
+              path: selectedPath,
+            })}
           </p>
         </div>
       </header>
 
-      {appsQuery.isLoading && <p className="hint">Загрузка…</p>}
+      {appsQuery.isLoading && <p className="hint">{t("common:action.loading")}</p>}
       {appsQuery.error && <p className="hint error">{String(appsQuery.error)}</p>}
 
       <div className="operator-apps-editor">
-        {uiQuery.isLoading && <p className="hint">Загрузка конфигурации…</p>}
+        {uiQuery.isLoading && <p className="hint">{t("operatorApps.loadingConfig")}</p>}
         {uiQuery.error && <p className="hint error">{String(uiQuery.error)}</p>}
 
         {!uiQuery.isLoading && !uiQuery.error && !uiQuery.data && (
           <p className="hint">
-            Конфигурация operator UI ещё не создана. Отметьте дашборды и нажмите «Сохранить»
-            {canManage ? "" : " (нужна роль admin)"}.
+            {t("operatorApps.noConfig", {
+              adminSuffix: canManage ? "" : t("operatorApps.noConfigAdminSuffix"),
+            })}
           </p>
         )}
 
         {(uiQuery.data || canManage) && !uiQuery.isLoading && (
           <div className="form-grid compact">
             <label>
-              Заголовок приложения
+              {t("operatorApps.appTitle")}
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -179,7 +184,7 @@ export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorA
               />
             </label>
             <label>
-              Дашборд по умолчанию
+              {t("operatorApps.defaultDashboard")}
               <select
                 value={defaultDashboard}
                 onChange={(e) => setDefaultDashboard(e.target.value)}
@@ -197,11 +202,11 @@ export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorA
             </label>
 
             <div className="full operator-apps-dashboards">
-              <strong>Дашборды в меню operator</strong>
+              <strong>{t("operatorApps.menuDashboards")}</strong>
               <p className="hint">
-                Объекты <code>DASHBOARD</code> из <code>{DASHBOARD_PARENT}</code>
+                {t("operatorApps.menuDashboardsHint", { path: DASHBOARD_PARENT })}
               </p>
-              {dashboardsQuery.isLoading && <p className="hint">Загрузка дашбордов…</p>}
+              {dashboardsQuery.isLoading && <p className="hint">{t("operatorApps.loadingDashboards")}</p>}
               <ul className="operator-apps-dashboard-list">
                 {availableDashboards.map((dashboard) => (
                   <li key={dashboard.path} className="operator-apps-dashboard-item">
@@ -240,13 +245,13 @@ export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorA
                   disabled={!dirty || saveMutation.isPending || !buildUi()}
                   onClick={handleSave}
                 >
-                  {saveMutation.isPending ? "Сохранение…" : "Сохранить"}
+                  {saveMutation.isPending ? t("common:action.saving") : t("common:action.save")}
                 </button>
                 {saveMutation.error && (
                   <p className="hint error">{String(saveMutation.error)}</p>
                 )}
                 {saveMutation.isSuccess && !dirty && (
-                  <p className="hint">Сохранено. Operator UI обновится после перезагрузки вкладки.</p>
+                  <p className="hint">{t("operatorApps.savedHint")}</p>
                 )}
               </div>
             )}

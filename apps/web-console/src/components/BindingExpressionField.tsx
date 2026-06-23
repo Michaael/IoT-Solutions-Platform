@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { validateExpression } from "../api";
 
 interface BindingExpressionFieldProps {
@@ -13,9 +14,10 @@ export default function BindingExpressionField({
   id,
   value,
   onChange,
-  placeholder = "CEL или platform: selectField, scale, clamp, format, delta, counterRate, rate, movingAvg, refAt, callFunction",
+  placeholder,
   disabled = false,
 }: BindingExpressionFieldProps) {
+  const { t } = useTranslation("inspector");
   const validateMutation = useMutation({
     mutationFn: () => validateExpression(value.trim()),
   });
@@ -28,7 +30,7 @@ export default function BindingExpressionField({
         className="mono"
         value={value}
         disabled={disabled}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("bindingExpression.placeholder")}
         onChange={(e) => onChange(e.target.value)}
       />
       <button
@@ -37,13 +39,13 @@ export default function BindingExpressionField({
         disabled={disabled || !value.trim() || validateMutation.isPending}
         onClick={() => validateMutation.mutate()}
       >
-        Проверить
+        {t("bindingExpression.validate")}
       </button>
       {validateMutation.data?.valid && (
-        <span className="hint success">Выражение корректно</span>
+        <span className="hint success">{t("bindingExpression.valid")}</span>
       )}
       {validateMutation.data && !validateMutation.data.valid && (
-        <span className="hint error">{validateMutation.data.error ?? "Ошибка"}</span>
+        <span className="hint error">{validateMutation.data.error ?? t("bindingExpression.error")}</span>
       )}
       {validateMutation.error && (
         <span className="hint error">{(validateMutation.error as Error).message}</span>

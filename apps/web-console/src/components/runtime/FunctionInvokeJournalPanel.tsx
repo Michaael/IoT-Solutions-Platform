@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFunctionInvocations } from "../../api";
 import type { FunctionInvokeAuditEntry } from "../../types/runtime";
@@ -16,6 +17,7 @@ export default function FunctionInvokeJournalPanel({
   limit = 50,
   showFilters = false,
 }: FunctionInvokeJournalPanelProps) {
+  const { t } = useTranslation(["runtime", "common"]);
   const [objectPath, setObjectPath] = useState(initialObjectPath ?? "");
   const [functionName, setFunctionName] = useState(initialFunctionName ?? "");
   const [successFilter, setSuccessFilter] = useState<"" | "true" | "false">("");
@@ -38,8 +40,8 @@ export default function FunctionInvokeJournalPanel({
     <section className="event-journal-panel function-invoke-journal">
       <header className="event-journal-head">
         <div>
-          <h3>Журнал вызовов функций</h3>
-          <p className="hint">Все invoke через API, workflow, scheduler и UI</p>
+          <h3>{t("runtime:functionJournal.title")}</h3>
+          <p className="hint">{t("runtime:functionJournal.subtitle")}</p>
         </div>
         <span className="badge">{items.length}</span>
       </header>
@@ -68,17 +70,17 @@ export default function FunctionInvokeJournalPanel({
               value={successFilter}
               onChange={(e) => setSuccessFilter(e.target.value as "" | "true" | "false")}
             >
-              <option value="">все</option>
-              <option value="true">успех</option>
-              <option value="false">ошибка</option>
+              <option value="">{t("runtime:functionJournal.filter.all")}</option>
+              <option value="true">{t("runtime:functionJournal.filter.success")}</option>
+              <option value="false">{t("runtime:functionJournal.filter.error")}</option>
             </select>
           </label>
         </div>
       )}
 
-      {query.isLoading && <p className="hint">Загрузка…</p>}
-      {query.error && <p className="hint error">Не удалось загрузить журнал</p>}
-      {items.length === 0 && !query.isLoading && <p className="hint">Вызовов пока нет</p>}
+      {query.isLoading && <p className="hint">{t("common:action.loading")}</p>}
+      {query.error && <p className="hint error">{t("runtime:functionJournal.loadError")}</p>}
+      {items.length === 0 && !query.isLoading && <p className="hint">{t("runtime:functionJournal.empty")}</p>}
 
       <ul className="event-journal-list">
         {items.map((entry) => (

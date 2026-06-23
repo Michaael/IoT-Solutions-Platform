@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { createVariable, type CreateVariablePayload } from "../api";
 import type { DataSchema } from "../types";
@@ -20,6 +21,7 @@ export default function CreateVariableDialog({
   onClose,
   onSaved,
 }: CreateVariableDialogProps) {
+  const { t } = useTranslation(["inspector", "common"]);
   const [name, setName] = useState("");
   const [writable, setWritable] = useState(false);
   const [history, setHistory] = useState<VariableHistoryState>({
@@ -46,13 +48,13 @@ export default function CreateVariableDialog({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <header>
-          <h3>Новая переменная</h3>
+          <h3>{t("variables.newTitle")}</h3>
           <button type="button" className="icon-btn" onClick={onClose}>✕</button>
         </header>
 
         <section className="modal-section form-grid">
           <label className="full">
-            Имя
+            {t("common:table.name")}
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -67,10 +69,10 @@ export default function CreateVariableDialog({
               checked={writable}
               onChange={(e) => setWritable(e.target.checked)}
             />
-            Доступна для записи
+            {t("variables.writable")}
           </label>
           <p className="hint full">
-            Для вычисляемых значений создайте переменную (writable=false), затем правило на вкладке «Привязки».
+            {t("variables.computedHint")}
           </p>
           <div className="full">
             <VariableHistoryFields
@@ -86,14 +88,14 @@ export default function CreateVariableDialog({
         )}
 
         <footer>
-          <button type="button" className="btn" onClick={onClose}>Отмена</button>
+          <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
           <button
             type="button"
             className="btn primary"
             disabled={!name.trim() || mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            Создать
+            {t("common:action.create")}
           </button>
         </footer>
       </div>

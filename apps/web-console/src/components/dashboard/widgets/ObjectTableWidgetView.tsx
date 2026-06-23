@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchObjects, fetchVariables } from "../../../api";
 import type { ObjectTableColumn, ObjectTableWidget } from "../../../types/dashboard";
@@ -19,6 +20,7 @@ export default function ObjectTableWidgetView({
   refreshIntervalMs,
   editable,
 }: ObjectTableWidgetViewProps) {
+  const { t } = useTranslation(["widgets", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
   const { selection, setSelection, navigateToDashboard, openDashboardModal } = useDashboardContext();
   const parsedColumns = useMemo(
@@ -65,15 +67,15 @@ export default function ObjectTableWidgetView({
       editable={editable}
     >
       {!widget.parentPath ? (
-        <p className="hint">Укажите parentPath</p>
+        <p className="hint">{t("view.specifyParentPath")}</p>
       ) : children.isLoading ? (
-        <p className="hint">Загрузка…</p>
+        <p className="hint">{t("common:action.loading")}</p>
       ) : (
         <div className="dash-table-wrap" style={styles.body}>
           <table className="dash-object-table" style={styles.table}>
             <thead>
               <tr>
-                <th>Объект</th>
+                <th>{t("view.objectColumn")}</th>
                 {parsedColumns.map((col) => (
                   <th key={col.variable ?? col.objectField ?? col.label}>{col.label}</th>
                 ))}

@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   deleteEvent,
@@ -44,6 +45,7 @@ interface ObjectInspectorProps {
 type Tab = "general" | "federation" | "variables" | "bindings" | "events" | "functions" | "driver" | "deploy" | "access";
 
 export default function ObjectInspector({ path, onDeleted, canManage = false }: ObjectInspectorProps) {
+  const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("general");
   const [displayName, setDisplayName] = useState("");
@@ -137,15 +139,15 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
   const obj = resolveInspectorObject(path, objectQuery.data);
 
   if (objectQuery.error && !obj) {
-    return <div className="inspector-empty error">Не удалось загрузить объект</div>;
+    return <div className="inspector-empty error">{t("common:error.objectLoadFailed")}</div>;
   }
 
   if (!obj && inspectorQueryLoading(objectQuery)) {
-    return <div className="inspector-empty">Загрузка объекта…</div>;
+    return <div className="inspector-empty">{t("common:action.loadingObject")}</div>;
   }
 
   if (!obj) {
-    return <div className="inspector-empty error">Не удалось загрузить объект</div>;
+    return <div className="inspector-empty error">{t("common:error.objectLoadFailed")}</div>;
   }
   const isRoot = path === "root";
   const isPlatformRoot = path === "root.platform";
@@ -163,26 +165,26 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
         : (["general", "federation", "variables", "bindings", "events", "functions"] as const)
   ).filter((tabName): tabName is Tab => tabName !== "federation" || showFederationBind);
 
-  const tabLabel = (t: Tab) => {
-    switch (t) {
+  const tabLabel = (tabId: Tab) => {
+    switch (tabId) {
       case "general":
-        return "Свойства";
+        return t("tab.general");
       case "federation":
-        return "Federation";
+        return t("tab.federation");
       case "deploy":
-        return "Deploy";
+        return t("tab.deploy");
       case "access":
-        return "Доступ";
+        return t("tab.access");
       case "driver":
-        return "Драйвер";
+        return t("tab.driver");
       case "variables":
-        return "Переменные";
+        return t("tab.variables");
       case "bindings":
-        return "Привязки";
+        return t("tab.bindings");
       case "events":
-        return "События";
+        return t("tab.events");
       case "functions":
-        return "Функции";
+        return t("tab.functions");
     }
   };
 
@@ -194,7 +196,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
           <div>
             <h2>
               {obj.displayName}
-              {obj.federated && <span className="inline-badge federated-inline-badge">federated</span>}
+              {obj.federated && <span className="inline-badge federated-inline-badge">{t("common:badge.federated")}</span>}
             </h2>
             <code className="path-code">{obj.path}</code>
           </div>
@@ -206,12 +208,12 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
               className="btn danger"
               disabled={deleteMutation.isPending}
               onClick={() => {
-                if (confirm(`Удалить объект «${obj.displayName}» и все дочерние?`)) {
+                if (confirm(t("common:action.confirmDeleteObject", { name: obj.displayName }))) {
                   deleteMutation.mutate();
                 }
               }}
             >
-              Удалить
+              {t("common:action.delete")}
             </button>
           )}
         </div>
@@ -244,7 +246,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
 
       {tab === "deploy" && isApplication && !applicationAppId && (
         <section className="panel">
-          <p className="op-muted">Не удалось определить appId для этого приложения.</p>
+          <p className="op-muted">{t("deploy.appIdMissing")}</p>
         </section>
       )}
 
@@ -269,15 +271,15 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
             }}
           >
             <label>
-              Имя
+              {t("common:field.displayName")}
               <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </label>
             <label>
-              Тип
+              {t("common:table.type")}
               <input value={obj.type} readOnly className="readonly" />
             </label>
             <label className="full">
-              Описание
+              {t("common:field.description")}
               <textarea
                 rows={3}
                 value={description}
@@ -285,7 +287,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
               />
             </label>
             <label className="full">
-              Иконка в дереве
+              {t("common:field.iconInTree")}
               <IconPicker
                 path={obj.path}
                 type={obj.type}
@@ -295,16 +297,16 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
               />
             </label>
             <label>
-              ID
+              {t("common:table.id")}
               <input value={obj.id} readOnly className="readonly" />
             </label>
             <label>
-              Основная модель
+              {t("common:field.primaryModel")}
               <input
                 value={
                   obj.appliedModels?.find((model) => model.primary)?.name ??
                   obj.templateId ??
-                  "—"
+                  t("common:empty.dash")
                 }
                 readOnly
                 className="readonly"
@@ -312,31 +314,31 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
             </label>
             {(obj.appliedModels?.length ?? 0) > 0 && (
               <div className="full">
-                <span className="field-label">Применённые модели</span>
+                <span className="field-label">{t("common:field.appliedModels")}</span>
                 <ul className="applied-models-list">
                   {obj.appliedModels!.map((model) => (
                     <li key={model.id} className={model.primary ? "primary-model" : undefined}>
                       <code>{model.name}</code>{" "}
-                      <span className="hint">({model.type}{model.primary ? ", primary" : ""})</span>
+                      <span className="hint">({model.type}{model.primary ? `, ${t("common:badge.primary")}` : ""})</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
             <label className="legacy-template-id">
-              templateId
-              <input value={obj.templateId ?? "—"} readOnly className="readonly" />
+              {t("common:field.templateId")}
+              <input value={obj.templateId ?? t("common:empty.dash")} readOnly className="readonly" />
             </label>
             <label>
-              Создан
+              {t("common:field.createdAt")}
               <input value={new Date(obj.createdAt).toLocaleString()} readOnly className="readonly" />
             </label>
             <div className="full form-actions">
               <button type="submit" className="btn primary" disabled={saveMutation.isPending}>
-                Сохранить
+                {t("common:action.save")}
               </button>
-              {saveMutation.isSuccess && <span className="hint success">Сохранено</span>}
-              {saveMutation.error && <span className="hint error">Ошибка сохранения</span>}
+              {saveMutation.isSuccess && <span className="hint success">{t("common:action.saved")}</span>}
+              {saveMutation.error && <span className="hint error">{t("common:action.saveError")}</span>}
             </div>
           </form>
         </section>
@@ -357,27 +359,27 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                 className="btn primary small"
                 onClick={() => setShowCreateVariable(true)}
               >
-                + Переменная
+                {t("variables.add")}
               </button>
             </div>
           )}
           {obj.federated && (
-            <p className="hint">Переменные проксируются с remote peer. Локальные переменные скрыты пока активен bind.</p>
+            <p className="hint">{t("variables.federatedHint")}</p>
           )}
-          {variablesQuery.isPending && !variablesQuery.data && <p>Загрузка переменных…</p>}
+          {variablesQuery.isPending && !variablesQuery.data && <p>{t("variables.loading")}</p>}
           {variablesQuery.data && variablesQuery.data.length === 0 && (
-            <p className="hint">Нет переменных</p>
+            <p className="hint">{t("variables.empty")}</p>
           )}
           {variablesQuery.data && variablesQuery.data.length > 0 && (
             <div className="table-scroll">
             <table className="data-table variables-table">
               <thead>
                 <tr>
-                  <th>Имя</th>
-                  <th>Значение</th>
-                  <th>Запись</th>
-                  <th>История</th>
-                  <th aria-label="Действия" />
+                  <th>{t("common:table.name")}</th>
+                  <th>{t("variables.column.value")}</th>
+                  <th>{t("variables.column.writable")}</th>
+                  <th>{t("variables.column.history")}</th>
+                  <th aria-label={t("common:table.actions")} />
                 </tr>
               </thead>
               <tbody>
@@ -394,17 +396,17 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                     <td className="mono var-value-cell" title={compactValue}>
                       {compactValue}
                     </td>
-                    <td className="var-flag-cell">{v.writable ? "да" : "нет"}</td>
+                    <td className="var-flag-cell">{v.writable ? t("common:action.yes") : t("common:action.no")}</td>
                     <td className="var-history-cell">
                       {v.historyEnabled ? (
                         <>
-                          <span className="var-flag yes">да</span>
+                          <span className="var-flag yes">{t("common:action.yes")}</span>
                           <span className="var-history-retention">
                             {formatHistoryRetention(v.historyRetentionDays)}
                           </span>
                         </>
                       ) : (
-                        <span className="var-flag no">нет</span>
+                        <span className="var-flag no">{t("common:action.no")}</span>
                       )}
                     </td>
                     <td className="var-actions-cell">
@@ -418,7 +420,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                             )
                           }
                         >
-                          График
+                          {t("variables.chart")}
                         </button>
                       )}
                       {canManage ? (
@@ -427,7 +429,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                           className="btn small"
                           onClick={() => setEditingVariable(v)}
                         >
-                          Настройки
+                          {t("variables.settings")}
                         </button>
                       ) : (
                         v.writable && (
@@ -436,7 +438,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                             className="btn small"
                             onClick={() => setEditingVariable(v)}
                           >
-                            Изменить
+                            {t("variables.changeValue")}
                           </button>
                         )
                       )}
@@ -476,13 +478,13 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                 className="btn primary small"
                 onClick={() => setDescriptorDialog({ kind: "event" })}
               >
-                + Событие
+                {t("events.add")}
               </button>
             </div>
           )}
-          {editorQuery.isPending && !editorQuery.data && <p>Загрузка…</p>}
+          {editorQuery.isPending && !editorQuery.data && <p>{t("common:action.loading")}</p>}
           {editorQuery.data && editorQuery.data.events.length === 0 && (
-            <p className="hint">Нет событий</p>
+            <p className="hint">{t("events.empty")}</p>
           )}
           {editorQuery.data && editorQuery.data.events.length > 0 && (
             <ul className="event-list editable-list">
@@ -496,7 +498,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                       className="btn small primary"
                       onClick={() => setFireEventTarget(ev)}
                     >
-                      Опубликовать
+                      {t("events.publish")}
                     </button>
                     {canManage && (
                       <>
@@ -505,19 +507,19 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                           className="btn small"
                           onClick={() => setDescriptorDialog({ kind: "event", initial: ev })}
                         >
-                          Изменить
+                          {t("common:action.edit")}
                         </button>
                         <button
                           type="button"
                           className="btn small danger"
                           disabled={deleteEventMutation.isPending}
                           onClick={() => {
-                            if (confirm(`Удалить событие «${ev.name}»?`)) {
+                            if (confirm(t("common:action.confirmDeleteEvent", { name: ev.name }))) {
                               deleteEventMutation.mutate(ev.name);
                             }
                           }}
                         >
-                          Удалить
+                          {t("common:action.delete")}
                         </button>
                       </>
                     )}
@@ -539,13 +541,13 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                 className="btn primary small"
                 onClick={() => setDescriptorDialog({ kind: "function" })}
               >
-                + Функция
+                {t("functions.add")}
               </button>
             </div>
           )}
-          {editorQuery.isPending && !editorQuery.data && <p>Загрузка…</p>}
+          {editorQuery.isPending && !editorQuery.data && <p>{t("common:action.loading")}</p>}
           {editorQuery.data && editorQuery.data.functions.length === 0 && (
-            <p className="hint">Нет функций</p>
+            <p className="hint">{t("functions.empty")}</p>
           )}
           {editorQuery.data && editorQuery.data.functions.length > 0 && (
             <ul className="event-list editable-list">
@@ -559,7 +561,7 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                       className="btn small primary"
                       onClick={() => setInvokeFunctionTarget(fn)}
                     >
-                      Вызвать
+                      {t("functions.invoke")}
                     </button>
                     {canManage && (
                       <>
@@ -568,19 +570,19 @@ export default function ObjectInspector({ path, onDeleted, canManage = false }: 
                           className="btn small"
                           onClick={() => setDescriptorDialog({ kind: "function", initial: fn })}
                         >
-                          Изменить
+                          {t("common:action.edit")}
                         </button>
                         <button
                           type="button"
                           className="btn small danger"
                           disabled={deleteFunctionMutation.isPending}
                           onClick={() => {
-                            if (confirm(`Удалить функцию «${fn.name}»?`)) {
+                            if (confirm(t("common:action.confirmDeleteFunction", { name: fn.name }))) {
                               deleteFunctionMutation.mutate(fn.name);
                             }
                           }}
                         >
-                          Удалить
+                          {t("common:action.delete")}
                         </button>
                       </>
                     )}

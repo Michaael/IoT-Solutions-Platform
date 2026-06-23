@@ -6,6 +6,7 @@ export interface WorkflowView {
   status: WorkflowLifecycleStatus;
   bpmnXml: string;
   triggerJson: string;
+  operatorAppId: string | null;
   instanceState: string;
   lastRunAt: string | null;
 }

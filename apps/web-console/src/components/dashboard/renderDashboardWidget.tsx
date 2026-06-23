@@ -1,4 +1,5 @@
 import type { DashboardWidget } from "../../types/dashboard";
+import { useTranslation } from "react-i18next";
 import DashboardWidgetContent from "./DashboardWidgetContent";
 import CarouselWidgetView from "./widgets/CarouselWidgetView";
 import CompositeWidgetView from "./widgets/CompositeWidgetView";
@@ -9,6 +10,11 @@ import SubDashboardWidgetView from "./widgets/SubDashboardWidgetView";
 import TabPanelWidgetView from "./widgets/TabPanelWidgetView";
 
 const MAX_WIDGET_DEPTH = 3;
+
+function MaxWidgetDepthMessage() {
+  const { t } = useTranslation("widgets");
+  return <div className="hint">{t("error.maxDepth")}</div>;
+}
 
 export interface RenderDashboardWidgetProps {
   widget: DashboardWidget;
@@ -24,7 +30,7 @@ export default function renderDashboardWidget({
   depth = 0,
 }: RenderDashboardWidgetProps) {
   if (depth >= MAX_WIDGET_DEPTH) {
-    return <div className="hint">Превышена глубина вложенности виджетов</div>;
+    return <MaxWidgetDepthMessage />;
   }
 
   switch (widget.type) {

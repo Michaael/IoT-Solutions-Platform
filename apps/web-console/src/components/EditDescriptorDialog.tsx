@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { upsertEvent, upsertFunction } from "../api";
 import type { DataSchema, EventDescriptor, FunctionDescriptor } from "../types";
@@ -46,6 +47,7 @@ export default function EditDescriptorDialog({
   onClose,
   onSaved,
 }: EditDescriptorDialogProps) {
+  const { t } = useTranslation(["inspector", "common"]);
   const isFunction = kind === "function";
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -111,17 +113,17 @@ export default function EditDescriptorDialog({
       setParseError(null);
       mutation.mutate();
     } catch {
-      setParseError("Некорректный JSON схемы");
+      setParseError(t("descriptor.invalidSchemaJson"));
     }
   }
 
   const title = initial
     ? isFunction
-      ? `Функция: ${initial.name}`
-      : `Событие: ${initial.name}`
+      ? t("descriptor.functionTitle", { name: initial.name })
+      : t("descriptor.eventTitle", { name: initial.name })
     : isFunction
-      ? "Новая функция"
-      : "Новое событие";
+      ? t("descriptor.newFunction")
+      : t("descriptor.newEvent");
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -133,7 +135,7 @@ export default function EditDescriptorDialog({
 
         <section className="modal-section form-grid">
           <label>
-            Имя
+            {t("common:table.name")}
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -144,7 +146,7 @@ export default function EditDescriptorDialog({
           </label>
           {!isFunction && (
             <label>
-              Уровень
+              {t("common:field.level")}
               <select value={level} onChange={(e) => setLevel(e.target.value)}>
                 <option value="DEBUG">DEBUG</option>
                 <option value="INFO">INFO</option>
@@ -155,7 +157,7 @@ export default function EditDescriptorDialog({
             </label>
           )}
           <label className="full">
-            Описание
+            {t("common:field.description")}
             <input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
           <label className="full">
@@ -173,14 +175,14 @@ export default function EditDescriptorDialog({
         {mutation.error && <p className="hint error">{(mutation.error as Error).message}</p>}
 
         <footer>
-          <button type="button" className="btn" onClick={onClose}>Отмена</button>
+          <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
           <button
             type="button"
             className="btn primary"
             disabled={!name.trim() || mutation.isPending}
             onClick={handleSave}
           >
-            Сохранить
+            {t("common:action.save")}
           </button>
         </footer>
       </div>

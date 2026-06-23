@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchSecurityUsers } from "../api/securityUsers";
 import CreateSecurityUserDialog from "./CreateSecurityUserDialog";
 
@@ -9,6 +10,7 @@ interface SecurityUsersPanelProps {
 }
 
 export default function SecurityUsersPanel({ canManage, onSelectUser }: SecurityUsersPanelProps) {
+  const { t } = useTranslation(["security", "common"]);
   const [showCreate, setShowCreate] = useState(false);
 
   const usersQuery = useQuery({
@@ -17,21 +19,18 @@ export default function SecurityUsersPanel({ canManage, onSelectUser }: Security
   });
 
   if (!canManage) {
-    return <p className="op-muted">Управление пользователями доступно только admin.</p>;
+    return <p className="op-muted">{t("users.adminOnly")}</p>;
   }
 
   return (
     <section className="security-users-panel">
       <header className="security-users-header">
         <div>
-          <h3>Пользователи платформы</h3>
-          <p className="op-muted">
-            Учётные записи в <code>root.platform.security.users</code>. Выберите пользователя в
-            дереве или в списке — свойства редактируются в инспекторе объекта.
-          </p>
+          <h3>{t("users.title")}</h3>
+          <p className="op-muted">{t("users.subtitle")}</p>
         </div>
         <button type="button" className="btn primary" onClick={() => setShowCreate(true)}>
-          + Создать пользователя
+          {t("users.create")}
         </button>
       </header>
 
@@ -40,10 +39,10 @@ export default function SecurityUsersPanel({ canManage, onSelectUser }: Security
       <table className="op-table security-users-table security-users-table-compact">
         <thead>
           <tr>
-            <th>Логин</th>
-            <th>Имя</th>
-            <th>Роли</th>
-            <th>Активен</th>
+            <th>{t("users.column.login")}</th>
+            <th>{t("users.column.displayName")}</th>
+            <th>{t("users.column.roles")}</th>
+            <th>{t("users.column.active")}</th>
           </tr>
         </thead>
         <tbody>
@@ -60,7 +59,7 @@ export default function SecurityUsersPanel({ canManage, onSelectUser }: Security
               </td>
               <td>{user.displayName}</td>
               <td>{user.roles.join(", ")}</td>
-              <td>{user.enabled ? "да" : "нет"}</td>
+              <td>{user.enabled ? t("common:action.yes") : t("common:action.no")}</td>
             </tr>
           ))}
         </tbody>

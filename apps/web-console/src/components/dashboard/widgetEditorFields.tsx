@@ -1,4 +1,6 @@
 import { Children, Fragment, isValidElement, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchReport } from "../../api/reports";
 import type { DashboardWidget } from "../../types/dashboard";
@@ -129,6 +131,7 @@ function PathSelect({
   onChange: (path: string) => void;
   placeholder?: string;
 }) {
+  const { t } = useTranslation(["widgets", "common"]);
   return (
     <FieldLabel caption={label} className="path-select-field">
       <div className="field-controls">
@@ -143,7 +146,7 @@ function PathSelect({
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder ?? "или введите path"}
+          placeholder={placeholder ?? t("editor.placeholder.orEnterPath")}
         />
       </div>
     </FieldLabel>
@@ -151,6 +154,7 @@ function PathSelect({
 }
 
 function ReportParameterHints({ reportPath }: { reportPath: string }) {
+  const { t } = useTranslation(["widgets", "common"]);
   const metaQuery = useQuery({
     queryKey: ["report-widget-hints", reportPath],
     queryFn: () => fetchReport(reportPath),
@@ -161,7 +165,7 @@ function ReportParameterHints({ reportPath }: { reportPath: string }) {
     return null;
   }
   if (metaQuery.isLoading) {
-    return <p className="hint full">Загрузка схемы отчёта…</p>;
+    return <p className="hint full">{t("editor.reportSchemaLoading")}</p>;
   }
   if (metaQuery.error || !metaQuery.data) {
     return null;
@@ -174,7 +178,7 @@ function ReportParameterHints({ reportPath }: { reportPath: string }) {
       <p className="hint full">
         tree-variables: <code>{data.devicePathPattern}</code> · variable{" "}
         <code>{data.variableName}</code>
-        {data.hasTemplate ? " · YARG template загружен" : ""}
+        {data.hasTemplate ? t("editor.yargTemplateLoaded") : ""}
       </p>
     );
   }
@@ -189,7 +193,7 @@ function ReportParameterHints({ reportPath }: { reportPath: string }) {
     <p className="hint full">
       {params.length > 0 ? (
         <>
-          SQL-параметры: <code>{params.join(", ")}</code>
+          {t("editor.sqlParameters")} <code>{params.join(", ")}</code>
           {defaults && (
             <>
               {" "}
@@ -198,7 +202,7 @@ function ReportParameterHints({ reportPath }: { reportPath: string }) {
           )}
         </>
       ) : (
-        <>SQL без параметров</>
+        <>{t("editor.sqlNoParameters")}</>
       )}
       {data.dataSourcePath && (
         <>
@@ -206,12 +210,12 @@ function ReportParameterHints({ reportPath }: { reportPath: string }) {
           · data source: <code>{data.dataSourcePath}</code>
         </>
       )}
-      {data.hasTemplate ? " · YARG template загружен" : ""}
+      {data.hasTemplate ? t("editor.yargTemplateLoaded") : ""}
     </p>
   );
 }
 
-function rowNavigationFields(ctx: WidgetFieldContext, prefix: "row" | "card"): ReactNode {
+function rowNavigationFields(ctx: WidgetFieldContext, prefix: "row" | "card", t: TFunction): ReactNode {
   const w = ctx.widget;
   const update = ctx.update;
 
@@ -221,7 +225,7 @@ function rowNavigationFields(ctx: WidgetFieldContext, prefix: "row" | "card"): R
       <>
         <FormRow>
           <DashboardPathField
-            caption="Дашборд по клику (rowTargetDashboard)"
+            caption={t("editor.rowTargetDashboard")}
             value={mw.rowTargetDashboard ?? ""}
             dashboards={ctx.dashboards}
             onChange={(v) => update({ rowTargetDashboard: v || undefined })}
@@ -399,6 +403,7 @@ function DashboardPathInput({
 }
 
 export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
+  const { t } = useTranslation(["widgets", "common"]);
   const { widget, objects, variables, variableSelectEnabled, update } = ctx;
   const binding = widgetDataBinding(widget.type);
   const typeHint = WIDGET_TYPE_HINTS[widget.type];
@@ -406,7 +411,7 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
   return (
     <FieldPairs>
       <Section
-        title="Источник данных"
+        title={t("editor.dataSource")}
         hint={[DATA_BINDING_HINTS[binding], typeHint].filter(Boolean).join(" ")}
       />
 
@@ -414,30 +419,30 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
         <>
           <FormRow>
             <PathSelect
-              label="Объект (objectPath)"
+              label={t("editor.objectPath")}
               value={widget.objectPath ?? ""}
               objects={objects}
               onChange={(path) => update({ objectPath: path || undefined, variableName: "" })}
             />
-            <FieldLabel caption="Ключ выбора (selectionKey)">
+            <FieldLabel caption={t("editor.selectionKey")}>
               <div className="field-controls-slot field-controls-slot--stacked">
                 <input
                   value={widget.selectionKey ?? ""}
                   onChange={(e) => update({ selectionKey: e.target.value || undefined })}
-                  placeholder="device — путь из session.selection"
+                  placeholder={t("editor.placeholder.selectionPath")}
                 />
               </div>
             </FieldLabel>
           </FormRow>
           <FormRow>
-            <FieldLabel caption="Путь из params (contextPathKey)">
+            <FieldLabel caption={t("editor.contextPathKey")}>
               <input
                 value={widget.contextPathKey ?? ""}
                 onChange={(e) => update({ contextPathKey: e.target.value || undefined })}
-                placeholder="если objectPath пуст и нет selection"
+                placeholder={t("editor.placeholder.contextPathEmpty")}
               />
             </FieldLabel>
-            <FieldLabel caption="Образец для списка переменных (modelHintPath)">
+            <FieldLabel caption={t("editor.modelHintPath")}>
               <select
                 value={widget.modelHintPath ?? ""}
                 onChange={(e) => update({ modelHintPath: e.target.value || undefined })}
@@ -456,7 +461,7 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
 
       {binding === "object-variable" && (
         <FormRow>
-          <FieldLabel caption="Переменная (variableName)">
+          <FieldLabel caption={t("editor.variableName")}>
             <div
               className={
                 !widget.objectPath && widget.selectionKey
@@ -478,14 +483,14 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
               </select>
               {!widget.objectPath && widget.selectionKey && (
                 <input
-                  placeholder="или введите имя переменной"
+                  placeholder={t("editor.placeholder.orEnterVariable")}
                   value={widget.variableName ?? ""}
                   onChange={(e) => update({ variableName: e.target.value || undefined })}
                 />
               )}
             </div>
           </FieldLabel>
-          <FieldLabel caption="Поле в записи (valueField)">
+          <FieldLabel caption={t("editor.valueField")}>
             <div className="field-controls-slot field-controls-slot--stacked">
               <input
                 value={widget.valueField ?? "value"}
@@ -500,13 +505,13 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
       {binding === "parent-catalog" && (
         <FormRow>
           <PathSelect
-            label="Каталог (parentPath)"
+            label={t("editor.parentPath")}
             value={(widget as { parentPath?: string }).parentPath ?? ""}
             objects={objects}
             onChange={(path) => update({ parentPath: path } as Partial<DashboardWidget>)}
             placeholder="root.platform.devices"
           />
-          <FieldLabel caption="Ключ выбора при клике (selectionKey)">
+          <FieldLabel caption={t("editor.selectionKeyOnClick")}>
             <StackedSlot>
               <input
                 value={widget.selectionKey ?? ""}
@@ -520,7 +525,7 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
 
       {(binding === "session" || widget.paramKey) && (
         <label>
-          Ключ в session.params (paramKey)
+          {t("editor.paramKey")}
           <input
             value={widget.paramKey ?? ""}
             onChange={(e) => update({ paramKey: e.target.value || undefined })}
@@ -531,27 +536,27 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
   );
 }
 
-function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
+function renderWidgetTypeFields(ctx: WidgetFieldContext, t: TFunction): ReactNode {
   const { widget, update } = ctx;
 
   switch (widget.type) {
     case "value":
       return (
         <>
-          <Section title="Отображение значения" />
+          <Section title={t("editor.section.valueDisplay")} />
           <label>
-            Единица (unit)
+            {t("editor.unit")}
             <input value={widget.unit ?? ""} onChange={(e) => update({ unit: e.target.value })} />
           </label>
           <label>
-            Поле единицы (unitField)
+            {t("editor.unitField")}
             <input
               value={widget.unitField ?? ""}
               onChange={(e) => update({ unitField: e.target.value || undefined })}
             />
           </label>
           <label>
-            Десятичные знаки
+            {t("editor.decimals")}
             <input
               type="number"
               min={0}
@@ -566,16 +571,16 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "toggle":
       return (
         <>
-          <Section title="Переключатель" />
+          <Section title={t("editor.section.toggle")} />
           <label>
-            Подпись «вкл»
+            {t("editor.trueLabelOn")}
             <input
               value={widget.trueLabel ?? ""}
               onChange={(e) => update({ trueLabel: e.target.value || undefined })}
             />
           </label>
           <label>
-            Подпись «выкл»
+            {t("editor.trueLabelOff")}
             <input
               value={widget.falseLabel ?? ""}
               onChange={(e) => update({ falseLabel: e.target.value || undefined })}
@@ -587,23 +592,23 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "indicator":
       return (
         <>
-          <Section title="Индикатор" />
+          <Section title={t("editor.section.indicator")} />
           <label>
-            Подпись true
+            {t("editor.trueLabel")}
             <input
               value={widget.trueLabel ?? ""}
               onChange={(e) => update({ trueLabel: e.target.value || undefined })}
             />
           </label>
           <label>
-            Подпись false
+            {t("editor.falseLabel")}
             <input
               value={widget.falseLabel ?? ""}
               onChange={(e) => update({ falseLabel: e.target.value || undefined })}
             />
           </label>
           <label>
-            Цвет true
+            {t("editor.trueColor")}
             <input
               type="color"
               value={widget.trueColor ?? "#3fb950"}
@@ -611,7 +616,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            Цвет false
+            {t("editor.falseColor")}
             <input
               type="color"
               value={widget.falseColor ?? "#f85149"}
@@ -624,22 +629,22 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "chart":
       return (
         <>
-          <Section title="График" />
+          <Section title={t("editor.section.chart")} />
           <label>
-            Период истории (historyRange)
+            {t("editor.historyRange")}
             <select
               value={widget.historyRange ?? "live"}
               onChange={(e) => update({ historyRange: e.target.value as typeof widget.historyRange })}
             >
               {WIDGET_HISTORY_RANGE_OPTIONS.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label}
+                  {t(`history.${item.id}`)}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Тип графика (chartType)
+            {t("editor.chartType")}
             <select
               value={widget.chartType ?? widget.chartStyle ?? "area"}
               onChange={(e) => update({ chartType: e.target.value as typeof widget.chartType })}
@@ -654,7 +659,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             </select>
           </label>
           <label>
-            Стиль (chartStyle, legacy)
+            {t("editor.chartStyle")}
             <select
               value={widget.chartStyle ?? "area"}
               onChange={(e) => update({ chartStyle: e.target.value as "line" | "area" })}
@@ -664,7 +669,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             </select>
           </label>
           <label>
-            Макс. точек (maxPoints)
+            {t("editor.maxPoints")}
             <input
               type="number"
               min={10}
@@ -674,7 +679,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            Цвет
+            {t("editor.color")}
             <input
               type="color"
               value={widget.color ?? "#2f81f7"}
@@ -682,7 +687,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            Единица (unit)
+            {t("editor.unit")}
             <input value={widget.unit ?? ""} onChange={(e) => update({ unit: e.target.value })} />
           </label>
           <label>
@@ -693,7 +698,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            Десятичные знаки
+            {t("editor.decimals")}
             <input
               type="number"
               min={0}
@@ -708,7 +713,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "sparkline":
       return (
         <>
-          <Section title="Спарклайн" />
+          <Section title={t("editor.section.sparkline")} />
           <label>
             historyRange
             <select
@@ -717,7 +722,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             >
               {WIDGET_HISTORY_RANGE_OPTIONS.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label}
+                  {t(`history.${item.id}`)}
                 </option>
               ))}
             </select>
@@ -733,7 +738,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            Цвет
+            {t("editor.color")}
             <input
               type="color"
               value={widget.color ?? "#3fb950"}
@@ -741,7 +746,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            Десятичные знаки
+            {t("editor.decimals")}
             <input
               type="number"
               min={0}
@@ -756,7 +761,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "function":
       return (
         <>
-          <Section title="Вызов функции" />
+          <Section title={t("editor.section.functionInvoke")} />
           <label>
             functionName
             <input
@@ -779,7 +784,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            inputJson (статический ввод)
+            {t("editor.inputJsonStatic")}
             <textarea
               rows={3}
               value={widget.inputJson ?? ""}
@@ -792,7 +797,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "function-form":
       return (
         <>
-          <Section title="Форма функции" />
+          <Section title={t("editor.section.functionForm")} />
           <label>
             functionName
             <input
@@ -828,7 +833,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "progress":
       return (
         <>
-          <Section title="Прогресс" />
+          <Section title={t("editor.section.progress")} />
           <label>
             currentVariable
             <input
@@ -863,7 +868,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "object-table":
       return (
         <>
-          <Section title="Таблица объектов" />
+          <Section title={t("editor.section.objectTable")} />
           <label className="full">
             columnsJson
             <textarea
@@ -873,14 +878,14 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
               placeholder='[{"variable":"temperature","label":"T"}]'
             />
           </label>
-          {rowNavigationFields(ctx, "row")}
+          {rowNavigationFields(ctx, "row", t)}
         </>
       );
 
     case "event-feed":
       return (
         <>
-          <Section title="Лента событий" />
+          <Section title={t("editor.section.eventFeed")} />
           <label>
             objectPathPrefix
             <input
@@ -921,7 +926,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "work-queue":
       return (
         <>
-          <Section title="Очередь задач" />
+          <Section title={t("editor.section.workQueue")} />
           <label>
             operatorId
             <input
@@ -945,7 +950,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "gauge":
       return (
         <>
-          <Section title="Шкала (gauge)" />
+          <Section title={t("editor.section.gauge")} />
           <label>
             minVariable
             <input
@@ -961,7 +966,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            minValue (если нет minVariable)
+            {t("editor.minValueNoVariable")}
             <input
               type="number"
               value={widget.minValue ?? 0}
@@ -969,7 +974,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            maxValue (если нет maxVariable)
+            {t("editor.maxValueNoVariable")}
             <input
               type="number"
               value={widget.maxValue ?? 100}
@@ -996,7 +1001,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "linear-gauge":
       return (
         <>
-          <Section title="Линейная шкала" />
+          <Section title={t("editor.section.linearGauge")} />
           <label>
             minVariable
             <input
@@ -1047,7 +1052,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "liquid-gauge":
       return (
         <>
-          <Section title="Жидкий gauge" />
+          <Section title={t("editor.section.liquidGauge")} />
           <label>
             minVariable
             <input
@@ -1094,7 +1099,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "card-grid":
       return (
         <>
-          <Section title="Сетка карточек" />
+          <Section title={t("editor.section.cardGrid")} />
           <label className="full">
             variablesJson
             <textarea
@@ -1103,14 +1108,14 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
               onChange={(e) => update({ variablesJson: e.target.value })}
             />
           </label>
-          {rowNavigationFields(ctx, "card")}
+          {rowNavigationFields(ctx, "card", t)}
         </>
       );
 
     case "dashboard-link":
       return (
         <>
-          <Section title="Переход на дашборд" />
+          <Section title={t("editor.section.dashboardLink")} />
           <DashboardPathField
             caption="targetDashboardPath"
             value={widget.targetDashboardPath}
@@ -1175,8 +1180,8 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
       return (
         <>
           <Section
-            title="Отчёт (report)"
-            hint="type: report, reportPath → root.platform.reports.*. SQL и tree-variables. CSV/HTML без шаблона; PDF/XLSX — после загрузки YARG в Report Builder."
+            title={t("editor.section.report")}
+            hint={t("editor.reportHint")}
           />
           <PathSelect
             label="reportPath"
@@ -1187,7 +1192,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
           />
           <ReportParameterHints reportPath={rw.reportPath} />
           <label className="full">
-            parametersJson (статические параметры run)
+            {t("editor.parametersJsonStatic")}
             <textarea
               rows={2}
               className="mono"
@@ -1197,7 +1202,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label className="full">
-            contextParamsJson (reportParam → ключ session.params)
+            {t("editor.contextParamsJsonReport")}
             <textarea
               rows={2}
               className="mono"
@@ -1219,8 +1224,8 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
                 value={rw.showCsv === false ? "false" : "true"}
                 onChange={(e) => update({ showCsv: e.target.value === "true" })}
               >
-                <option value="true">да</option>
-                <option value="false">нет</option>
+                <option value="true">{t("common:action.yes")}</option>
+                <option value="false">{t("common:action.no")}</option>
               </select>
             </FieldLabel>
             <FieldLabel caption="showTruncatedWarning">
@@ -1228,8 +1233,8 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
                 value={rw.showTruncatedWarning === false ? "false" : "true"}
                 onChange={(e) => update({ showTruncatedWarning: e.target.value === "true" })}
               >
-                <option value="true">да</option>
-                <option value="false">нет</option>
+                <option value="true">{t("common:action.yes")}</option>
+                <option value="false">{t("common:action.no")}</option>
               </select>
             </FieldLabel>
           </FormRow>
@@ -1239,8 +1244,8 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
                 value={rw.showPdf === false ? "false" : "true"}
                 onChange={(e) => update({ showPdf: e.target.value === "true" })}
               >
-                <option value="true">да (если есть YARG)</option>
-                <option value="false">нет</option>
+                <option value="true">{t("editor.yesWithYarg")}</option>
+                <option value="false">{t("common:action.no")}</option>
               </select>
             </FieldLabel>
             <FieldLabel caption="showXlsx">
@@ -1248,8 +1253,8 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
                 value={rw.showXlsx === false ? "false" : "true"}
                 onChange={(e) => update({ showXlsx: e.target.value === "true" })}
               >
-                <option value="true">да (если есть YARG)</option>
-                <option value="false">нет</option>
+                <option value="true">{t("editor.yesWithYarg")}</option>
+                <option value="false">{t("common:action.no")}</option>
               </select>
             </FieldLabel>
           </FormRow>
@@ -1259,8 +1264,8 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
               value={rw.showHtml === false ? "false" : "true"}
               onChange={(e) => update({ showHtml: e.target.value === "true" })}
             >
-              <option value="true">да (если есть YARG)</option>
-              <option value="false">нет</option>
+              <option value="true">{t("editor.yesWithYarg")}</option>
+              <option value="false">{t("common:action.no")}</option>
             </select>
           </label>
         </>
@@ -1270,7 +1275,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "pie-chart":
       return (
         <>
-          <Section title="Круговая диаграмма" />
+          <Section title={t("editor.section.pieChart")} />
           <label>
             labelField
             <input
@@ -1294,7 +1299,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "history-table":
       return (
         <>
-          <Section title="Таблица истории" />
+          <Section title={t("editor.section.historyTable")} />
           <label>
             decimals
             <input
@@ -1311,9 +1316,9 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "variable-editor":
       return (
         <>
-          <Section title="Редактор переменных" />
+          <Section title={t("editor.section.variableEditor")} />
           <label className="full">
-            variablesJson (пусто = все переменные объекта)
+            {t("editor.variablesJsonAll")}
             <textarea
               rows={3}
               value={widget.variablesJson ?? "[]"}
@@ -1326,9 +1331,9 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "spreadsheet":
       return (
         <>
-          <Section title="Таблица RECORD_LIST" />
+          <Section title={t("editor.section.spreadsheet")} />
           <label>
-            variableName (обязательно)
+            {t("editor.variableNameRequired")}
             <input
               value={widget.variableName}
               onChange={(e) => update({ variableName: e.target.value })}
@@ -1340,7 +1345,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
               checked={widget.editable === true}
               onChange={(e) => update({ editable: e.target.checked })}
             />
-            editable (разрешить запись)
+            {t("editor.editableAllowWrite")}
           </label>
         </>
       );
@@ -1403,7 +1408,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "sub-dashboard":
       return (
         <>
-          <Section title="Вложенный дашборд" />
+          <Section title={t("editor.section.subDashboard")} />
           <DashboardPathField
             caption="targetDashboardPath"
             value={widget.targetDashboardPath ?? ""}
@@ -1411,7 +1416,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             onChange={(v) => update({ targetDashboardPath: v || undefined })}
           />
           <label>
-            targetDashboardPathKey (из params)
+            {t("editor.targetDashboardPathKeyFromParams")}
             <StackedSlot>
               <input
                 value={widget.targetDashboardPathKey ?? ""}
@@ -1433,7 +1438,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "panel":
       return (
         <>
-          <Section title="Панель" />
+          <Section title={t("editor.section.panel")} />
           <label>
             variant
             <input
@@ -1464,7 +1469,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "drawer-panel":
       return (
         <>
-          <Section title={widget.type === "drawer-panel" ? "Выдвижная панель" : "Композит"} />
+          <Section title={widget.type === "drawer-panel" ? t("editor.drawerPanel") : t("editor.composite")} />
           {widget.type === "drawer-panel" && (
             <label>
               drawerLabel
@@ -1488,7 +1493,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "tab-panel":
       return (
         <>
-          <Section title="Вкладки" />
+          <Section title={t("editor.section.tabs")} />
           <label className="full">
             tabsJson
             <textarea
@@ -1503,7 +1508,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "map":
       return (
         <>
-          <Section title="Карта" />
+          <Section title={t("editor.section.map")} />
           <label>
             latVariable
             <input
@@ -1565,7 +1570,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             <input
               value={widget.mapStyleUrl ?? ""}
               onChange={(e) => update({ mapStyleUrl: e.target.value || undefined })}
-              placeholder="опционально — Vector style JSON"
+              placeholder={t("editor.placeholder.vectorStyle")}
             />
           </label>
           <label>
@@ -1583,23 +1588,23 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
               onChange={(e) => update({ tileAttribution: e.target.value || undefined })}
             />
           </label>
-          {rowNavigationFields(ctx, "row")}
+          {rowNavigationFields(ctx, "row", t)}
         </>
       );
 
     case "label":
       return (
         <>
-          <Section title="Текстовая метка" />
+          <Section title={t("editor.section.label")} />
           <label>
-            text (статический)
+            {t("editor.textStatic")}
             <input
               value={widget.text ?? ""}
               onChange={(e) => update({ text: e.target.value || undefined })}
             />
           </label>
           <label>
-            textJson (альтернатива)
+            {t("editor.textJsonAlt")}
             <input
               value={widget.textJson ?? ""}
               onChange={(e) => update({ textJson: e.target.value || undefined })}
@@ -1611,7 +1616,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "image":
       return (
         <>
-          <Section title="Изображение" />
+          <Section title={t("editor.section.image")} />
           <label>
             imageUrl
             <input
@@ -1647,7 +1652,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "object-tree":
       return (
         <>
-          <Section title="Дерево объектов" />
+          <Section title={t("editor.section.objectTree")} />
           <label>
             maxDepth
             <input
@@ -1664,9 +1669,9 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "breadcrumbs":
       return (
         <>
-          <Section title="Хлебные крошки" />
+          <Section title={t("editor.section.breadcrumbs")} />
           <label>
-            pathKey (ключ в session.params)
+            {t("editor.pathKeyInParams")}
             <input
               value={widget.pathKey ?? ""}
               onChange={(e) => update({ pathKey: e.target.value || undefined })}
@@ -1685,7 +1690,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "timer":
       return (
         <>
-          <Section title="Таймер" />
+          <Section title={t("editor.section.timer")} />
           <label>
             mode
             <select
@@ -1711,15 +1716,15 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "context-list":
       return (
         <Section
-          title="Контекст сессии"
-          hint="Показывает selection и params текущего дашборда (без доп. полей)."
+          title={t("editor.section.sessionContext")}
+          hint={t("editor.section.sessionContextHint")}
         />
       );
 
     case "input-form":
       return (
         <>
-          <Section title="Форма ввода" />
+          <Section title={t("editor.section.inputForm")} />
           <label>
             buttonLabel
             <input
@@ -1741,7 +1746,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "carousel":
       return (
         <>
-          <Section title="Карусель" />
+          <Section title={t("editor.section.carousel")} />
           <label className="full">
             slidesJson
             <textarea
@@ -1751,7 +1756,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            autoplayMs (0 = выкл)
+            {t("editor.autoplayOff")}
             <input
               type="number"
               min={0}
@@ -1765,7 +1770,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "steps-panel":
       return (
         <>
-          <Section title="Шаги" />
+          <Section title={t("editor.section.steps")} />
           <label className="full">
             stepsJson
             <textarea
@@ -1775,7 +1780,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
             />
           </label>
           <label>
-            activeStepKey (ключ в params)
+            {t("editor.activeStepKeyInParams")}
             <input
               value={widget.activeStepKey ?? ""}
               onChange={(e) => update({ activeStepKey: e.target.value || undefined })}
@@ -1787,7 +1792,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "gantt-chart":
       return (
         <>
-          <Section title="Гантт" />
+          <Section title={t("editor.section.gantt")} />
           <label>
             labelField
             <input
@@ -1815,7 +1820,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "network-graph":
       return (
         <>
-          <Section title="Граф сети" />
+          <Section title={t("editor.section.networkGraph")} />
           <label>
             nodesVariable
             <input
@@ -1843,14 +1848,14 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
     case "nav-menu":
       return (
         <>
-          <Section title="Меню навигации" />
+          <Section title={t("editor.section.navMenu")} />
           <label className="full">
             itemsJson
             <textarea
               rows={6}
               value={widget.itemsJson ?? "[]"}
               onChange={(e) => update({ itemsJson: e.target.value })}
-              placeholder='[{"label":"Демо","dashboardPath":"root.platform.dashboards.demo-sensor"}]'
+              placeholder={t("editor.navMenuPlaceholder")}
             />
           </label>
         </>
@@ -1858,7 +1863,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
 
     case "status-badge":
       return (
-        <Section title="Статус" hint="Использует variableName (по умолчанию status) на объекте." />
+        <Section title={t("editor.section.status")} hint={t("editor.statusHint")} />
       );
 
     default:
@@ -1867,5 +1872,6 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
 }
 
 export function WidgetTypeSpecificFields(ctx: WidgetFieldContext) {
-  return <FieldPairs>{renderWidgetTypeFields(ctx)}</FieldPairs>;
+  const { t } = useTranslation(["widgets", "common"]);
+  return <FieldPairs>{renderWidgetTypeFields(ctx, t)}</FieldPairs>;
 }

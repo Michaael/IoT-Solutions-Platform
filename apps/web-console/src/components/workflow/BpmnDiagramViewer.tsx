@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import BpmnViewer from "bpmn-js/lib/NavigatedViewer";
 import ispfModdle from "../../bpmn/ispf-moddle.json";
 import { EMPTY_BPMN } from "../../bpmn/constants";
@@ -12,6 +13,7 @@ interface BpmnDiagramViewerProps {
 }
 
 export default function BpmnDiagramViewer({ xml }: BpmnDiagramViewerProps) {
+  const { t } = useTranslation("workflow");
   const containerRef = useRef<HTMLDivElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -52,7 +54,7 @@ export default function BpmnDiagramViewer({ xml }: BpmnDiagramViewerProps) {
   if (importError) {
     return (
       <div className="bpmn-viewer-fallback">
-        <p className="hint error">Диаграмма недоступна: {importError}</p>
+        <p className="hint error">{t("bpmn.viewerUnavailable", { error: importError })}</p>
         <pre className="workflow-code-block workflow-bpmn-view">{xml || EMPTY_BPMN}</pre>
       </div>
     );

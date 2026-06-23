@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Map, { Marker, Popup, type MapRef } from "react-map-gl/maplibre";
 import { useQuery } from "@tanstack/react-query";
 import { fetchObjects, fetchVariables } from "../../../api";
@@ -29,6 +30,7 @@ export default function MapWidgetView({
   refreshIntervalMs,
   editable,
 }: MapWidgetViewProps) {
+  const { t } = useTranslation("widgets");
   const styles = useWidgetStyles(widget.stylesJson);
   const { setSelection, navigateToDashboard, openDashboardModal } = useDashboardContext();
   const [gpsByPath, setGpsByPath] = useState<Record<string, boolean>>({});
@@ -110,9 +112,9 @@ export default function MapWidgetView({
       editable={editable}
     >
       {!widget.parentPath ? (
-        <p className="hint">Укажите parentPath (каталог объектов на карте)</p>
+        <p className="hint">{t("view.mapParentPathHint")}</p>
       ) : markerObjects.length === 0 ? (
-        <p className="hint">Нет дочерних объектов в {widget.parentPath}</p>
+        <p className="hint">{t("view.noChildObjects", { path: widget.parentPath })}</p>
       ) : (
         <div className="dash-map-wrap dash-map-container" style={styles.body}>
           <Map
@@ -158,7 +160,7 @@ export default function MapWidgetView({
           </Map>
           {reportedCount === markerObjects.length && missingCount > 0 && (
             <p className="hint dash-map-no-gps">
-              Без координат: {missingCount} из {markerObjects.length}
+              {t("view.mapMissingCoords", { missing: missingCount, total: markerObjects.length })}
             </p>
           )}
         </div>

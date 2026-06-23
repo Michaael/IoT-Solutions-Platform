@@ -21,6 +21,9 @@ public class WorkflowUserTaskEntity {
     @Column(name = "workflow_path", nullable = false, length = 512)
     private String workflowPath;
 
+    @Column(name = "operator_app_id", length = 128)
+    private String operatorAppId;
+
     @Column(name = "task_node_id", nullable = false, length = 128)
     private String taskNodeId;
 
@@ -70,6 +73,14 @@ public class WorkflowUserTaskEntity {
 
     public void setWorkflowPath(String workflowPath) {
         this.workflowPath = workflowPath;
+    }
+
+    public String getOperatorAppId() {
+        return operatorAppId;
+    }
+
+    public void setOperatorAppId(String operatorAppId) {
+        this.operatorAppId = operatorAppId;
     }
 
     public String getTaskNodeId() {

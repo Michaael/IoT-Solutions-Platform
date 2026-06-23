@@ -1,4 +1,5 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { SecurityUserSummary } from "../../api/securityUsers";
 import { copyToClipboard } from "./federationShared";
 
@@ -31,18 +32,16 @@ export default function FederationTokensTab({
   tokenApiMissing,
   issueTokenMutation,
 }: FederationTokensTabProps) {
+  const { t } = useTranslation(["federation", "common"]);
   const userOptions = usersQuery.data ?? [];
 
   return (
     <div className="panel-card driver-config-form">
-      <h4>Токен для федерации (этот узел)</h4>
-      <p className="op-muted">
-        Выпускает Bearer-сессию для выбранного пользователя (TTL по умолчанию 12 ч). Используйте на другом
-        ISPF как токен авторизации узла, указывающего на этот инстанс.
-      </p>
+      <h4>{t("tokens.title")}</h4>
+      <p className="op-muted">{t("tokens.subtitle")}</p>
       <div className="form-grid">
         <label>
-          Пользователь
+          {t("tokens.field.user")}
           <select
             value={tokenUser}
             onChange={(e) => setTokenUser(e.target.value)}
@@ -57,7 +56,7 @@ export default function FederationTokensTab({
           </select>
         </label>
         <label>
-          TTL (часы)
+          {t("tokens.field.ttlHours")}
           <input
             type="number"
             min={1}
@@ -74,7 +73,7 @@ export default function FederationTokensTab({
           disabled={issueTokenMutation.isPending || tokenApiMissing}
           onClick={() => issueTokenMutation.mutate()}
         >
-          {issueTokenMutation.isPending ? "Выпуск…" : "Выпустить токен"}
+          {issueTokenMutation.isPending ? t("tokens.issuing") : t("tokens.issue")}
         </button>
         {issuedToken && (
           <button
@@ -82,11 +81,11 @@ export default function FederationTokensTab({
             className="btn compact"
             onClick={() => {
               copyToClipboard(issuedToken)
-                .then(() => setTokenCopyFeedback("Скопировано"))
-                .catch(() => setTokenCopyFeedback("Не удалось скопировать"));
+                .then(() => setTokenCopyFeedback(t("tokens.copied")))
+                .catch(() => setTokenCopyFeedback(t("tokens.copyFailed")));
             }}
           >
-            Копировать
+            {t("tokens.copy")}
           </button>
         )}
       </div>

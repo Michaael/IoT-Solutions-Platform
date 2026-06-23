@@ -1,3 +1,4 @@
+import i18n from "../i18n";
 import { OPERATOR_APPS_ROOT, isOperatorAppChildPath } from "./operatorAppsPath";
 import {
   ALERT_RULES_ROOT,
@@ -76,23 +77,23 @@ export function resolveCreateDialogMode(parentPath: string): CreateDialogMode {
 export function createActionLabel(parentPath: string): string {
   switch (resolveCreateDialogMode(parentPath)) {
     case "application":
-      return "+ Deploy-приложение";
+      return i18n.t("explorer:create.deployApp");
     case "operator-app":
-      return "+ Operator app";
+      return i18n.t("explorer:create.operatorApp");
     case "alert-rule":
-      return "+ Правило алерта";
+      return i18n.t("explorer:create.alertRule");
     case "correlator":
-      return "+ Коррелятор";
+      return i18n.t("explorer:create.correlator");
     case "report":
-      return "+ Отчёт";
+      return i18n.t("explorer:create.report");
     case "data-source":
-      return "+ Источник данных";
+      return i18n.t("explorer:create.dataSource");
     case "migration":
-      return "+ Миграция";
+      return i18n.t("explorer:create.migration");
     case "sql-binding":
-      return "+ SQL-привязка";
+      return i18n.t("explorer:create.sqlBinding");
     default:
-      return "+ Объект";
+      return i18n.t("explorer:create.object");
   }
 }
 

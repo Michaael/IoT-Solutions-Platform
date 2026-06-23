@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchEvents } from "../../../api";
 import type { EventFeedWidget } from "../../../types/dashboard";
@@ -27,6 +28,7 @@ export default function EventFeedWidgetView({
   refreshIntervalMs,
   editable,
 }: EventFeedWidgetViewProps) {
+  const { t } = useTranslation(["widgets", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
   const eventNames = useMemo(() => {
     try {
@@ -71,9 +73,9 @@ export default function EventFeedWidgetView({
       editable={editable}
       demo={isDemo}
     >
-      {events.isLoading && !isDemo && <p className="hint">Загрузка…</p>}
+      {events.isLoading && !isDemo && <p className="hint">{t("common:action.loading")}</p>}
       {displayEvents.length === 0 && !events.isLoading && (
-        <p className="hint">Нет событий</p>
+        <p className="hint">{t("view.noEvents")}</p>
       )}
       <ul className="dash-event-feed-list" style={styles.body}>
         {displayEvents.map((event) => {

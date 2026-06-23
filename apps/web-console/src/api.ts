@@ -18,6 +18,7 @@ import { parseApiError } from "./utils/parseApiError";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeaders(),
@@ -455,14 +456,25 @@ export function updateWorkflowStatus(
   });
 }
 
+export function updateWorkflowOperatorApp(path: string, operatorAppId: string): Promise<WorkflowView> {
+  return request(`/api/v1/workflows/by-path/operator-app?path=${encodeURIComponent(path)}`, {
+    method: "PUT",
+    body: JSON.stringify({ operatorAppId }),
+  });
+}
+
 export function runWorkflow(path: string): Promise<WorkflowView> {
   return request(`/api/v1/workflows/by-path/run?path=${encodeURIComponent(path)}`, {
     method: "POST",
   });
 }
 
-export function fetchWorkQueue(limit = 50): Promise<import("./types/operator").WorkQueueItem[]> {
-  return request(`/api/v1/work-queue?limit=${limit}`);
+export function fetchWorkQueue(limit = 50, operatorAppId?: string): Promise<import("./types/operator").WorkQueueItem[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (operatorAppId?.trim()) {
+    params.set("operatorAppId", operatorAppId.trim());
+  }
+  return request(`/api/v1/work-queue?${params}`);
 }
 
 export function claimWorkTask(taskId: string, operatorId = "operator"): Promise<import("./types/operator").WorkQueueItem> {
