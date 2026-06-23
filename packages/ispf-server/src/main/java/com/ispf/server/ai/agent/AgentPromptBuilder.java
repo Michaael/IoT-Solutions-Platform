@@ -102,6 +102,8 @@ public final class AgentPromptBuilder {
         prompt.append("\n\n");
         prompt.append(AgentPlaybooks.virtualClusterMonitoring());
         prompt.append("\n\n");
+        prompt.append(AgentPlaybooks.miniTecReference());
+        prompt.append("\n\n");
         prompt.append(AgentPlaybooks.platformObjectTypesGuide());
         prompt.append("\n\n");
         prompt.append(AgentPlaybooks.widgetCatalogGuide());

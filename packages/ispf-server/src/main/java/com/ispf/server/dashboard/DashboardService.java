@@ -152,6 +152,7 @@ public class DashboardService {
         if (widget == null || widget.isEmpty()) {
             throw new IllegalArgumentException("widget object is required");
         }
+        Map<String, Object> normalized = DashboardWidgetNormalizer.normalizeWidget(widget, objectMapper);
         DashboardView current = getDashboard(path);
         try {
             var root = objectMapper.readTree(current.layoutJson());
@@ -168,7 +169,7 @@ public class DashboardService {
                     }
                 }
             }
-            widgets.add(objectMapper.valueToTree(widget));
+            widgets.add(objectMapper.valueToTree(normalized));
             return saveLayout(path, objectMapper.writeValueAsString(root));
         } catch (JacksonException e) {
             throw new IllegalArgumentException("Invalid layout JSON", e);

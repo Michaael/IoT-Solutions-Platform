@@ -158,6 +158,17 @@ public class ApplicationBundleDeployService {
             errors.add("dataSource: " + ex.getMessage());
         }
 
+        if (manifest.models() != null) {
+            for (BundleModel model : manifest.models()) {
+                try {
+                    deployModel(model);
+                    applied.add("model:" + model.name());
+                } catch (Exception ex) {
+                    errors.add("model:" + model.name() + ": " + ex.getMessage());
+                }
+            }
+        }
+
         if (manifest.objects() != null) {
             for (BundleObject object : manifest.objects()) {
                 try {
@@ -192,17 +203,6 @@ public class ApplicationBundleDeployService {
                     applied.add("workflow:" + workflow.path());
                 } catch (Exception ex) {
                     errors.add("workflow:" + workflow.path() + ": " + ex.getMessage());
-                }
-            }
-        }
-
-        if (manifest.models() != null) {
-            for (BundleModel model : manifest.models()) {
-                try {
-                    deployModel(model);
-                    applied.add("model:" + model.name());
-                } catch (Exception ex) {
-                    errors.add("model:" + model.name() + ": " + ex.getMessage());
                 }
             }
         }

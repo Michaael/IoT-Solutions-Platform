@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * Simulated device driver for demos and integration tests.
- * Profiles: demo, meter, weighbridge, rack-signals, lab, unified (all types showcase).
+ * Profiles: demo, meter, weighbridge, rack-signals, lab, unified, tec-gpu, tec-grpb, tec-rumb, tec-dgu, tec-load.
  */
 public class VirtualDeviceDriver implements DeviceDriver {
 
@@ -41,7 +41,9 @@ public class VirtualDeviceDriver implements DeviceDriver {
                     Map.entry("baseLongitude", "37.6173"),
                     Map.entry("orbitRadiusM", "50"),
                     Map.entry("serialNumber", "VIRT-UNIFIED-001"),
-                    Map.entry("firmwareVersion", "1.0.0-unified")
+                    Map.entry("firmwareVersion", "1.0.0-unified"),
+                    Map.entry("ratedPowerKw", "1480"),
+                    Map.entry("unitIndex", "1")
             )
     );
 
@@ -101,6 +103,13 @@ public class VirtualDeviceDriver implements DeviceDriver {
     private long lastPollAt;
     private final long startedAt = System.currentTimeMillis();
     private final VirtualUnifiedPoll.UnifiedState unifiedState = new VirtualUnifiedPoll.UnifiedState();
+    private final VirtualTecPoll.GpuState tecGpuState = new VirtualTecPoll.GpuState();
+    private final VirtualTecPoll.GrpbState tecGrpbState = new VirtualTecPoll.GrpbState();
+    private final VirtualTecPoll.RumbState tecRumbState = new VirtualTecPoll.RumbState();
+    private final VirtualTecPoll.DguState tecDguState = new VirtualTecPoll.DguState();
+    private final VirtualTecPoll.LoadState tecLoadState = new VirtualTecPoll.LoadState();
+    private double ratedPowerKw = 1480.0;
+    private int unitIndex = 1;
     private volatile boolean connected;
 
     @Override
@@ -126,6 +135,8 @@ public class VirtualDeviceDriver implements DeviceDriver {
         readConfig("gasConnected", value -> gasConnected = Boolean.parseBoolean(value));
         readConfig("groundConnected", value -> groundConnected = Boolean.parseBoolean(value));
         readConfig("filling", value -> filling = Boolean.parseBoolean(value));
+        readConfig("ratedPowerKw", value -> ratedPowerKw = Double.parseDouble(value));
+        readConfig("unitIndex", value -> unitIndex = Integer.parseInt(value));
         lastPollAt = System.currentTimeMillis();
     }
 
@@ -145,6 +156,8 @@ public class VirtualDeviceDriver implements DeviceDriver {
             case "gasConnected" -> gasConnected = Boolean.parseBoolean(value);
             case "groundConnected" -> groundConnected = Boolean.parseBoolean(value);
             case "filling" -> filling = Boolean.parseBoolean(value);
+            case "ratedPowerKw" -> ratedPowerKw = Double.parseDouble(value);
+            case "unitIndex" -> unitIndex = Integer.parseInt(value);
             default -> { }
         }
     }
@@ -177,6 +190,11 @@ public class VirtualDeviceDriver implements DeviceDriver {
             case "rack-signals" -> readRackSignalsProfile();
             case "lab" -> readLabProfile();
             case "unified" -> readUnifiedProfile();
+            case "tec-gpu" -> VirtualTecPoll.pollGpu(driverObject, tecGpuState, ratedPowerKw, unitIndex);
+            case "tec-grpb" -> VirtualTecPoll.pollGrpb(driverObject, tecGrpbState);
+            case "tec-rumb" -> VirtualTecPoll.pollRumb(driverObject, tecRumbState);
+            case "tec-dgu" -> VirtualTecPoll.pollDgu(driverObject, tecDguState);
+            case "tec-load" -> VirtualTecPoll.pollLoad(driverObject, tecLoadState);
             default -> readDemoProfile();
         }
     }

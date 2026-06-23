@@ -1,0 +1,69 @@
+{
+  "version": "1.0.0",
+  "displayName": "Мини-ТЭЦ (эталон)",
+  "tablePrefix": "",
+  "schemaName": "app_mini_tec",
+  "metadata": {
+    "description": "Эталонный цифровой двойник мини-ТЭЦ (3×ГПУ, ГРПБ, РУМБ, ДГУ, нагрузочный модуль). Объекты создаются MiniTecPlatformBootstrap при старте; bundle — для повторного деплоя SQL и operator UI."
+  },
+  "migrations": [
+    {
+      "id": "tec_schema",
+      "sql": "CREATE TABLE IF NOT EXISTS tec_daily_journal (journal_date DATE PRIMARY KEY, total_energy_kwh DOUBLE PRECISION NOT NULL DEFAULT 0, total_reactive_kvarh DOUBLE PRECISION NOT NULL DEFAULT 0, total_running_hours DOUBLE PRECISION NOT NULL DEFAULT 0, start_count INTEGER NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS tec_consumer_load (consumer_code VARCHAR(64) PRIMARY KEY, consumer_name VARCHAR(256) NOT NULL, nominal_load_kw INTEGER NOT NULL); INSERT INTO tec_consumer_load (consumer_code, consumer_name, nominal_load_kw) SELECT 'consumer-1', 'Потребитель 1', 2430 WHERE NOT EXISTS (SELECT 1 FROM tec_consumer_load WHERE consumer_code = 'consumer-1'); INSERT INTO tec_consumer_load (consumer_code, consumer_name, nominal_load_kw) SELECT 'consumer-2', 'Потребитель 2', 1200 WHERE NOT EXISTS (SELECT 1 FROM tec_consumer_load WHERE consumer_code = 'consumer-2'); INSERT INTO tec_consumer_load (consumer_code, consumer_name, nominal_load_kw) SELECT 'consumer-3', 'Резервная нагрузка', 500 WHERE NOT EXISTS (SELECT 1 FROM tec_consumer_load WHERE consumer_code = 'consumer-3');"
+    }
+  ],
+  "reports": [
+    {
+      "reportId": "tec-daily-energy",
+      "title": "Суточный журнал энергии",
+      "description": "Учёт кВт·ч и наработки",
+      "reportType": "sql",
+      "query": "SELECT journal_date, total_energy_kwh, total_reactive_kvarh, total_running_hours, start_count FROM tec_daily_journal ORDER BY journal_date DESC",
+      "columns": [
+        { "field": "journal_date", "label": "Дата" },
+        { "field": "total_energy_kwh", "label": "кВт·ч" },
+        { "field": "total_reactive_kvarh", "label": "кВАр·ч" },
+        { "field": "total_running_hours", "label": "Наработка, ч" },
+        { "field": "start_count", "label": "Пуски" }
+      ],
+      "maxRows": 365
+    },
+    {
+      "reportId": "tec-gpu-run-hours",
+      "title": "Наработка ГПУ",
+      "description": "Показатели эксплуатации газопоршневых модулей",
+      "reportType": "tree-variables",
+      "devicePathPattern": "root.platform.devices.mini-tec-plant.gpu-*",
+      "variableName": "runningHours",
+      "columns": [
+        { "field": "devicepath", "label": "Агрегат" },
+        { "field": "value", "label": "Наработка, ч" }
+      ],
+      "maxRows": 10
+    }
+  ],
+  "events": [
+    { "id": "gpuProtOverload", "roles": ["operator", "admin"] },
+    { "id": "busProtUndervoltage", "roles": ["operator", "admin"] },
+    { "id": "grpbGasLeak", "roles": ["operator", "admin"] },
+    { "id": "grpbFire", "roles": ["operator", "admin"] },
+    { "id": "stationUnderpower", "roles": ["operator", "admin"] }
+  ],
+  "operatorUi": {
+    "appId": "mini-tec",
+    "title": "Мини-ТЭЦ (эталон)",
+    "defaultDashboard": "root.platform.dashboards.mini-tec-overview",
+    "eventJournalObjectPath": "root.platform.devices.mini-tec-plant.station-hub",
+    "dashboards": [
+      { "path": "root.platform.dashboards.mini-tec-overview", "title": "Сводка" },
+      { "path": "root.platform.dashboards.mini-tec-single-line", "title": "Однолинейная" },
+      { "path": "root.platform.dashboards.mini-tec-gpu-detail", "title": "ГПУ" },
+      { "path": "root.platform.dashboards.mini-tec-grpb", "title": "ГРПБ" },
+      { "path": "root.platform.dashboards.mini-tec-rumb", "title": "РУМБ" },
+      { "path": "root.platform.dashboards.mini-tec-dgu", "title": "ДГУ" },
+      { "path": "root.platform.dashboards.mini-tec-load-module", "title": "Нагрузочный модуль" },
+      { "path": "root.platform.dashboards.mini-tec-protections", "title": "Защиты" },
+      { "path": "root.platform.dashboards.mini-tec-exploitation", "title": "Эксплуатация" }
+    ]
+  }
+}

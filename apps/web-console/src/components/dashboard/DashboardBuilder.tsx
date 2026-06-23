@@ -398,6 +398,7 @@ export default function DashboardBuilder({
       {!isEditorWorkspace && (
         <div className="dashboard-body">
           <DashboardProvider
+            operatorMode={operatorMode}
             session={currentSession}
             onSessionChange={onSessionChange}
             onSelectionChange={onSelectionChange}

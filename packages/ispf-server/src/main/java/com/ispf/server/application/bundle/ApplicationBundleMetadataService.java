@@ -5,6 +5,7 @@ import com.ispf.core.object.PlatformObject;
 import com.ispf.plugin.workflow.WorkflowLifecycleStatus;
 import com.ispf.server.dashboard.DashboardService;
 import com.ispf.server.object.ObjectManager;
+import com.ispf.server.object.ObjectTemplateService;
 import com.ispf.server.workflow.WorkflowService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,15 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class ApplicationBundleMetadataService {
 
     private final ObjectManager objectManager;
+    private final ObjectTemplateService objectTemplateService;
     private final DashboardService dashboardService;
     private final WorkflowService workflowService;
 
     public ApplicationBundleMetadataService(
             ObjectManager objectManager,
+            ObjectTemplateService objectTemplateService,
             DashboardService dashboardService,
             WorkflowService workflowService
     ) {
         this.objectManager = objectManager;
+        this.objectTemplateService = objectTemplateService;
         this.dashboardService = dashboardService;
         this.workflowService = workflowService;
     }
@@ -34,6 +38,9 @@ public class ApplicationBundleMetadataService {
             PlatformObject node = existing.get();
             if (object.displayName() != null) {
                 objectManager.updateInfo(path, object.displayName(), object.description() != null ? object.description() : node.description());
+            }
+            if (object.templateId() != null && !object.templateId().isBlank()) {
+                objectTemplateService.applyTemplate(path, object.templateId());
             }
             return DeployOutcome.UPDATED;
         }
@@ -51,6 +58,9 @@ public class ApplicationBundleMetadataService {
         }
         if (type == ObjectType.WORKFLOW) {
             workflowService.ensureWorkflowStructure(node.path());
+        }
+        if (object.templateId() != null && !object.templateId().isBlank()) {
+            objectTemplateService.applyTemplate(path, object.templateId());
         }
         return DeployOutcome.APPLIED;
     }

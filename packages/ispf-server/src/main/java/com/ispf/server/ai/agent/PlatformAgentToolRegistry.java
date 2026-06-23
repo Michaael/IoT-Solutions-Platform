@@ -20,6 +20,7 @@ import com.ispf.server.application.function.ApplicationFunctionStore;
 import com.ispf.server.application.bundle.BundleManifestJsonSupport;
 import com.ispf.server.automation.AutomationTreeService;
 import com.ispf.server.dashboard.DashboardService;
+import com.ispf.server.dashboard.DashboardWidgetNormalizer;
 import com.ispf.server.driver.DeviceProvisioningService;
 import com.ispf.server.driver.DriverCatalog;
 import com.ispf.server.event.EventService;
@@ -508,6 +509,15 @@ public class PlatformAgentToolRegistry {
                         String layoutJson = optionalString(arguments, "layoutJson");
                         if (layoutJson == null) {
                             layoutJson = optionalString(arguments, "layout");
+                        }
+                        if (layoutJson == null) {
+                            Object layoutObject = arguments.get("layout");
+                            if (layoutObject == null) {
+                                layoutObject = arguments.get("layoutJson");
+                            }
+                            if (layoutObject != null && !(layoutObject instanceof String)) {
+                                layoutJson = DashboardWidgetNormalizer.resolveLayoutJson(layoutObject, objectMapper);
+                            }
                         }
                         if (layoutJson == null || layoutJson.isBlank()) {
                             return Map.of(

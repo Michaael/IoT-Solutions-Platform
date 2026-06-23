@@ -24,8 +24,10 @@ export function shouldOpenOperatorShell(
   return session.autoStartEnabled === true && Boolean(session.autoStartApp);
 }
 
-export function resolveOperatorAppId(session: AuthSession | null): string | null {
-  const params = new URLSearchParams(window.location.search);
+export function resolveOperatorAppId(
+  session: AuthSession | null,
+  params: URLSearchParams = new URLSearchParams(window.location.search)
+): string | null {
   const fromUrl = params.get("app");
   if (fromUrl) {
     return fromUrl;

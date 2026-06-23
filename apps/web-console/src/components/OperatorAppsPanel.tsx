@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { fetchObjects } from "../api";
 import {
+  createOperatorApp,
   fetchOperatorAppUi,
   fetchOperatorApps,
   saveOperatorAppUi,
@@ -52,13 +53,18 @@ export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorA
 
   useEffect(() => {
     const ui = uiQuery.data;
-    if (!ui) {
+    if (ui) {
+      setTitle(ui.title);
+      setDefaultDashboard(ui.defaultDashboard);
+      setSelectedPaths(ui.dashboards.map((item) => item.path));
       return;
     }
-    setTitle(ui.title);
-    setDefaultDashboard(ui.defaultDashboard);
-    setSelectedPaths(ui.dashboards.map((item) => item.path));
-  }, [uiQuery.data]);
+    if (pathLeaf) {
+      setTitle(pathLeaf);
+      setDefaultDashboard("");
+      setSelectedPaths([]);
+    }
+  }, [uiQuery.data, pathLeaf]);
 
   const availableDashboards = useMemo(
     () => (dashboardsQuery.data ?? []).filter((obj) => obj.type === "DASHBOARD"),
@@ -66,7 +72,17 @@ export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorA
   );
 
   const saveMutation = useMutation({
-    mutationFn: (ui: OperatorUi) => saveOperatorAppUi(selectedAppId, ui),
+    mutationFn: async (ui: OperatorUi) => {
+      try {
+        return await saveOperatorAppUi(selectedAppId, ui);
+      } catch (error) {
+        if (!canManage) {
+          throw error;
+        }
+        await createOperatorApp(selectedAppId, ui.title);
+        return saveOperatorAppUi(selectedAppId, ui);
+      }
+    },
     onSuccess: (saved) => {
       queryClient.setQueryData(["operator-app-ui", selectedAppId], saved);
       queryClient.invalidateQueries({ queryKey: ["operator-apps"] });
@@ -103,8 +119,11 @@ export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorA
   const dirty = useMemo(() => {
     const ui = uiQuery.data;
     const draft = buildUi();
-    if (!ui || !draft) {
+    if (!draft) {
       return false;
+    }
+    if (!ui) {
+      return true;
     }
     return JSON.stringify(ui) !== JSON.stringify(draft);
   }, [uiQuery.data, title, defaultDashboard, selectedPaths, selectedAppId, availableDashboards]);
@@ -136,7 +155,14 @@ export default function OperatorAppsPanel({ canManage, selectedPath }: OperatorA
         {uiQuery.isLoading && <p className="hint">Загрузка конфигурации…</p>}
         {uiQuery.error && <p className="hint error">{String(uiQuery.error)}</p>}
 
-        {uiQuery.data && (
+        {!uiQuery.isLoading && !uiQuery.error && !uiQuery.data && (
+          <p className="hint">
+            Конфигурация operator UI ещё не создана. Отметьте дашборды и нажмите «Сохранить»
+            {canManage ? "" : " (нужна роль admin)"}.
+          </p>
+        )}
+
+        {(uiQuery.data || canManage) && !uiQuery.isLoading && (
           <div className="form-grid compact">
             <label>
               Заголовок приложения

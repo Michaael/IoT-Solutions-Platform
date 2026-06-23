@@ -30,6 +30,7 @@ export function mergeSession(
 }
 
 export interface DashboardContextValue extends DashboardSession {
+  operatorMode?: boolean;
   setSelection: (key: string, path: string) => void;
   setParams: (patch: Record<string, unknown>) => void;
   navigateToDashboard: (path: string, options?: OpenDashboardOptions) => void;
@@ -52,6 +53,7 @@ const DashboardContext = createContext<DashboardContextValue>(defaultValue);
 interface DashboardProviderProps {
   children: ReactNode;
   value?: DashboardContextValue;
+  operatorMode?: boolean;
   session?: DashboardSession;
   selection?: Record<string, string>;
   params?: Record<string, unknown>;
@@ -65,6 +67,7 @@ interface DashboardProviderProps {
 export function DashboardProvider({
   children,
   value,
+  operatorMode = false,
   session: controlledSession,
   selection: controlledSelection,
   params: controlledParams,
@@ -113,6 +116,7 @@ export function DashboardProvider({
     };
 
     return {
+      operatorMode,
       selection: session.selection,
       params: session.params,
       setSelection,
@@ -131,6 +135,7 @@ export function DashboardProvider({
     onParamsChange,
     onNavigateDashboard,
     onOpenDashboardModal,
+    operatorMode,
   ]);
 
   return <DashboardContext.Provider value={derivedValue}>{children}</DashboardContext.Provider>;

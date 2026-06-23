@@ -102,7 +102,7 @@ export default function App() {
   const [editorTabs, setEditorTabs] = useState<EditorTab[]>([]);
   const [dashboardSessions, setDashboardSessions] = useState<Record<string, DashboardSession>>({});
   const [propertiesTabPath, setPropertiesTabPath] = useState<string | null>(null);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedPath, setSelectedPath] = useState<string | null>(() =>
     resolveInitialAdminPath(window.location.search, readSelectedPath())
   );
@@ -336,12 +336,18 @@ export default function App() {
   };
 
   const selectOperatorApp = (appId: string) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("mode", "operator");
-    url.searchParams.set("app", appId);
-    url.searchParams.delete("screen");
-    url.searchParams.delete("dashboard");
-    window.history.replaceState({}, "", url.toString());
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("mode", "operator");
+        next.set("app", appId);
+        next.delete("screen");
+        next.delete("dashboard");
+        next.delete("report");
+        return next;
+      },
+      { replace: true }
+    );
     setAppMode("operator");
   };
 
@@ -392,7 +398,7 @@ export default function App() {
   }
 
   if (shouldOpenOperatorShell(session, appMode)) {
-    const operatorAppId = resolveOperatorAppId(session);
+    const operatorAppId = resolveOperatorAppId(session, searchParams);
     return (
       <OperatorView
         appId={operatorAppId}

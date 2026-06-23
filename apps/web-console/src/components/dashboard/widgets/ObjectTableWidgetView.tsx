@@ -4,7 +4,7 @@ import { fetchObjects, fetchVariables } from "../../../api";
 import type { ObjectTableColumn, ObjectTableWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
 import { useDashboardContext, triggerDashboardOpen } from "../DashboardContext";
-import { parseJsonObject } from "../dashboardUtils";
+import { parseJsonObject, parseWidgetJsonArray, matchesNamePattern, objectTableValueField, formatObjectTableCell } from "../dashboardUtils";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 
@@ -21,13 +21,10 @@ export default function ObjectTableWidgetView({
 }: ObjectTableWidgetViewProps) {
   const styles = useWidgetStyles(widget.stylesJson);
   const { selection, setSelection, navigateToDashboard, openDashboardModal } = useDashboardContext();
-  const parsedColumns = useMemo(() => {
-    try {
-      return widget.columnsJson ? (JSON.parse(widget.columnsJson) as ObjectTableColumn[]) : [];
-    } catch {
-      return [] as ObjectTableColumn[];
-    }
-  }, [widget.columnsJson]);
+  const parsedColumns = useMemo(
+    () => parseWidgetJsonArray<ObjectTableColumn>(widget.columnsJson),
+    [widget.columnsJson]
+  );
 
   const children = useQuery({
     queryKey: ["objects", widget.parentPath],
@@ -36,15 +33,29 @@ export default function ObjectTableWidgetView({
     refetchInterval: refreshIntervalMs,
   });
 
+  const rows = useMemo(() => {
+    const list = children.data ?? [];
+    return list.filter((obj) => {
+      const leaf = obj.path.split(".").pop() ?? "";
+      if (widget.namePattern && !matchesNamePattern(leaf, widget.namePattern)) {
+        return false;
+      }
+      if (widget.objectType && obj.type !== widget.objectType) {
+        return false;
+      }
+      return true;
+    });
+  }, [children.data, widget.namePattern, widget.objectType]);
+
   const selectedPath = widget.selectionKey ? selection[widget.selectionKey] : undefined;
 
   useEffect(() => {
     if (!widget.selectionKey || editable || selectedPath) return;
-    const first = children.data?.[0];
+    const first = rows[0];
     if (first) {
       setSelection(widget.selectionKey, first.path);
     }
-  }, [children.data, editable, selectedPath, setSelection, widget.selectionKey]);
+  }, [rows, editable, selectedPath, setSelection, widget.selectionKey]);
 
   return (
     <DashWidgetShell
@@ -64,12 +75,12 @@ export default function ObjectTableWidgetView({
               <tr>
                 <th>Объект</th>
                 {parsedColumns.map((col) => (
-                  <th key={col.variable}>{col.label}</th>
+                  <th key={col.variable ?? col.objectField ?? col.label}>{col.label}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {(children.data ?? []).map((obj) => (
+              {rows.map((obj) => (
                 <ObjectTableRow
                   key={obj.path}
                   path={obj.path}
@@ -141,9 +152,26 @@ function ObjectTableRow({
     >
       <td>{displayName}</td>
       {columns.map((col) => {
-        const variable = vars.data?.find((v) => v.name === col.variable);
-        const raw = readFieldValue(variable?.value?.rows[0], "value");
-        return <td key={col.variable}>{raw != null ? String(raw) : "—"}</td>;
+        let raw: unknown;
+        if (!col.variable) {
+          if (col.objectField === "path" || col.field === "path") {
+            raw = path;
+          } else {
+            raw = displayName;
+          }
+        } else {
+          const variable = vars.data?.find((v) => v.name === col.variable);
+          raw = readFieldValue(
+            variable?.value?.rows[0],
+            objectTableValueField(col)
+          );
+        }
+        const text = formatObjectTableCell(raw, col);
+        return (
+          <td key={`${col.variable ?? col.objectField ?? col.label}-${col.field ?? "value"}`}>
+            {text}
+          </td>
+        );
       })}
     </tr>
   );

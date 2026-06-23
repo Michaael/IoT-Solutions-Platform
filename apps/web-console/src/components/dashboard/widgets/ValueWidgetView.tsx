@@ -1,6 +1,7 @@
 import type { ValueWidget } from "../../../types/dashboard";
 import { useBoundVariable } from "../../../hooks/useBoundVariable";
 import { useWidgetObjectPath } from "../../../hooks/useWidgetObjectPath";
+import { useDashboardContext } from "../DashboardContext";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 
@@ -16,6 +17,7 @@ export default function ValueWidgetView({
   editable = false,
 }: ValueWidgetViewProps) {
   const styles = useWidgetStyles(widget.stylesJson);
+  const { operatorMode } = useDashboardContext();
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const { rawValue, variable, isLoading, isError } = useBoundVariable(
     objectPath,
@@ -25,8 +27,10 @@ export default function ValueWidgetView({
   );
 
   const unitRow = variable?.value?.rows[0];
+  const legacySuffix = (widget as ValueWidget & { suffix?: string }).suffix;
   const unit =
     widget.unit ??
+    legacySuffix ??
     (widget.unitField && unitRow ? String(unitRow[widget.unitField] ?? "") : "");
 
   let display = "—";
@@ -53,13 +57,18 @@ export default function ValueWidgetView({
       ? "dash-widget-text dash-widget-text-multiline"
       : "dash-widget-text";
 
+  const metaFooter =
+    operatorMode || !widget.variableName
+      ? undefined
+      : `${(objectPath || widget.objectPath || "—").split(".").pop()}.${widget.variableName}`;
+
   return (
     <DashWidgetShell
       title={widget.title}
       stylesJson={widget.stylesJson}
       className="dash-widget dash-widget-value"
       editable={editable}
-      footer={`${(objectPath || widget.objectPath || "—").split(".").pop()}.${widget.variableName}`}
+      footer={metaFooter}
     >
       {!objectPath && widget.selectionKey ? (
         <p className="hint">Выберите устройство</p>

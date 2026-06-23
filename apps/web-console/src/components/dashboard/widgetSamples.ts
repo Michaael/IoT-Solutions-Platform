@@ -743,6 +743,15 @@ export function buildSampleWidget(type: WidgetType, index: number): DashboardWid
           },
         ]),
       };
+    case "mini-tec-sld":
+      return {
+        ...base,
+        type: "mini-tec-sld",
+        title: "Однолинейная схема Мини-ТЭЦ",
+        w: 12,
+        h: 5,
+        objectPath: "",
+      };
     default:
       return { ...base, type: "value", title: "Значение", variableName: "temperature", decimals: 1 };
   }

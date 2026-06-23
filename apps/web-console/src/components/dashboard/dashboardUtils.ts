@@ -1,4 +1,4 @@
-import type { DataSchema } from "../../types";
+import type { DataRecord, DataSchema } from "../../types";
 import type { DashboardSession } from "./DashboardContext";
 import type { FunctionFormField } from "../../types/dashboard";
 
@@ -102,6 +102,20 @@ export function buildFunctionInput(
   return { schema, rows: [row] };
 }
 
+/** Wraps plain `{action:"open"}` JSON into DataRecord `{rows:[...]}` for function invoke. */
+export function parseFunctionInputJson(raw: string): DataRecord {
+  const parsed = JSON.parse(raw) as unknown;
+  const emptySchema: DataSchema = { name: "functionInput", fields: [] };
+  if (parsed && typeof parsed === "object" && Array.isArray((parsed as DataRecord).rows)) {
+    const record = parsed as DataRecord;
+    return { schema: record.schema ?? emptySchema, rows: record.rows };
+  }
+  return {
+    schema: emptySchema,
+    rows: [parsed as Record<string, unknown>],
+  };
+}
+
 export function parseJsonArray<T>(raw: string | undefined, fallback: T[]): T[] {
   if (!raw?.trim()) return fallback;
   try {
@@ -110,6 +124,46 @@ export function parseJsonArray<T>(raw: string | undefined, fallback: T[]): T[] {
   } catch {
     return fallback;
   }
+}
+
+/** columnsJson / variablesJson may be a JSON string OR already-parsed array (agent layout). */
+export function parseWidgetJsonArray<T>(raw: unknown, fallback: T[] = []): T[] {
+  if (raw == null || raw === "") return fallback;
+  if (Array.isArray(raw)) return raw as T[];
+  if (typeof raw === "string") return parseJsonArray(raw, fallback);
+  return fallback;
+}
+
+/** Match object leaf name against glob (only * and ?). */
+export function matchesNamePattern(leafName: string, pattern?: string): boolean {
+  if (!pattern?.trim()) return true;
+  const escaped = pattern
+    .trim()
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*")
+    .replace(/\?/g, ".");
+  return new RegExp(`^${escaped}$`, "i").test(leafName);
+}
+
+export function objectTableValueField(col: { variable?: string; field?: string }): string {
+  if (!col.field || (col.variable && col.field === col.variable)) {
+    return "value";
+  }
+  return col.field;
+}
+
+export function formatObjectTableCell(
+  raw: unknown,
+  col: { trueLabel?: string; falseLabel?: string }
+): string {
+  if (raw == null || raw === "") return "—";
+  if (typeof raw === "boolean") {
+    return raw ? (col.trueLabel ?? "Да") : (col.falseLabel ?? "Нет");
+  }
+  if (typeof raw === "number") {
+    return Number.isInteger(raw) ? String(raw) : raw.toFixed(2);
+  }
+  return String(raw);
 }
 
 export function formatDispatchStatus(status: unknown): string {

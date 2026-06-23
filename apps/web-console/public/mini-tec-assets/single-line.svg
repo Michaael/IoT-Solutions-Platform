@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 360" role="img" aria-label="Mini-TEC single-line diagram">
+  <defs>
+    <linearGradient id="busGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#388bfd" stop-opacity="0.35"/>
+      <stop offset="50%" stop-color="#58a6ff"/>
+      <stop offset="100%" stop-color="#388bfd" stop-opacity="0.35"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <marker id="arrowGas" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#f0883e"/>
+    </marker>
+  </defs>
+
+  <rect width="1120" height="360" fill="#0d1117" rx="8"/>
+
+  <text x="36" y="118" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="11">Gas</text>
+  <line x1="70" y1="112" x2="118" y2="112" stroke="#f0883e" stroke-width="3" marker-end="url(#arrowGas)"/>
+
+  <g transform="translate(120,72)">
+    <rect width="96" height="80" rx="6" fill="#161b22" stroke="#f0883e" stroke-width="2"/>
+    <text x="48" y="28" text-anchor="middle" fill="#e6edf3" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600">GRPB</text>
+    <text x="48" y="48" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">gas regulating</text>
+    <text x="48" y="62" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">station</text>
+    <circle cx="48" cy="72" r="4" fill="#3fb950"/>
+  </g>
+
+  <rect x="228" y="104" width="640" height="10" rx="3" fill="url(#busGrad)" filter="url(#glow)"/>
+  <text x="548" y="98" text-anchor="middle" fill="#58a6ff" font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600">10 kV bus</text>
+
+  <line x1="216" y1="112" x2="228" y2="112" stroke="#58a6ff" stroke-width="3"/>
+
+  <g transform="translate(268,24)">
+    <line x1="52" y1="80" x2="52" y2="104" stroke="#58a6ff" stroke-width="3"/>
+    <rect width="104" height="76" rx="6" fill="#161b22" stroke="#3fb950" stroke-width="2"/>
+    <text x="52" y="26" text-anchor="middle" fill="#e6edf3" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600">GPU-1</text>
+    <text x="52" y="46" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">1480 kW</text>
+    <rect x="20" y="54" width="64" height="14" rx="3" fill="#21262d" stroke="#30363d"/>
+    <text x="52" y="65" text-anchor="middle" fill="#3fb950" font-family="Segoe UI, system-ui, sans-serif" font-size="9">GEN</text>
+  </g>
+
+  <g transform="translate(418,24)">
+    <line x1="52" y1="80" x2="52" y2="104" stroke="#58a6ff" stroke-width="3"/>
+    <rect width="104" height="76" rx="6" fill="#161b22" stroke="#3fb950" stroke-width="2"/>
+    <text x="52" y="26" text-anchor="middle" fill="#e6edf3" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600">GPU-2</text>
+    <text x="52" y="46" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">1480 kW</text>
+    <rect x="20" y="54" width="64" height="14" rx="3" fill="#21262d" stroke="#30363d"/>
+    <text x="52" y="65" text-anchor="middle" fill="#3fb950" font-family="Segoe UI, system-ui, sans-serif" font-size="9">GEN</text>
+  </g>
+
+  <g transform="translate(568,24)">
+    <line x1="52" y1="80" x2="52" y2="104" stroke="#58a6ff" stroke-width="3"/>
+    <rect width="104" height="76" rx="6" fill="#161b22" stroke="#3fb950" stroke-width="2"/>
+    <text x="52" y="26" text-anchor="middle" fill="#e6edf3" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600">GPU-3</text>
+    <text x="52" y="46" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">1480 kW</text>
+    <rect x="20" y="54" width="64" height="14" rx="3" fill="#21262d" stroke="#30363d"/>
+    <text x="52" y="65" text-anchor="middle" fill="#3fb950" font-family="Segoe UI, system-ui, sans-serif" font-size="9">GEN</text>
+  </g>
+
+  <g transform="translate(468,148)">
+    <line x1="52" y1="0" x2="52" y2="24" stroke="#58a6ff" stroke-width="3"/>
+    <line x1="52" y1="24" x2="52" y2="48" stroke="#a371f7" stroke-width="2" stroke-dasharray="5 4"/>
+    <rect width="104" height="72" rx="6" fill="#161b22" stroke="#a371f7" stroke-width="2"/>
+    <text x="52" y="26" text-anchor="middle" fill="#e6edf3" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600">DGU</text>
+    <text x="52" y="46" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">reserve</text>
+    <text x="52" y="62" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">~500 kW</text>
+  </g>
+
+  <g transform="translate(728,72)">
+    <line x1="0" y1="40" x2="24" y2="40" stroke="#58a6ff" stroke-width="3"/>
+    <line x1="24" y1="28" x2="24" y2="52" stroke="#e6edf3" stroke-width="3"/>
+    <line x1="14" y1="52" x2="34" y2="28" stroke="#e6edf3" stroke-width="3"/>
+    <line x1="24" y1="40" x2="48" y2="40" stroke="#58a6ff" stroke-width="3"/>
+    <rect x="48" y="0" width="108" height="80" rx="6" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+    <text x="102" y="28" text-anchor="middle" fill="#e6edf3" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600">RUMB</text>
+    <text x="102" y="48" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">10 / 0.4 kV</text>
+    <text x="102" y="64" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">breaker</text>
+  </g>
+
+  <g transform="translate(900,56)">
+    <line x1="0" y1="56" x2="20" y2="56" stroke="#58a6ff" stroke-width="3"/>
+    <rect x="20" y="12" width="120" height="96" rx="6" fill="#161b22" stroke="#d29922" stroke-width="2"/>
+    <text x="80" y="40" text-anchor="middle" fill="#e6edf3" font-family="Segoe UI, system-ui, sans-serif" font-size="14" font-weight="600">Load</text>
+    <text x="80" y="60" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">load module</text>
+    <text x="80" y="76" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="10">consumers</text>
+  </g>
+
+  <g transform="translate(32,248)">
+    <rect width="1056" height="88" rx="6" fill="#161b22" stroke="#30363d"/>
+    <text x="20" y="26" fill="#e6edf3" font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="600">Legend</text>
+    <circle cx="36" cy="48" r="5" fill="#3fb950"/>
+    <text x="50" y="52" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="11">generation / normal</text>
+    <circle cx="220" cy="48" r="5" fill="#f0883e"/>
+    <text x="234" y="52" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="11">gas path</text>
+    <circle cx="360" cy="48" r="5" fill="#a371f7"/>
+    <text x="374" y="52" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="11">DGU reserve</text>
+    <line x1="36" y1="72" x2="76" y2="72" stroke="#58a6ff" stroke-width="3"/>
+    <text x="86" y="76" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="11">10 kV power bus</text>
+    <text x="520" y="52" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="11">Island mode: power from on-site generation</text>
+    <text x="520" y="76" fill="#8b949e" font-family="Segoe UI, system-ui, sans-serif" font-size="11">Plant rating: 3 x 1480 kW GPU + DGU reserve</text>
+  </g>
+</svg>

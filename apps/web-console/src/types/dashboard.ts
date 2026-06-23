@@ -40,7 +40,8 @@ export type WidgetType =
   | "network-graph"
   | "spreadsheet"
   | "liquid-gauge"
-  | "nav-menu";
+  | "nav-menu"
+  | "mini-tec-sld";
 
 export type DashboardOpenMode = "navigate" | "modal";
 
@@ -114,6 +115,8 @@ export interface IndicatorWidget extends DashboardWidgetBase {
   falseLabel?: string;
   trueColor?: string;
   falseColor?: string;
+  /** When true, variable=true means alarm (red). Default false: true=active/ok (green). */
+  alarmMode?: boolean;
 }
 
 export interface ChartWidget extends DashboardWidgetBase {
@@ -172,14 +175,24 @@ export interface ProgressWidget extends DashboardWidgetBase {
 }
 
 export interface ObjectTableColumn {
-  variable: string;
+  variable?: string;
   label: string;
+  /** DataRecord field; default "value". Use "online" for status.online, etc. */
+  field?: string;
+  /** Object field when variable is omitted (displayName, path). */
+  objectField?: "displayName" | "path";
+  trueLabel?: string;
+  falseLabel?: string;
 }
 
 export interface ObjectTableWidget extends DashboardWidgetBase {
   type: "object-table";
   parentPath: string;
   columnsJson?: string;
+  /** Glob on object leaf name, e.g. gpu-* */
+  namePattern?: string;
+  /** Filter children by ObjectType */
+  objectType?: import("../types").ObjectType;
   /** Writes selected row path into dashboard selection */
   selectionKey?: string;
   /** Open another dashboard when a row is clicked */
@@ -273,6 +286,11 @@ export interface SvgWidget extends DashboardWidgetBase {
   functionName?: string;
   toggleVariable?: string;
   confirmMessage?: string;
+}
+
+/** Live SCADA single-line diagram for the mini-TEC reference plant. */
+export interface MiniTecSldWidget extends DashboardWidgetBase {
+  type: "mini-tec-sld";
 }
 
 export interface CompositeWidget extends DashboardWidgetBase {
@@ -469,6 +487,7 @@ export type DashboardWidget =
   | HistoryTableWidget
   | VariableEditorWidget
   | SvgWidget
+  | MiniTecSldWidget
   | CompositeWidget
   | SubDashboardWidget
   | PanelWidget
@@ -557,17 +576,30 @@ export function emptyLayout(): DashboardLayout {
   return { columns: 12, rowHeight: 72, widgets: [] };
 }
 
+function normalizeLayoutWidget(widget: DashboardWidget): DashboardWidget {
+  if (widget.type === "dashboard-link") {
+    const legacy = widget as DashboardLinkWidget & { dashboardPath?: string; label?: string };
+    return {
+      ...widget,
+      targetDashboardPath: legacy.targetDashboardPath ?? legacy.dashboardPath,
+      buttonLabel: legacy.buttonLabel ?? legacy.label,
+    };
+  }
+  return widget;
+}
+
 export function parseLayoutJson(raw: string | undefined | null): DashboardLayout {
   if (!raw) {
     return emptyLayout();
   }
   try {
     const parsed = JSON.parse(raw) as DashboardLayout;
+    const widgets = Array.isArray(parsed.widgets) ? parsed.widgets.map(normalizeLayoutWidget) : [];
     return {
       columns: parsed.columns ?? 12,
       rowHeight: parsed.rowHeight ?? 72,
       theme: typeof parsed.theme === "string" ? parsed.theme : undefined,
-      widgets: Array.isArray(parsed.widgets) ? parsed.widgets : [],
+      widgets,
     };
   } catch {
     return emptyLayout();

@@ -7,6 +7,8 @@ import com.ispf.server.application.data.ApplicationDataStore;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -112,6 +114,7 @@ public class OperatorAppUiService {
         return toUiMap(record);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Map<String, Object> saveUi(
             String appId,
             String title,

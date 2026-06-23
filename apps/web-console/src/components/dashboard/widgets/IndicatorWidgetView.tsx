@@ -28,28 +28,42 @@ export default function IndicatorWidgetView({
   );
 
   const active = rawValue === true || rawValue === "true" || rawValue === 1;
+  const alarmMode = widget.alarmMode ?? false;
+  let borderColor: string;
+  let dotClass: string;
+  if (alarmMode) {
+    if (active) {
+      borderColor = widget.trueColor ?? "var(--danger)";
+      dotClass = "alarm";
+    } else {
+      borderColor = widget.falseColor ?? "var(--success)";
+      dotClass = "ok";
+    }
+  } else if (active) {
+    borderColor = widget.trueColor ?? "var(--success)";
+    dotClass = "ok";
+  } else {
+    borderColor = widget.falseColor ?? "var(--border)";
+    dotClass = "idle";
+  }
   const label = active
-    ? (widget.trueLabel ?? "Активно")
+    ? (widget.trueLabel ?? (alarmMode ? "АВАРИЯ" : "Активно"))
     : (widget.falseLabel ?? "Норма");
 
   return (
     <DashWidgetShell
       title={widget.title}
       stylesJson={widget.stylesJson}
-      className={`dash-widget dash-widget-indicator ${active ? "active" : "inactive"}`}
+      className={`dash-widget dash-widget-indicator ${dotClass}`}
       editable={editable}
-      rootStyle={{
-        borderColor: active
-          ? (widget.trueColor ?? "var(--danger)")
-          : (widget.falseColor ?? "var(--success)"),
-      }}
+      rootStyle={{ borderColor }}
     >
       {!objectPath && widget.selectionKey ? (
         <p className="hint">Выберите устройство</p>
       ) : (
         <div className="dash-widget-indicator-body" style={styles.body}>
           <span
-            className={`dash-indicator-dot ${active ? "on" : "off"}`}
+            className={`dash-indicator-dot ${dotClass}`}
             style={styles.dot}
           />
           <span style={styles.label}>

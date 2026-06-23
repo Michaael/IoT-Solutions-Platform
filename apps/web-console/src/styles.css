@@ -1765,6 +1765,27 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   overflow: hidden;
 }
 
+.dash-widget-image .dash-widget-image-el {
+  display: block;
+  width: 100%;
+  max-height: 100%;
+  flex: 1;
+  min-height: 0;
+  object-fit: contain;
+}
+
+.dash-widget-mini-tec-sld {
+  padding: 0.5rem 0.65rem 0.65rem;
+}
+
+.mini-tec-sld-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  flex: 1;
+}
+
 .dash-widget-title {
   flex-shrink: 0;
   font-size: 0.85rem;
@@ -1882,14 +1903,21 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   background: var(--text-muted);
 }
 
-.dash-indicator-dot.on {
+.dash-indicator-dot.on,
+.dash-indicator-dot.ok {
+  background: var(--success);
+  box-shadow: 0 0 12px rgba(63, 185, 80, 0.35);
+}
+
+.dash-indicator-dot.off,
+.dash-indicator-dot.alarm {
   background: var(--danger);
   box-shadow: 0 0 12px rgba(248, 81, 73, 0.45);
 }
 
-.dash-indicator-dot.off {
-  background: var(--success);
-  box-shadow: 0 0 12px rgba(63, 185, 80, 0.35);
+.dash-indicator-dot.idle {
+  background: var(--text-muted);
+  box-shadow: none;
 }
 
 .dash-toggle-btn {
@@ -2577,6 +2605,26 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
 
 .dashboard-link-btn {
   width: 100%;
+  max-height: 2.5rem;
+  align-self: stretch;
+}
+
+.dashboard-link-widget,
+.function-widget {
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.function-widget-btn {
+  max-height: 2.75rem;
+}
+
+.operator-dashboard-shell .dash-widget-value {
+  padding: 0.65rem 0.85rem;
+}
+
+.operator-dashboard-shell .dash-widget-metric {
+  font-size: clamp(1rem, 2.2vw, 1.55rem);
 }
 
 .form-grid .checkbox-row {

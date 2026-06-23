@@ -330,6 +330,12 @@ const WIDGET_ICONS: Record<WidgetType, ReactNode> = {
       <path d="M3.5 5h9M3.5 8h9M3.5 11h9" />
     </>
   ),
+  "mini-tec-sld": (
+    <>
+      <rect x="2" y="3" width="12" height="10" rx="1" />
+      <path d="M4 7h8M4 9h5" />
+    </>
+  ),
 };
 
 function WidgetTypeIcon({ type }: { type: WidgetType }) {

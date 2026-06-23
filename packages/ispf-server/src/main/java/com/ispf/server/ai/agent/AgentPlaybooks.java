@@ -1,6 +1,7 @@
 package com.ispf.server.ai.agent;
 
 import com.ispf.server.bootstrap.LabModelBootstrap;
+import com.ispf.server.bootstrap.MiniTecPaths;
 import com.ispf.server.dashboard.DashboardLayouts;
 import com.ispf.server.plugin.model.ModelBootstrap;
 
@@ -313,6 +314,37 @@ public final class AgentPlaybooks {
 
     public static String platformObjectTypesGuide() {
         return AgentObjectTreeGuide.referenceText();
+    }
+
+    public static String miniTecReference() {
+        return """
+                ## Мини-ТЭЦ (эталон) — цифровой двойник (3×ГПУ, ГРПБ, РУМБ, ДГУ, нагрузочный модуль)
+                
+                Преднастроено bootstrap-ом при старте сервера. Smoke-check:
+                1. list_variables path="""
+                + MiniTecPaths.STATION_HUB
+                + """
+                 — totalGenPowerKw, gridFrequencyHz, alarmLatched
+                2. driver_control action=poll path="""
+                + MiniTecPaths.GPU_01
+                + """
+                3. Operator UI: ?mode=operator&app=mini-tec&dashboard="""
+                + MiniTecPaths.DASHBOARD_OVERVIEW
+                + """
+                
+                Пути:
+                - Папка: """
+                + MiniTecPaths.FOLDER
+                + """
+                - ГПУ: gpu-01..03, ГРПБ: grpb, РУМБ: rumb-10kv, ДГУ: dgu, нагрузка: load-module
+                - Hub: """
+                + MiniTecPaths.STATION_HUB
+                + """
+                - Дашборды: mini-tec-overview, mini-tec-gpu-detail, mini-tec-grpb, mini-tec-protections
+                - Модели: mini-tec-gpu-v1, mini-tec-grpb-v1, mini-tec-rumb-v1, mini-tec-dgu-v1, mini-tec-load-module-v1
+                - Virtual driver profiles: tec-gpu, tec-grpb, tec-rumb, tec-dgu, tec-load
+                - Bundle redeploy: POST /api/v1/applications/mini-tec/deploy with examples/mini-tec/bundle.json
+                """;
     }
 
     public static String widgetCatalogGuide() {

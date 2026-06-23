@@ -53,6 +53,7 @@ const BINDING_BY_TYPE: Record<WidgetType, WidgetDataBinding> = {
   carousel: "composition",
   "steps-panel": "composition",
   "nav-menu": "composition",
+  "mini-tec-sld": "composition",
 };
 
 export function widgetDataBinding(type: WidgetType): WidgetDataBinding {

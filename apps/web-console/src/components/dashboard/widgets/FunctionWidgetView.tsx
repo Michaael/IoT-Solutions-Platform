@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invokeFunction } from "../../../api";
 import type { DataRecord } from "../../../types";
 import type { FunctionWidget } from "../../../types/dashboard";
-import { resolveWidgetPath } from "../dashboardUtils";
+import { parseFunctionInputJson, resolveWidgetPath } from "../dashboardUtils";
 import { useDashboardContext } from "../DashboardContext";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
@@ -28,16 +28,17 @@ export default function FunctionWidgetView({ widget, editable }: FunctionWidgetV
       }
       let input: DataRecord | undefined;
       if (widget.inputJson?.trim()) {
-        try {
-          input = JSON.parse(widget.inputJson) as DataRecord;
-        } catch {
-          throw new Error("Некорректный inputJson");
-        }
+        input = parseFunctionInputJson(widget.inputJson);
       }
       return invokeFunction(objectPath, widget.functionName, input);
     },
     onSuccess: (result) => {
       const row = result.rows?.[0];
+      if (row?.success === false) {
+        setError(String(row.message ?? "Ошибка"));
+        setMessage(null);
+        return;
+      }
       const text = row?.message ? String(row.message) : "Выполнено";
       setMessage(text);
       setError(null);

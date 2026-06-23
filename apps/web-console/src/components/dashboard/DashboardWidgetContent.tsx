@@ -20,6 +20,7 @@ import VariableEditorWidgetView from "./widgets/VariableEditorWidgetView";
 import SvgWidgetView from "./widgets/SvgWidgetView";
 import LabelWidgetView from "./widgets/LabelWidgetView";
 import ImageWidgetView from "./widgets/ImageWidgetView";
+import MiniTecSldWidgetView from "./widgets/MiniTecSldWidgetView";
 import HtmlSnippetWidgetView from "./widgets/HtmlSnippetWidgetView";
 import ObjectTreeWidgetView from "./widgets/ObjectTreeWidgetView";
 import BreadcrumbsWidgetView from "./widgets/BreadcrumbsWidgetView";
@@ -187,6 +188,14 @@ export default function DashboardWidgetContent({
       return <LabelWidgetView widget={widget} editable={editable} />;
     case "image":
       return <ImageWidgetView widget={widget} editable={editable} />;
+    case "mini-tec-sld":
+      return (
+        <MiniTecSldWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
     case "html-snippet":
       return <HtmlSnippetWidgetView widget={widget} editable={editable} />;
     case "object-tree":
