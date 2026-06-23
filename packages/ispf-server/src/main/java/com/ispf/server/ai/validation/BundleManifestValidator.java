@@ -271,6 +271,24 @@ public class BundleManifestValidator {
             if (report.title() == null || report.title().isBlank()) {
                 builder.addError("report " + report.reportId() + ": title is required");
             }
+            String reportType = report.reportType() != null ? report.reportType().trim() : "";
+            if ("tree-variables".equals(reportType)) {
+                if (report.devicePathPattern() == null || report.devicePathPattern().isBlank()) {
+                    builder.addError("report " + report.reportId() + ": devicePathPattern is required for tree-variables");
+                }
+                if (report.variableName() == null || report.variableName().isBlank()) {
+                    builder.addError("report " + report.reportId() + ": variableName is required for tree-variables");
+                }
+            } else if (report.query() == null || report.query().isBlank()) {
+                builder.addError("report " + report.reportId() + ": query is required for SQL reports");
+            }
+            if (report.columns() != null) {
+                for (ApplicationBundleDeployService.BundleReportColumn column : report.columns()) {
+                    if (column.field() == null || column.field().isBlank()) {
+                        builder.addError("report " + report.reportId() + ": column field is required");
+                    }
+                }
+            }
         }
     }
 

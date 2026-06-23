@@ -260,6 +260,15 @@ export interface ReportWidget extends DashboardWidgetBase {
   type: "report";
   reportPath: string;
   emptyMessage?: string;
+  /** Static run parameters (JSON object) */
+  parametersJson?: string;
+  /** Session param key → report parameter name mapping (JSON object) */
+  contextParamsJson?: string;
+  showCsv?: boolean;
+  showPdf?: boolean;
+  showXlsx?: boolean;
+  showHtml?: boolean;
+  showTruncatedWarning?: boolean;
 }
 
 export interface PieChartWidget extends DashboardWidgetBase {

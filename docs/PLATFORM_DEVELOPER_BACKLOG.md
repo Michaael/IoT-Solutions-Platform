@@ -137,6 +137,7 @@ REQ-PF и bundle deploy — способ **загрузить** declarative-ко
 | **PF-10** | Workflow cancel + signal     | **Готово**       | —                                               | P1  |
 | **PF-11** | Function rollback / versions | **Готово**       | — (API + Web Console deploy tab v0.3.0)         | P2  |
 | **PF-12** | Application SQL reports      | **Готово**       | Tree-first reports + YARG PDF/XLSX export (Phase 12–13) | P2  |
+| **PF-12b** | Reports product polish    | **Готово**       | Report Builder UX, dashboard widget params/exports, tree-variables UI, agent tools | P2  |
 | **PF-14** | Device driver catalog        | **Готово**       | 58 `driverId` в `main` (§10)                    | P3+ |
 
 ### Дополнительные требования (REQ-FW)

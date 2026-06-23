@@ -102,6 +102,46 @@
         { "field": "string", "label": "String" }
       ],
       "maxRows": 500
+    },
+    {
+      "reportId": "lab-virtual-sine",
+      "title": "Lab sine wave snapshot",
+      "description": "Current sineWave value from each lab virtual device",
+      "reportType": "tree-variables",
+      "devicePathPattern": "root.platform.devices.lab-*",
+      "variableName": "sineWave",
+      "columns": [
+        { "field": "devicepath", "label": "Device path" },
+        { "field": "value", "label": "Value" }
+      ],
+      "maxRows": 100
+    },
+    {
+      "reportId": "lab-virtual-waves-sum",
+      "title": "Lab waves sum",
+      "description": "sumWaves from each lab virtual device",
+      "reportType": "tree-variables",
+      "devicePathPattern": "root.platform.devices.lab-*",
+      "variableName": "sumWaves",
+      "columns": [
+        { "field": "devicepath", "label": "Device path" },
+        { "field": "value", "label": "Value" }
+      ],
+      "maxRows": 100
+    },
+    {
+      "reportId": "lab-virtual-status",
+      "title": "Lab device status",
+      "description": "Connectivity status from each lab virtual device",
+      "reportType": "tree-variables",
+      "devicePathPattern": "root.platform.devices.lab-*",
+      "variableName": "status",
+      "columns": [
+        { "field": "devicepath", "label": "Device path" },
+        { "field": "online", "label": "Online" },
+        { "field": "lastseen", "label": "Last seen" }
+      ],
+      "maxRows": 100
     }
   ],
   "dashboards": [
@@ -184,7 +224,10 @@
     ],
     "reports": [
       { "path": "root.platform.reports.lab-all-devices-table", "title": "All lab devices table" },
-      { "path": "root.platform.reports.lab-table-corrective", "title": "Corrective table report" }
+      { "path": "root.platform.reports.lab-table-corrective", "title": "Corrective table report" },
+      { "path": "root.platform.reports.lab-virtual-sine", "title": "Sine wave snapshot" },
+      { "path": "root.platform.reports.lab-virtual-waves-sum", "title": "Waves sum" },
+      { "path": "root.platform.reports.lab-virtual-status", "title": "Device status" }
     ],
     "defaultReport": "root.platform.reports.lab-all-devices-table"
   }

@@ -21,6 +21,8 @@ public final class AgentPromptBuilder {
             For widgets: get_widget_catalog type=<type> for exact fields before add_dashboard_widget;
             list_variables for variableName values; list_object_models before create_object.
             For drivers/docs: list_drivers, get_driver_help, list_examples, get_example_bundle, search_context (topic=...).
+            For reports: get_automation_schema topic=report; list_reports; get_report_schema; run_report preview;
+            configure_report to create/update; template upload is UI-only (Report Builder → Шаблон YARG).
             Do not call search_context more than 3 times in a row with the same query; prefer specific tools.
             
             Reply with ONLY one JSON object per turn — no markdown fences, no prose before or after:
@@ -60,6 +62,9 @@ public final class AgentPromptBuilder {
             - configure_driver or driver_control start after driver mappings are set
             - list_variables to show metrics to the user in finish summary
             - bundle import only after validate_bundle/dry_run_deploy OK
+            - Reports: list_reports → get_report_schema → run_report preview → configure_report if needed;
+              YARG template columns must match report column field names (UPPERCASE in template);
+              add_dashboard_widget type=report for table on dashboard; finish with Report Builder path
             - BFF / app functions: list_functions → get_function → invoke_bff (objectPath, functionName, inputRows)
             - Tree functions: invoke_tree_function; search: search_objects; events: list_event_catalog, get_event_schema, fire_event, list_events
             - Variables: describe_variables for schema before set_variable; list_variables for current values
@@ -107,6 +112,8 @@ public final class AgentPromptBuilder {
         prompt.append(AgentPlaybooks.platformObjectTypesGuide());
         prompt.append("\n\n");
         prompt.append(AgentPlaybooks.widgetCatalogGuide());
+        prompt.append("\n\n");
+        prompt.append(AgentPlaybooks.reportsGuide());
         prompt.append(RULES);
         prompt.append("- Reuse existing demo paths when present: ")
                 .append(AgentPlaybooks.SNMP_DEVICE_PATH)

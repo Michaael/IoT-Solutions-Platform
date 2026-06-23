@@ -5,6 +5,7 @@ import { fetchInstanceTypes, instantiateModel } from "../api/models";
 import { registerApplication } from "../api/applications";
 import { saveReportDefinition } from "../api/reports";
 import { createOperatorApp } from "../api/operatorApps";
+import { useDataSourceOptions } from "./platform/useDataSourceOptions";
 import {
   createDataSource,
   createMigration,
@@ -77,6 +78,8 @@ export default function CreateObjectDialog({
   const [bindingVariable, setBindingVariable] = useState("value");
   const [bindingDataSourcePath, setBindingDataSourcePath] = useState("");
   const [bindingQuery, setBindingQuery] = useState("SELECT 1 AS cnt");
+
+  const dataSourcesQuery = useDataSourceOptions();
 
   const dialogTitle = useMemo(() => {
     switch (mode) {
@@ -293,13 +296,19 @@ export default function CreateObjectDialog({
                 SQL-отчёт в <code>{parentPath}</code>. После создания откроется редактор с preview и CSV.
               </p>
               <label>
-                Data source path *
-                <input
+                Data source *
+                <select
                   value={reportDataSourcePath}
                   onChange={(e) => setReportDataSourcePath(e.target.value)}
-                  placeholder="root.platform.data-sources.demo"
                   required
-                />
+                >
+                  <option value="">— выберите —</option>
+                  {(dataSourcesQuery.data ?? []).map((source) => (
+                    <option key={source.path} value={source.path}>
+                      {source.displayName} ({source.path})
+                    </option>
+                  ))}
+                </select>
               </label>
             </>
           )}

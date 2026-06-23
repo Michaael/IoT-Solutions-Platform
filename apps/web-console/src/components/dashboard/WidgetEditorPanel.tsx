@@ -11,6 +11,7 @@ interface WidgetEditorPanelProps {
   widget: DashboardWidget | null;
   objects: Array<{ path: string; displayName: string; variableNames: string[] }>;
   dashboards?: Array<{ path: string; displayName: string }>;
+  reports?: Array<{ path: string; displayName: string }>;
   onChange: (widget: DashboardWidget) => void;
   onDelete: () => void;
 }
@@ -19,6 +20,7 @@ export default function WidgetEditorPanel({
   widget,
   objects,
   dashboards = [],
+  reports = [],
   onChange,
   onDelete,
 }: WidgetEditorPanelProps) {
@@ -44,6 +46,7 @@ export default function WidgetEditorPanel({
     widget,
     objects,
     dashboards,
+    reports,
     variables,
     variableSelectEnabled,
     update,

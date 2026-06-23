@@ -84,7 +84,7 @@ public final class AgentWidgetCatalog {
             w("html-snippet", "static", "Embedded HTML", List.of(),
                     "htmlJson"),
             w("report", "external", "SQL report table", List.of("reportPath"),
-                    "emptyMessage"),
+                    "parametersJson, contextParamsJson, emptyMessage, showCsv, showPdf, showXlsx, showHtml"),
             w("dashboard-link", "external", "Navigate/modal to dashboard", List.of("targetDashboardPath"),
                     "openMode navigate|modal, buttonLabel, contextSelectionJson"),
             w("sub-dashboard", "external", "Embed dashboard", List.of(),

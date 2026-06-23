@@ -27,13 +27,44 @@ Legacy API `/api/v1/applications/{appId}/reports/*` сохранён и деле
 
 Бинарный шаблон хранится в таблице `report_templates` (не в object_variables).
 
-Web Console: **Report Builder** — SQL preview, CSV, вкладка **Шаблон YARG**, export PDF/XLSX/HTML.
+Web Console: **Report Builder** — structured editor (parameters/columns, без ручного JSON), SQL preview, CSV, вкладка **Шаблон YARG**, export PDF/XLSX/HTML. Переключатель **sql** | **tree-variables**.
+
+### tree-variables (модель `tree-variables-report-v1`)
+
+| Variable | Описание |
+|----------|----------|
+| `reportType` | `tree-variables` |
+| `devicePathPattern` | Префикс или glob пути устройств (`*`, `?`) |
+| `variableName` | Имя переменной на каждом объекте |
+| `columns` | JSON array `{field, label}` (по умолчанию path, value) |
+
+Сохранение: `PUT /api/v1/reports/by-path/tree-variables-definition?path=...`
+
+## Export matrix (UI)
+
+| Поверхность | CSV | PDF/XLSX/HTML |
+|-------------|-----|----------------|
+| Report Builder | да | да (если YARG template) |
+| Dashboard widget `report` | настраивается (`showCsv`, …) | настраивается + template |
+| Operator manifest `screen.report` | да | да (если template) |
+| Operator app (ReportBuilder) | да | да (если template) |
+
+## Dashboard widget `type: "report"`
+
+| Поле | Описание |
+|------|----------|
+| `reportPath` | Путь REPORT |
+| `parametersJson` | Статические параметры run |
+| `contextParamsJson` | `{reportParam: sessionParamKey}` |
+| `showCsv` / `showPdf` / `showXlsx` / `showHtml` | Кнопки export |
+| `showTruncatedWarning` | Banner при truncated rows |
 
 ## Path-based API (primary)
 
 ```http
 GET  /api/v1/reports/by-path?path=root.platform.reports.ready-items
 PUT  /api/v1/reports/by-path/definition?path=...
+PUT  /api/v1/reports/by-path/tree-variables-definition?path=...
 POST /api/v1/reports/by-path/run?path=...
 GET  /api/v1/reports/by-path/export?path=...&format=csv|pdf|xlsx|html
 POST /api/v1/reports/by-path/template?path=...&format=xlsx   (multipart file)
@@ -99,8 +130,8 @@ GET  /api/v1/applications/{appId}/reports/{reportId}/export?format=csv|pdf|xlsx|
 ## Operator UI
 
 - **operatorUi `reports[]`:** навигация по path отчётов (как `dashboards[]`).
-- **Dashboard widget `type: "report"`** — встроенная таблица по `reportPath`.
-- **Legacy manifest** `screen.report` — по-прежнему через app API (резолв в `root.platform.reports.{reportId}`).
+- **Dashboard widget `type: "report"`** — таблица по `reportPath` с `parametersJson` / session mapping и export toolbar.
+- **Legacy manifest** `screen.report` — CSV + PDF/XLSX/HTML при YARG template.
 
 ## Права
 

@@ -96,6 +96,12 @@ ispf:
     agent-max-history-turns: ${ISPF_AI_AGENT_MAX_HISTORY_TURNS:50}
     agent-eviction-interval-ms: ${ISPF_AI_AGENT_EVICTION_INTERVAL_MS:3600000}
     agent-disable-thinking: ${ISPF_AI_AGENT_DISABLE_THINKING:true}
+  reports:
+    yarg:
+      libre-office:
+        path: ${ISPF_REPORTS_LIBREOFFICE_PATH:}
+        timeout-seconds: ${ISPF_REPORTS_LIBREOFFICE_TIMEOUT:120}
+        display-device-available: false
 
 logging:
   level:

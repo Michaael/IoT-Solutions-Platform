@@ -1,6 +1,6 @@
 {
   "contextPackVersion": "ispf-0.8.0",
-  "generatedAt": "2026-06-23T08:12:36.528115+00:00",
+  "generatedAt": "2026-06-23T12:38:56.458850+00:00",
   "platformVersion": "0.8.0",
   "bundleManifest": {
     "fields": [
@@ -510,6 +510,14 @@
       "keywords": "demo-app migrations"
     },
     {
+      "appId": "lab-mqtt-temperature",
+      "purpose": "mqtt_temperature_lab",
+      "keySections": "dashboards, events, functions, migrations, objects",
+      "version": "1.0.0",
+      "path": "examples/lab-mqtt-temperature/bundle.json",
+      "keywords": "lab-mqtt-temperature dashboards events functions migrations objects"
+    },
+    {
       "appId": "lab-training",
       "purpose": "Virtual lab training PF-15, virtual driver profiles",
       "keySections": "dashboards",
@@ -524,6 +532,14 @@
       "version": "1.0.0",
       "path": "examples/mes-reference/bundle.json",
       "keywords": "mes-reference events functions migrations objects"
+    },
+    {
+      "appId": "mini-tec",
+      "purpose": "mini_tec",
+      "keySections": "events, migrations",
+      "version": "1.0.0",
+      "path": "examples/mini-tec/bundle.json",
+      "keywords": "mini-tec events migrations"
     },
     {
       "appId": "simulator-profiles",
@@ -736,6 +752,314 @@
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "appId": "lab-mqtt-temperature",
+      "packageId": "mqtt_temperature_lab",
+      "path": "examples/lab-mqtt-temperature/bundle.json",
+      "version": "1.0.0",
+      "sections": [
+        "alertRules",
+        "dashboards",
+        "displayName",
+        "events",
+        "functions",
+        "metadata",
+        "migrations",
+        "objects",
+        "operatorUi",
+        "schedules",
+        "schemaName",
+        "tablePrefix",
+        "version"
+      ],
+      "manifest": {
+        "version": "1.0.0",
+        "displayName": "MQTT Temperature Lab",
+        "tablePrefix": "mlt_",
+        "schemaName": "mqtt_temperature_lab",
+        "metadata": {
+          "taskVariant": "mqtt-temperature",
+          "broker": "m5.wqtt.ru:11296"
+        },
+        "migrations": [
+          {
+            "id": "sensor_registry",
+            "sql": "CREATE TABLE IF NOT EXISTS mlt_sensor (sensor_id VARCHAR(64) PRIMARY KEY, object_path VARCHAR(256) NOT NULL, display_name VARCHAR(128) NOT NULL, mqtt_topic VARCHAR(256) NOT NULL, latitude DOUBLE PRECISION NOT NULL, longitude DOUBLE PRECISION NOT NULL); INSERT INTO mlt_sensor (sensor_id, object_path, display_name, mqtt_topic, latitude, longitude) SELECT 'sensor-01', 'root.platform.devices.mqtt-lab.sensors.sensor-01', '1wire test 1', 'esp2/1wire_test1/temperature', 55.761, 37.638 WHERE NOT EXISTS (SELECT 1 FROM mlt_sensor WHERE sensor_id = 'sensor-01'); INSERT INTO mlt_sensor (sensor_id, object_path, display_name, mqtt_topic, latitude, longitude) SELECT 'sensor-02', 'root.platform.devices.mqtt-lab.sensors.sensor-02', '1wire test 2', 'esp2/1wire_test2/temperature', 55.765, 37.645 WHERE NOT EXISTS (SELECT 1 FROM mlt_sensor WHERE sensor_id = 'sensor-02'); INSERT INTO mlt_sensor (sensor_id, object_path, display_name, mqtt_topic, latitude, longitude) SELECT 'sensor-03', 'root.platform.devices.mqtt-lab.sensors.sensor-03', 'Aqua cold corner', 'esp1/aqua_coldcorner_water/temperature', 55.752, 37.621 WHERE NOT EXISTS (SELECT 1 FROM mlt_sensor WHERE sensor_id = 'sensor-03'); INSERT INTO mlt_sensor (sensor_id, object_path, display_name, mqtt_topic, latitude, longitude) SELECT 'sensor-04', 'root.platform.devices.mqtt-lab.sensors.sensor-04', 'Aqua island air', 'esp1/aqua_island_air/temperature', 55.748, 37.615 WHERE NOT EXISTS (SELECT 1 FROM mlt_sensor WHERE sensor_id = 'sensor-04'); CREATE TABLE IF NOT EXISTS mlt_poll_heartbeat (id INT PRIMARY KEY DEFAULT 1, last_tick TIMESTAMPTZ); INSERT INTO mlt_poll_heartbeat (id, last_tick) SELECT 1, NOW() WHERE NOT EXISTS (SELECT 1 FROM mlt_poll_heartbeat WHERE id = 1);"
+          }
+        ],
+        "objects": [
+          {
+            "parentPath": "root.platform.devices",
+            "name": "mqtt-lab",
+            "type": "CUSTOM",
+            "displayName": "MQTT Lab"
+          },
+          {
+            "parentPath": "root.platform.devices.mqtt-lab",
+            "name": "sensors",
+            "type": "CUSTOM",
+            "displayName": "Temperature sensors"
+          },
+          {
+            "parentPath": "root.platform.devices.mqtt-lab.sensors",
+            "name": "sensor-01",
+            "type": "DEVICE",
+            "displayName": "1wire test 1",
+            "templateId": "mqtt-sensor-v1"
+          },
+          {
+            "parentPath": "root.platform.devices.mqtt-lab.sensors",
+            "name": "sensor-02",
+            "type": "DEVICE",
+            "displayName": "1wire test 2",
+            "templateId": "mqtt-sensor-v1"
+          },
+          {
+            "parentPath": "root.platform.devices.mqtt-lab.sensors",
+            "name": "sensor-03",
+            "type": "DEVICE",
+            "displayName": "Aqua cold corner",
+            "templateId": "mqtt-sensor-v1"
+          },
+          {
+            "parentPath": "root.platform.devices.mqtt-lab.sensors",
+            "name": "sensor-04",
+            "type": "DEVICE",
+            "displayName": "Aqua island air",
+            "templateId": "mqtt-sensor-v1"
+          }
+        ],
+        "functions": [
+          {
+            "objectPath": "root.platform.devices.mqtt-lab.sensors.sensor-01",
+            "functionName": "listSensors",
+            "version": "1",
+            "descriptor": {
+              "inputSchema": {
+                "name": "in",
+                "fields": []
+              },
+              "outputSchema": {
+                "name": "out",
+                "fields": [
+                  {
+                    "name": "error_code",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "error_message",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "rows",
+                    "type": "RECORD_LIST",
+                    "nestedSchema": {
+                      "name": "sensor_row",
+                      "fields": [
+                        {
+                          "name": "sensorId",
+                          "type": "STRING",
+                          "description": "ID"
+                        },
+                        {
+                          "name": "objectPath",
+                          "type": "STRING",
+                          "description": "Путь"
+                        },
+                        {
+                          "name": "displayName",
+                          "type": "STRING",
+                          "description": "Датчик"
+                        },
+                        {
+                          "name": "mqttTopic",
+                          "type": "STRING",
+                          "description": "MQTT топик"
+                        },
+                        {
+                          "name": "latitude",
+                          "type": "DOUBLE",
+                          "description": "Широта"
+                        },
+                        {
+                          "name": "longitude",
+                          "type": "DOUBLE",
+                          "description": "Долгота"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "source": {
+              "type": "script",
+              "body": "{\"steps\":[{\"type\":\"selectMany\",\"var\":\"sensors\",\"sql\":\"SELECT sensor_id, object_path, display_name, mqtt_topic, latitude, longitude FROM mlt_sensor ORDER BY sensor_id\"},{\"type\":\"map\",\"var\":\"rows\",\"source\":\"${sensors}\",\"fields\":{\"sensorId\":\"${item.sensor_id}\",\"objectPath\":\"${item.object_path}\",\"displayName\":\"${item.display_name}\",\"mqttTopic\":\"${item.mqtt_topic}\",\"latitude\":\"${item.latitude}\",\"longitude\":\"${item.longitude}\"}},{\"type\":\"return\",\"fields\":{\"error_code\":\"OK\",\"error_message\":\"\",\"rows\":\"${rows}\"}}]}"
+            }
+          },
+          {
+            "objectPath": "root.platform.devices.mqtt-lab.sensors.sensor-01",
+            "functionName": "getSensorDetail",
+            "version": "1",
+            "descriptor": {
+              "inputSchema": {
+                "name": "in",
+                "fields": [
+                  {
+                    "name": "sensorId",
+                    "type": "STRING"
+                  }
+                ]
+              },
+              "outputSchema": {
+                "name": "out",
+                "fields": [
+                  {
+                    "name": "error_code",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "error_message",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "sensorId",
+                    "type": "STRING",
+                    "description": "ID"
+                  },
+                  {
+                    "name": "objectPath",
+                    "type": "STRING",
+                    "description": "Путь"
+                  },
+                  {
+                    "name": "displayName",
+                    "type": "STRING",
+                    "description": "Датчик"
+                  },
+                  {
+                    "name": "mqttTopic",
+                    "type": "STRING",
+                    "description": "MQTT топик"
+                  },
+                  {
+                    "name": "latitude",
+                    "type": "DOUBLE",
+                    "description": "Широта"
+                  },
+                  {
+                    "name": "longitude",
+                    "type": "DOUBLE",
+                    "description": "Долгота"
+                  }
+                ]
+              }
+            },
+            "source": {
+              "type": "script",
+              "body": "{\"steps\":[{\"type\":\"selectOne\",\"var\":\"sensor\",\"sql\":\"SELECT sensor_id, object_path, display_name, mqtt_topic, latitude, longitude FROM mlt_sensor WHERE sensor_id = ?\",\"params\":[\"${input.sensorId}\"]},{\"type\":\"failIfNull\",\"var\":\"sensor\",\"message\":\"Sensor not found\"},{\"type\":\"return\",\"fields\":{\"error_code\":\"OK\",\"error_message\":\"\",\"sensorId\":\"${sensor.sensor_id}\",\"objectPath\":\"${sensor.object_path}\",\"displayName\":\"${sensor.display_name}\",\"mqttTopic\":\"${sensor.mqtt_topic}\",\"latitude\":\"${sensor.latitude}\",\"longitude\":\"${sensor.longitude}\"}}]}"
+            }
+          },
+          {
+            "objectPath": "root.platform.devices.mqtt-lab.sensors.sensor-01",
+            "functionName": "heartbeat",
+            "version": "1",
+            "descriptor": {
+              "inputSchema": {
+                "name": "in",
+                "fields": []
+              },
+              "outputSchema": {
+                "name": "out",
+                "fields": [
+                  {
+                    "name": "error_code",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "error_message",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "lastTick",
+                    "type": "STRING"
+                  }
+                ]
+              }
+            },
+            "source": {
+              "type": "script",
+              "body": "{\"steps\":[{\"type\":\"exec\",\"sql\":\"UPDATE mlt_poll_heartbeat SET last_tick = NOW() WHERE id = 1\"},{\"type\":\"selectOne\",\"var\":\"row\",\"sql\":\"SELECT last_tick::text AS last_tick FROM mlt_poll_heartbeat WHERE id = 1\"},{\"type\":\"return\",\"fields\":{\"error_code\":\"OK\",\"error_message\":\"\",\"lastTick\":\"${row.last_tick}\"}}]}"
+            }
+          }
+        ],
+        "schedules": [
+          {
+            "scheduleId": "mqtt-lab-heartbeat",
+            "enabled": true,
+            "intervalMs": 60000,
+            "actionType": "invoke_function",
+            "action": {
+              "objectPath": "root.platform.devices.mqtt-lab.sensors.sensor-01",
+              "functionName": "heartbeat"
+            }
+          }
+        ],
+        "alertRules": [
+          {
+            "name": "MQTT lab high temperature",
+            "objectPath": "root.platform.devices.mqtt-lab.sensors.sensor-01",
+            "watchVariable": "temperature",
+            "conditionExpr": "self.temperature[\"value\"] > 30.0",
+            "eventName": "mqttLabHighTemperature",
+            "payloadVariable": "temperature",
+            "enabled": true,
+            "edgeTrigger": true,
+            "delaySeconds": 0,
+            "sustainWhileTrue": false
+          }
+        ],
+        "events": [
+          {
+            "id": "mqttLabHighTemperature",
+            "roles": [
+              "admin",
+              "operator"
+            ]
+          }
+        ],
+        "dashboards": [
+          {
+            "path": "root.platform.dashboards.mqtt-lab-overview",
+            "title": "MQTT Lab — обзор",
+            "refreshIntervalMs": 3000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"sensor-table\",\"type\":\"object-table\",\"title\":\"Датчики температуры\",\"x\":0,\"y\":0,\"w\":12,\"h\":4,\"parentPath\":\"root.platform.devices.mqtt-lab.sensors\",\"selectionKey\":\"sensor\",\"rowTargetDashboard\":\"root.platform.dashboards.mqtt-lab-detail\",\"rowOpenMode\":\"navigate\",\"columnsJson\":\"[{\\\"variable\\\":\\\"temperature\\\",\\\"label\\\":\\\"°C\\\",\\\"field\\\":\\\"value\\\",\\\"decimals\\\":2},{\\\"variable\\\":\\\"driverStatus\\\",\\\"label\\\":\\\"Драйвер\\\",\\\"field\\\":\\\"value\\\"},{\\\"variable\\\":\\\"threshold\\\",\\\"label\\\":\\\"Порог\\\",\\\"field\\\":\\\"value\\\"}]\"},{\"id\":\"sensor-map\",\"type\":\"map\",\"title\":\"Карта датчиков\",\"x\":0,\"y\":4,\"w\":12,\"h\":5,\"parentPath\":\"root.platform.devices.mqtt-lab.sensors\",\"latVariable\":\"coordinates\",\"latField\":\"latitude\",\"lonField\":\"longitude\",\"labelVariable\":\"sensorLabel\",\"centerLat\":55.755,\"centerLon\":37.62,\"zoom\":11,\"selectionKey\":\"sensor\",\"rowTargetDashboard\":\"root.platform.dashboards.mqtt-lab-detail\",\"rowOpenMode\":\"navigate\"},{\"id\":\"events\",\"type\":\"event-feed\",\"title\":\"Тревоги\",\"x\":0,\"y\":9,\"w\":12,\"h\":3,\"objectPath\":\"root.platform.devices.mqtt-lab.sensors.sensor-01\",\"eventNamesJson\":\"[\\\"mqttLabHighTemperature\\\",\\\"thresholdExceeded\\\"]\",\"maxItems\":15}]}"
+          },
+          {
+            "path": "root.platform.dashboards.mqtt-lab-detail",
+            "title": "MQTT Lab — датчик",
+            "refreshIntervalMs": 2000,
+            "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"temp-value\",\"type\":\"value\",\"title\":\"Температура\",\"x\":0,\"y\":0,\"w\":4,\"h\":2,\"selectionKey\":\"sensor\",\"variableName\":\"temperature\",\"valueField\":\"value\",\"decimals\":2,\"unit\":\"°C\"},{\"id\":\"threshold-value\",\"type\":\"value\",\"title\":\"Порог тревоги\",\"x\":4,\"y\":0,\"w\":4,\"h\":2,\"selectionKey\":\"sensor\",\"variableName\":\"threshold\",\"valueField\":\"value\",\"decimals\":1,\"unit\":\"°C\"},{\"id\":\"driver-status\",\"type\":\"indicator\",\"title\":\"Драйвер\",\"x\":8,\"y\":0,\"w\":4,\"h\":2,\"selectionKey\":\"sensor\",\"variableName\":\"driverStatus\",\"valueField\":\"value\",\"trueLabel\":\"RUNNING\",\"falseLabel\":\"STOPPED\",\"trueColor\":\"#3fb950\",\"falseColor\":\"#8b949e\"},{\"id\":\"temp-chart\",\"type\":\"chart\",\"title\":\"История температуры\",\"x\":0,\"y\":2,\"w\":8,\"h\":5,\"selectionKey\":\"sensor\",\"variableName\":\"temperature\",\"valueField\":\"value\",\"chartStyle\":\"line\",\"maxPoints\":120,\"historyRange\":\"live\",\"color\":\"#2f81f7\",\"decimals\":2},{\"id\":\"alarm-indicator\",\"type\":\"indicator\",\"title\":\"Тревога\",\"x\":8,\"y\":2,\"w\":4,\"h\":2,\"selectionKey\":\"sensor\",\"variableName\":\"alarmActive\",\"valueField\":\"value\",\"trueLabel\":\"Активна\",\"falseLabel\":\"Норма\",\"trueColor\":\"#f85149\",\"falseColor\":\"#3fb950\"},{\"id\":\"set-temp\",\"type\":\"variable-editor\",\"title\":\"Задать температуру (локально)\",\"x\":8,\"y\":4,\"w\":4,\"h\":3,\"selectionKey\":\"sensor\",\"variablesJson\":\"[\\\"temperature\\\"]\"},{\"id\":\"ack-alarm\",\"type\":\"function-form\",\"title\":\"Квитировать тревогу\",\"x\":8,\"y\":7,\"w\":4,\"h\":2,\"selectionKey\":\"sensor\",\"functionName\":\"acknowledgeAlarm\",\"buttonLabel\":\"Квитировать\",\"fieldsJson\":\"[]\"}]}"
+          }
+        ],
+        "operatorUi": {
+          "appId": "mqtt-temperature-lab",
+          "title": "MQTT Temperature Lab",
+          "defaultDashboard": "root.platform.dashboards.mqtt-lab-overview",
+          "dashboards": [
+            {
+              "path": "root.platform.dashboards.mqtt-lab-overview",
+              "title": "Обзор"
+            },
+            {
+              "path": "root.platform.dashboards.mqtt-lab-detail",
+              "title": "Датчик"
+            }
+          ],
+          "eventJournalObjectPath": "root.platform.devices.mqtt-lab.sensors.sensor-01"
         }
       }
     },
@@ -1221,6 +1545,169 @@
       }
     },
     {
+      "appId": "mini-tec",
+      "packageId": "mini_tec",
+      "path": "examples/mini-tec/bundle.json",
+      "version": "1.0.0",
+      "sections": [
+        "displayName",
+        "events",
+        "metadata",
+        "migrations",
+        "operatorUi",
+        "reports",
+        "schemaName",
+        "version"
+      ],
+      "manifest": {
+        "version": "1.0.0",
+        "displayName": "Мини-ТЭЦ (эталон)",
+        "tablePrefix": "",
+        "schemaName": "app_mini_tec",
+        "metadata": {
+          "description": "Эталонный цифровой двойник мини-ТЭЦ (3×ГПУ, ГРПБ, РУМБ, ДГУ, нагрузочный модуль). Объекты создаются MiniTecPlatformBootstrap при старте; bundle — для повторного деплоя SQL и operator UI."
+        },
+        "migrations": [
+          {
+            "id": "tec_schema",
+            "sql": "CREATE TABLE IF NOT EXISTS tec_daily_journal (journal_date DATE PRIMARY KEY, total_energy_kwh DOUBLE PRECISION NOT NULL DEFAULT 0, total_reactive_kvarh DOUBLE PRECISION NOT NULL DEFAULT 0, total_running_hours DOUBLE PRECISION NOT NULL DEFAULT 0, start_count INTEGER NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS tec_consumer_load (consumer_code VARCHAR(64) PRIMARY KEY, consumer_name VARCHAR(256) NOT NULL, nominal_load_kw INTEGER NOT NULL); INSERT INTO tec_consumer_load (consumer_code, consumer_name, nominal_load_kw) SELECT 'consumer-1', 'Потребитель 1', 2430 WHERE NOT EXISTS (SELECT 1 FROM tec_consumer_load WHERE consumer_code = 'consumer-1'); INSERT INTO tec_consumer_load (consumer_code, consumer_name, nominal_load_kw) SELECT 'consumer-2', 'Потребитель 2', 1200 WHERE NOT EXISTS (SELECT 1 FROM tec_consumer_load WHERE consumer_code = 'consumer-2'); INSERT INTO tec_consumer_load (consumer_code, consumer_name, nominal_load_kw) SELECT 'consumer-3', 'Резервная нагрузка', 500 WHERE NOT EXISTS (SELECT 1 FROM tec_consumer_load WHERE consumer_code = 'consumer-3');"
+          }
+        ],
+        "reports": [
+          {
+            "reportId": "tec-daily-energy",
+            "title": "Суточный журнал энергии",
+            "description": "Учёт кВт·ч и наработки",
+            "reportType": "sql",
+            "query": "SELECT journal_date, total_energy_kwh, total_reactive_kvarh, total_running_hours, start_count FROM tec_daily_journal ORDER BY journal_date DESC",
+            "columns": [
+              {
+                "field": "journal_date",
+                "label": "Дата"
+              },
+              {
+                "field": "total_energy_kwh",
+                "label": "кВт·ч"
+              },
+              {
+                "field": "total_reactive_kvarh",
+                "label": "кВАр·ч"
+              },
+              {
+                "field": "total_running_hours",
+                "label": "Наработка, ч"
+              },
+              {
+                "field": "start_count",
+                "label": "Пуски"
+              }
+            ],
+            "maxRows": 365
+          },
+          {
+            "reportId": "tec-gpu-run-hours",
+            "title": "Наработка ГПУ",
+            "description": "Показатели эксплуатации газопоршневых модулей",
+            "reportType": "tree-variables",
+            "devicePathPattern": "root.platform.devices.mini-tec-plant.gpu-*",
+            "variableName": "runningHours",
+            "columns": [
+              {
+                "field": "devicepath",
+                "label": "Агрегат"
+              },
+              {
+                "field": "value",
+                "label": "Наработка, ч"
+              }
+            ],
+            "maxRows": 10
+          }
+        ],
+        "events": [
+          {
+            "id": "gpuProtOverload",
+            "roles": [
+              "operator",
+              "admin"
+            ]
+          },
+          {
+            "id": "busProtUndervoltage",
+            "roles": [
+              "operator",
+              "admin"
+            ]
+          },
+          {
+            "id": "grpbGasLeak",
+            "roles": [
+              "operator",
+              "admin"
+            ]
+          },
+          {
+            "id": "grpbFire",
+            "roles": [
+              "operator",
+              "admin"
+            ]
+          },
+          {
+            "id": "stationUnderpower",
+            "roles": [
+              "operator",
+              "admin"
+            ]
+          }
+        ],
+        "operatorUi": {
+          "appId": "mini-tec",
+          "title": "Мини-ТЭЦ (эталон)",
+          "defaultDashboard": "root.platform.dashboards.mini-tec-overview",
+          "eventJournalObjectPath": "root.platform.devices.mini-tec-plant.station-hub",
+          "dashboards": [
+            {
+              "path": "root.platform.dashboards.mini-tec-overview",
+              "title": "Сводка"
+            },
+            {
+              "path": "root.platform.dashboards.mini-tec-single-line",
+              "title": "Однолинейная"
+            },
+            {
+              "path": "root.platform.dashboards.mini-tec-gpu-detail",
+              "title": "ГПУ"
+            },
+            {
+              "path": "root.platform.dashboards.mini-tec-grpb",
+              "title": "ГРПБ"
+            },
+            {
+              "path": "root.platform.dashboards.mini-tec-rumb",
+              "title": "РУМБ"
+            },
+            {
+              "path": "root.platform.dashboards.mini-tec-dgu",
+              "title": "ДГУ"
+            },
+            {
+              "path": "root.platform.dashboards.mini-tec-load-module",
+              "title": "Нагрузочный модуль"
+            },
+            {
+              "path": "root.platform.dashboards.mini-tec-protections",
+              "title": "Защиты"
+            },
+            {
+              "path": "root.platform.dashboards.mini-tec-exploitation",
+              "title": "Эксплуатация"
+            }
+          ]
+        }
+      }
+    },
+    {
       "appId": "simulator-profiles",
       "packageId": "simulator",
       "path": "examples/simulator-profiles/bundle.json",
@@ -1363,5 +1850,5 @@
       "custom bff routes"
     ]
   },
-  "contentSha256": "ad92b5632520b9818b4c3931ace6b40dc649b08fed33562ec7d6c904c640e67e"
+  "contentSha256": "d31c8fb94cacda1ac1f472d3acef660913e384c3f5c0021f38abc88feb7f9ce5"
 }

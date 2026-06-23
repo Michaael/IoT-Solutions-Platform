@@ -11,6 +11,9 @@ export interface ReportDefinition {
   dataSourcePath: string;
   legacyAppId?: string;
   query: string;
+  reportType?: string;
+  devicePathPattern?: string;
+  variableName?: string;
   parameters: string[];
   columns: ReportColumn[];
   defaultParameters: Record<string, unknown>;
@@ -43,6 +46,15 @@ export interface SaveReportDefinitionPayload {
   refreshIntervalMs?: number;
 }
 
+export interface SaveTreeVariablesReportPayload {
+  title?: string;
+  devicePathPattern: string;
+  variableName: string;
+  columns?: ReportColumn[];
+  maxRows?: number;
+  refreshIntervalMs?: number;
+}
+
 export interface ObjectWriteOptions {
   revision?: number;
   force?: boolean;
@@ -60,6 +72,26 @@ export function fetchReport(path: string): Promise<ReportDefinition> {
   }).then(async (response) => {
     if (!response.ok) {
       throw new Error(await parseError(response, `Failed to load report: ${response.status}`));
+    }
+    return response.json();
+  });
+}
+
+export function saveTreeVariablesReportDefinition(
+  path: string,
+  payload: SaveTreeVariablesReportPayload
+): Promise<ReportDefinition> {
+  const params = new URLSearchParams({ path });
+  return fetch(`/api/v1/reports/by-path/tree-variables-definition?${params}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  }).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(await parseError(response, `Failed to save tree-variables report: ${response.status}`));
     }
     return response.json();
   });
@@ -107,6 +139,18 @@ export function runReportByPath(
 
 export type ReportExportFormat = "csv" | "pdf" | "xlsx" | "html";
 
+function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}
+
 export function downloadReportExportByPath(
   path: string,
   format: ReportExportFormat,
@@ -122,12 +166,10 @@ export function downloadReportExportByPath(
       throw new Error(await parseError(response, `Report export failed: ${response.status}`));
     }
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${path.split(".").pop() ?? "report"}.${format === "pdf" ? "pdf" : format}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    triggerBlobDownload(
+      blob,
+      `${path.split(".").pop() ?? "report"}.${format === "pdf" ? "pdf" : format}`
+    );
   });
 }
 
@@ -156,12 +198,7 @@ export function downloadReportTemplate(path: string): Promise<void> {
       throw new Error(await parseError(response, `Failed to download template: ${response.status}`));
     }
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${path.split(".").pop() ?? "report"}-template`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    triggerBlobDownload(blob, `${path.split(".").pop() ?? "report"}-template`);
   });
 }
 
@@ -192,12 +229,7 @@ export function downloadReportCsvByPath(
       throw new Error(await parseError(response, `Report export failed: ${response.status}`));
     }
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${path.split(".").pop() ?? "report"}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    triggerBlobDownload(blob, `${path.split(".").pop() ?? "report"}.csv`);
   });
 }
 
@@ -227,6 +259,31 @@ export async function runReport(
   }
 }
 
+export async function downloadReportExport(
+  appId: string,
+  reportId: string,
+  format: ReportExportFormat,
+  parameters?: Record<string, string>
+): Promise<void> {
+  const path = reportPathFromId(reportId);
+  try {
+    await downloadReportExportByPath(path, format, parameters);
+  } catch {
+    const params = new URLSearchParams(parameters ?? {});
+    params.set("format", format);
+    const response = await fetch(
+      `/api/v1/applications/${appId}/reports/${reportId}/export?${params.toString()}`,
+      { headers: getAuthHeaders() }
+    );
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Report export failed: ${response.status}`);
+    }
+    const blob = await response.blob();
+    triggerBlobDownload(blob, `${reportId}.${format === "pdf" ? "pdf" : format}`);
+  }
+}
+
 export async function downloadReportCsv(
   appId: string,
   reportId: string,
@@ -246,12 +303,7 @@ export async function downloadReportCsv(
       throw new Error(text || `Report export failed: ${response.status}`);
     }
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${reportId}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    triggerBlobDownload(blob, `${reportId}.csv`);
   }
 }
 

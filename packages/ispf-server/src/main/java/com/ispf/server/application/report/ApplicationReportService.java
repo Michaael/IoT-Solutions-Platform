@@ -4,6 +4,7 @@ import com.ispf.server.application.data.ApplicationDataStore;
 import com.ispf.server.application.data.ApplicationSchemaSupport;
 import com.ispf.server.datasource.DataSourceObjectService;
 import com.ispf.server.report.ReportExportFormat;
+import com.ispf.server.report.ReportExportService;
 import com.ispf.server.report.ReportService;
 import com.ispf.server.report.YargReportService;
 import org.springframework.stereotype.Service;
@@ -19,18 +20,18 @@ import java.util.Map;
 public class ApplicationReportService {
 
     private final ReportService reportService;
-    private final YargReportService yargReportService;
+    private final ReportExportService reportExportService;
     private final DataSourceObjectService dataSourceObjectService;
     private final ApplicationDataStore applicationDataStore;
 
     public ApplicationReportService(
             ReportService reportService,
-            YargReportService yargReportService,
+            ReportExportService reportExportService,
             DataSourceObjectService dataSourceObjectService,
             ApplicationDataStore applicationDataStore
     ) {
         this.reportService = reportService;
-        this.yargReportService = yargReportService;
+        this.reportExportService = reportExportService;
         this.dataSourceObjectService = dataSourceObjectService;
         this.applicationDataStore = applicationDataStore;
     }
@@ -91,11 +92,8 @@ public class ApplicationReportService {
     @Transactional(readOnly = true)
     public YargReportService.ExportedReport export(String appId, String reportId, ReportExportFormat format, Map<String, Object> parameters) {
         String path = ReportService.reportPath(reportId);
-        if (format == ReportExportFormat.CSV) {
-            byte[] csv = reportService.exportCsvByApp(appId, reportId, parameters);
-            return new YargReportService.ExportedReport(csv, reportId + ".csv", ReportExportFormat.CSV.contentType());
-        }
-        return yargReportService.export(path, format, parameters);
+        ReportExportService.ExportedFile exported = reportExportService.export(path, format, parameters);
+        return new YargReportService.ExportedReport(exported.content(), exported.filename(), exported.contentType());
     }
 
     private String inferSchema(String appId) {

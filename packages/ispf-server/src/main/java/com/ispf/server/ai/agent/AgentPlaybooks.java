@@ -354,4 +354,75 @@ public final class AgentPlaybooks {
     public static String widgetPropertiesGuide() {
         return AgentWidgetPropertiesGuide.referenceText();
     }
+
+    public static String reportsGuide() {
+        return """
+                ## Reports (REQ-PF-12)
+
+                Tree-first REPORT objects under root.platform.reports.*.
+
+                ### Tools (use these — do not invent REST paths)
+                - list_reports — catalog under root.platform.reports
+                - get_report_schema path=... — definition, columns, exportFormats, yargPlaceholders
+                - run_report path=... parameters={} — preview rows before wiring UI
+                - configure_report — create/update SQL or tree-variables report
+                - create_object parentPath=root.platform.reports type=REPORT (prefer configure_report)
+                - add_dashboard_widget type=report reportPath=...
+                - configure_operator_ui — manifest screens with report
+                - get_automation_schema topic=report — this guide
+
+                ### Report types
+                - **sql** (report-v1): dataSourcePath → root.platform.data-sources.*, SELECT query, ? parameters, columns
+                - **tree-variables** (tree-variables-report-v1): devicePathPattern (glob), variableName, columns
+
+                ### Lab virtual reports (bootstrap)
+                - root.platform.reports.lab-all-devices-table — variable table, columns devicepath/int/string
+                - root.platform.reports.lab-virtual-status — variable status, columns devicepath/online/lastseen
+                - root.platform.reports.lab-virtual-sine — sineWave snapshot
+                - root.platform.reports.lab-virtual-waves-sum — sumWaves
+                - root.platform.reports.lab-table-corrective — opened from table action when int sum > 100
+                - Pattern for lab devices: root.platform.devices.lab-*
+
+                ### configure_report examples
+                tree-variables:
+                  reportId=lab-device-status reportType=tree-variables title="Device status"
+                  devicePathPattern=root.platform.devices.lab-* variableName=status
+                  columns=[{field:devicepath,label:"Device path"},{field:online,label:Online},{field:lastseen,label:"Last seen"}]
+                sql:
+                  reportId=ready-items reportType=sql dataSourcePath=root.platform.data-sources.demo
+                  query="SELECT item_code, status FROM demo_item WHERE status = ?"
+                  parameters=["status"] columns=[{field:item_code,label:Code},{field:status,label:Status}]
+
+                ### Dashboard widget type=report
+                - reportPath (required)
+                - parametersJson — static run params
+                - contextParamsJson — {reportParam: sessionParamKey}
+                - Export buttons in widget are optional; user exports via Report Builder too
+
+                ### YARG templates (PDF/XLSX/HTML)
+                - Upload .xls/.docx in Report Builder → Шаблон YARG (agent cannot upload binary files)
+                - Named range **Band1** on the data row in Excel
+                - Placeholders must match report column **field** names in UPPERCASE:
+                  Excel (.xls): ${DEVICEPATH} or ${Band1.DEVICEPATH} (server rewrites Band1. for Excel)
+                  Word (.docx): ${Band1.DEVICEPATH}
+                - get_report_schema returns yargPlaceholders for exact field names
+                - Column field names in report definition MUST match template placeholders
+                - Without template: CSV + table XLSX/HTML; with .xls template: styled PDF/XLSX
+
+                ### Bundle manifest
+                reports[] with reportId, title, query OR reportType=tree-variables + devicePathPattern + variableName
+
+                ### Playbook: report on dashboard
+                1. list_reports or get_report_schema path=...
+                2. run_report to verify data
+                3. add_dashboard_widget widget={type:report, reportPath, title}
+                4. finish — tell user Report Builder path for template/export
+
+                ### Playbook: new tree-variables report for devices
+                1. list_variables on sample device to pick variableName
+                2. configure_report reportType=tree-variables ...
+                3. run_report preview
+                4. optional: add_dashboard_widget or configure_operator_ui
+                """;
+    }
 }

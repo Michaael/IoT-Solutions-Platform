@@ -1,7 +1,9 @@
 package com.ispf.server.api;
 
 import com.ispf.server.report.ReportExportFormat;
+import com.ispf.server.report.ReportExportService;
 import com.ispf.server.report.ReportService;
+import com.ispf.server.report.ReportTemplateFormatDetector;
 import com.ispf.server.report.ReportTemplateStore;
 import com.ispf.server.report.YargReportService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,10 +32,16 @@ import java.util.Map;
 public class ReportController {
 
     private final ReportService reportService;
+    private final ReportExportService reportExportService;
     private final YargReportService yargReportService;
 
-    public ReportController(ReportService reportService, YargReportService yargReportService) {
+    public ReportController(
+            ReportService reportService,
+            ReportExportService reportExportService,
+            YargReportService yargReportService
+    ) {
         this.reportService = reportService;
+        this.reportExportService = reportExportService;
         this.yargReportService = yargReportService;
     }
 
@@ -68,6 +76,28 @@ public class ReportController {
         );
     }
 
+    @PutMapping("/by-path/tree-variables-definition")
+    public ReportService.ReportView saveTreeVariablesDefinition(
+            @RequestParam String path,
+            @Valid @RequestBody TreeVariablesDefinitionRequest request
+    ) {
+        return reportService.saveTreeVariablesDefinition(
+                path,
+                new ReportService.SaveTreeVariablesDefinitionRequest(
+                        request.title(),
+                        request.devicePathPattern(),
+                        request.variableName(),
+                        request.columns() == null
+                                ? null
+                                : request.columns().stream()
+                                        .map(col -> new ReportService.ReportColumn(col.field(), col.label()))
+                                        .toList(),
+                        request.maxRows(),
+                        request.refreshIntervalMs()
+                )
+        );
+    }
+
     @PutMapping("/by-path/layout")
     public ReportService.ReportView saveLayout(
             @RequestParam String path,
@@ -95,15 +125,7 @@ public class ReportController {
     ) {
         Map<String, Object> parameters = queryParameters(request);
         ReportExportFormat exportFormat = ReportExportFormat.parse(format);
-        if (exportFormat == ReportExportFormat.CSV) {
-            byte[] csv = reportService.exportCsv(path, parameters);
-            String filename = ReportService.reportIdFromPath(path) + ".csv";
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                    .contentType(MediaType.parseMediaType(ReportExportFormat.CSV.contentType()))
-                    .body(csv);
-        }
-        YargReportService.ExportedReport exported = yargReportService.export(path, exportFormat, parameters);
+        ReportExportService.ExportedFile exported = reportExportService.export(path, exportFormat, parameters);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + exported.filename() + "\"")
                 .contentType(MediaType.parseMediaType(exported.contentType()))
@@ -132,7 +154,10 @@ public class ReportController {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Template file is required");
         }
-        return reportService.saveTemplate(path, format, file.getBytes());
+        byte[] content = file.getBytes();
+        String resolvedFormat = ReportTemplateFormatDetector.resolve(format, file.getOriginalFilename(), content);
+        yargReportService.validateTemplate(content, resolvedFormat);
+        return reportService.saveTemplate(path, resolvedFormat, content);
     }
 
     @GetMapping("/by-path/template")
@@ -187,6 +212,16 @@ public class ReportController {
             Integer maxRows,
             Integer refreshIntervalMs,
             String layout
+    ) {
+    }
+
+    public record TreeVariablesDefinitionRequest(
+            String title,
+            @NotBlank String devicePathPattern,
+            @NotBlank String variableName,
+            List<ReportColumnDto> columns,
+            Integer maxRows,
+            Integer refreshIntervalMs
     ) {
     }
 

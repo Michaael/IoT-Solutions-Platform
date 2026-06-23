@@ -3,6 +3,7 @@ package com.ispf.server.bootstrap;
 import com.ispf.core.object.ObjectType;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectTemplateService;
+import com.ispf.server.report.ReportService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -21,15 +22,18 @@ public class LabPlatformBootstrap {
     private final LabModelBootstrap labModelBootstrap;
     private final ObjectTemplateService objectTemplateService;
     private final ObjectManager objectManager;
+    private final ReportService reportService;
 
     public LabPlatformBootstrap(
             LabModelBootstrap labModelBootstrap,
             ObjectTemplateService objectTemplateService,
-            ObjectManager objectManager
+            ObjectManager objectManager,
+            ReportService reportService
     ) {
         this.labModelBootstrap = labModelBootstrap;
         this.objectTemplateService = objectTemplateService;
         this.objectManager = objectManager;
+        this.reportService = reportService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -47,6 +51,7 @@ public class LabPlatformBootstrap {
                 "Lab User B Device 01",
                 "Collaboration lab device for user B"
         );
+        LabVirtualReports.deployAll(reportService);
     }
 
     private void ensureLabDevice(String name, String displayName, String description) {

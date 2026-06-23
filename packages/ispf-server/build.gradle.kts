@@ -88,7 +88,13 @@ dependencies {
 
     implementation("io.micrometer:micrometer-registry-prometheus")
 
-    implementation("com.haulmont.yarg:yarg:2.2.22")
+    implementation("com.haulmont.yarg:yarg:2.2.22") {
+        exclude(group = "javax.xml.bind", module = "jaxb-api")
+    }
+    // YARG XlsxFormatter uses docx4j; JDK 11+ removed internal JAXB — required for .xlsx templates
+    implementation("javax.xml.bind:jaxb-api:2.3.1")
+    implementation("org.glassfish.jaxb:jaxb-runtime:2.3.9")
+    implementation("org.docx4j:docx4j-JAXB-ReferenceImpl:8.3.11")
 
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")

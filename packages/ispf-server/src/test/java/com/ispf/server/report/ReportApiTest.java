@@ -147,6 +147,13 @@ class ReportApiTest {
                         .header("X-ISPF-Role", "operator")
                         .param("path", path)
                         .param("format", "xlsx"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", org.hamcrest.Matchers.containsString("spreadsheetml")));
+
+        mockMvc.perform(get("/api/v1/reports/by-path/export")
+                        .header("X-ISPF-Role", "operator")
+                        .param("path", path)
+                        .param("format", "pdf"))
                 .andExpect(status().isBadRequest());
     }
 

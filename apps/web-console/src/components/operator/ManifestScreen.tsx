@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { assertBffOk, bffInvoke, toBffInput } from "../../api/bff";
-import { downloadReportCsv, runReport } from "../../api/reports";
+import { downloadReportExport, runReport, type ReportExportFormat } from "../../api/reports";
+import ReportExportControls from "../report/ReportExportControls";
 import { invokeInputFromAction, validateActionInput } from "../../api/manifestInput";
 import { isActionVisible } from "../../api/manifestVisibility";
 import type { OperatorManifestScreen } from "../../types/operatorManifest";
@@ -53,20 +54,28 @@ export default function ManifestScreen({ screen, wireProfile, appId, onStatus }:
     },
   });
 
-  const exportReport = useCallback(async () => {
-    if (!screen.report) {
-      return;
-    }
-    try {
-      const params = Object.fromEntries(
-        Object.entries(screen.report.parameters ?? {}).map(([key, value]) => [key, String(value)])
-      );
-      await downloadReportCsv(appId, screen.report.reportId, params);
-      onStatus("CSV экспортирован");
-    } catch (error) {
-      onStatus(String(error));
-    }
-  }, [appId, onStatus, screen.report]);
+  const [exportBusy, setExportBusy] = useState(false);
+
+  const exportReport = useCallback(
+    async (format: ReportExportFormat) => {
+      if (!screen.report) {
+        return;
+      }
+      setExportBusy(true);
+      try {
+        const params = Object.fromEntries(
+          Object.entries(screen.report.parameters ?? {}).map(([key, value]) => [key, String(value)])
+        );
+        await downloadReportExport(appId, screen.report.reportId, format, params);
+        onStatus(`${format.toUpperCase()} экспортирован`);
+      } catch (error) {
+        onStatus(String(error));
+      } finally {
+        setExportBusy(false);
+      }
+    },
+    [appId, onStatus, screen.report]
+  );
 
   const actionMutation = useMutation({
     mutationFn: async ({ actionId, formValues }: { actionId: string; formValues: Record<string, unknown> }) => {
@@ -156,9 +165,7 @@ export default function ManifestScreen({ screen, wireProfile, appId, onStatus }:
               <button type="button" className="btn" onClick={() => reportQuery.refetch()}>
                 Обновить
               </button>
-              <button type="button" className="btn" onClick={() => void exportReport()}>
-                CSV
-              </button>
+              <ReportExportControls busy={exportBusy} onExport={exportReport} />
             </>
           )}
         </div>

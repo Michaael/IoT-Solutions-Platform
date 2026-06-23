@@ -79,6 +79,50 @@ class TreeVariablesReportTest {
         assertEquals("alpha", rows.get(0).get("string"));
     }
 
+    @Test
+    void flattenScalarDoubleValue() {
+        DataSchema valueSchema = DataSchema.builder("doubleValue")
+                .field("value", FieldType.DOUBLE)
+                .build();
+        PlatformObject device = new PlatformObject(
+                "dev-a",
+                "root.platform.devices.lab-userA-01",
+                ObjectType.DEVICE,
+                "Lab A",
+                "",
+                LabModelBootstrap.VIRTUAL_LAB_MODEL
+        );
+        device.addVariable(new Variable(
+                "sineWave",
+                valueSchema,
+                true,
+                true,
+                DataRecord.single(valueSchema, Map.of("value", 7.5)),
+                false,
+                0
+        ));
+
+        List<Map<String, Object>> rows = new java.util.ArrayList<>();
+        device.getVariable("sineWave")
+                .flatMap(Variable::value)
+                .ifPresent(record -> flattenScalar(device.path(), record, rows));
+
+        assertEquals(1, rows.size());
+        assertEquals("root.platform.devices.lab-userA-01", rows.get(0).get("devicepath"));
+        assertEquals(7.5, rows.get(0).get("value"));
+    }
+
+    private static void flattenScalar(String devicePath, DataRecord record, List<Map<String, Object>> rows) {
+        for (Map<String, Object> row : record.rows()) {
+            Map<String, Object> mapped = new LinkedHashMap<>();
+            mapped.put("devicepath", devicePath);
+            for (Map.Entry<String, Object> entry : row.entrySet()) {
+                mapped.put(entry.getKey(), entry.getValue());
+            }
+            rows.add(mapped);
+        }
+    }
+
     private static void flatten(String devicePath, DataRecord record, List<Map<String, Object>> rows) {
         var listField = record.schema().fields().stream()
                 .filter(field -> field.type() == FieldType.RECORD_LIST)

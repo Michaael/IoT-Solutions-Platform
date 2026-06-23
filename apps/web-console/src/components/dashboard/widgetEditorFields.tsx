@@ -1,4 +1,6 @@
 import { Children, Fragment, isValidElement, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchReport } from "../../api/reports";
 import type { DashboardWidget } from "../../types/dashboard";
 import { WIDGET_HISTORY_RANGE_OPTIONS } from "../../types/dashboard";
 import {
@@ -9,11 +11,13 @@ import {
 
 type ObjectOption = { path: string; displayName: string; variableNames: string[] };
 type DashboardOption = { path: string; displayName: string };
+type ReportOption = { path: string; displayName: string };
 
 export interface WidgetFieldContext {
   widget: DashboardWidget;
   objects: ObjectOption[];
   dashboards: DashboardOption[];
+  reports: ReportOption[];
   variables: string[];
   variableSelectEnabled: boolean;
   update: (patch: Partial<DashboardWidget>) => void;
@@ -143,6 +147,67 @@ function PathSelect({
         />
       </div>
     </FieldLabel>
+  );
+}
+
+function ReportParameterHints({ reportPath }: { reportPath: string }) {
+  const metaQuery = useQuery({
+    queryKey: ["report-widget-hints", reportPath],
+    queryFn: () => fetchReport(reportPath),
+    enabled: Boolean(reportPath?.trim()),
+  });
+
+  if (!reportPath?.trim()) {
+    return null;
+  }
+  if (metaQuery.isLoading) {
+    return <p className="hint full">Загрузка схемы отчёта…</p>;
+  }
+  if (metaQuery.error || !metaQuery.data) {
+    return null;
+  }
+
+  const data = metaQuery.data;
+  const isTree = data.reportType === "tree-variables";
+  if (isTree) {
+    return (
+      <p className="hint full">
+        tree-variables: <code>{data.devicePathPattern}</code> · variable{" "}
+        <code>{data.variableName}</code>
+        {data.hasTemplate ? " · YARG template загружен" : ""}
+      </p>
+    );
+  }
+
+  const params = data.parameters ?? [];
+  const defaults =
+    data.defaultParameters && Object.keys(data.defaultParameters).length > 0
+      ? JSON.stringify(data.defaultParameters)
+      : null;
+
+  return (
+    <p className="hint full">
+      {params.length > 0 ? (
+        <>
+          SQL-параметры: <code>{params.join(", ")}</code>
+          {defaults && (
+            <>
+              {" "}
+              · defaults: <code>{defaults}</code>
+            </>
+          )}
+        </>
+      ) : (
+        <>SQL без параметров</>
+      )}
+      {data.dataSourcePath && (
+        <>
+          {" "}
+          · data source: <code>{data.dataSourcePath}</code>
+        </>
+      )}
+      {data.hasTemplate ? " · YARG template загружен" : ""}
+    </p>
   );
 }
 
@@ -1105,27 +1170,102 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext): ReactNode {
         </>
       );
 
-    case "report":
+    case "report": {
+      const rw = widget;
       return (
         <>
-          <Section title="SQL-отчёт" />
+          <Section
+            title="Отчёт (report)"
+            hint="type: report, reportPath → root.platform.reports.*. SQL и tree-variables. CSV/HTML без шаблона; PDF/XLSX — после загрузки YARG в Report Builder."
+          />
+          <PathSelect
+            label="reportPath"
+            value={rw.reportPath}
+            objects={ctx.reports.map((r) => ({ ...r, variableNames: [] }))}
+            onChange={(path) => update({ reportPath: path })}
+            placeholder="root.platform.reports.ready-items"
+          />
+          <ReportParameterHints reportPath={rw.reportPath} />
           <label className="full">
-            reportPath
-            <input
-              value={widget.reportPath}
-              onChange={(e) => update({ reportPath: e.target.value })}
-              placeholder="root.platform.reports.ready-items"
+            parametersJson (статические параметры run)
+            <textarea
+              rows={2}
+              className="mono"
+              value={rw.parametersJson ?? ""}
+              onChange={(e) => update({ parametersJson: e.target.value || undefined })}
+              placeholder='{"status":"ready"}'
+            />
+          </label>
+          <label className="full">
+            contextParamsJson (reportParam → ключ session.params)
+            <textarea
+              rows={2}
+              className="mono"
+              value={rw.contextParamsJson ?? ""}
+              onChange={(e) => update({ contextParamsJson: e.target.value || undefined })}
+              placeholder='{"status":"filterStatus"}'
             />
           </label>
           <label>
             emptyMessage
             <input
-              value={widget.emptyMessage ?? ""}
+              value={rw.emptyMessage ?? ""}
               onChange={(e) => update({ emptyMessage: e.target.value || undefined })}
             />
           </label>
+          <FormRow>
+            <FieldLabel caption="showCsv">
+              <select
+                value={rw.showCsv === false ? "false" : "true"}
+                onChange={(e) => update({ showCsv: e.target.value === "true" })}
+              >
+                <option value="true">да</option>
+                <option value="false">нет</option>
+              </select>
+            </FieldLabel>
+            <FieldLabel caption="showTruncatedWarning">
+              <select
+                value={rw.showTruncatedWarning === false ? "false" : "true"}
+                onChange={(e) => update({ showTruncatedWarning: e.target.value === "true" })}
+              >
+                <option value="true">да</option>
+                <option value="false">нет</option>
+              </select>
+            </FieldLabel>
+          </FormRow>
+          <FormRow>
+            <FieldLabel caption="showPdf">
+              <select
+                value={rw.showPdf === false ? "false" : "true"}
+                onChange={(e) => update({ showPdf: e.target.value === "true" })}
+              >
+                <option value="true">да (если есть YARG)</option>
+                <option value="false">нет</option>
+              </select>
+            </FieldLabel>
+            <FieldLabel caption="showXlsx">
+              <select
+                value={rw.showXlsx === false ? "false" : "true"}
+                onChange={(e) => update({ showXlsx: e.target.value === "true" })}
+              >
+                <option value="true">да (если есть YARG)</option>
+                <option value="false">нет</option>
+              </select>
+            </FieldLabel>
+          </FormRow>
+          <label>
+            showHtml
+            <select
+              value={rw.showHtml === false ? "false" : "true"}
+              onChange={(e) => update({ showHtml: e.target.value === "true" })}
+            >
+              <option value="true">да (если есть YARG)</option>
+              <option value="false">нет</option>
+            </select>
+          </label>
         </>
       );
+    }
 
     case "pie-chart":
       return (

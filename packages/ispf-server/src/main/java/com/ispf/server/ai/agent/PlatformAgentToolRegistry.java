@@ -95,6 +95,12 @@ public class PlatformAgentToolRegistry {
                 applicationDataStore,
                 bundleSnapshotStore
         ));
+        tools.addAll(AgentReportTools.all(
+                reportService,
+                objectManager,
+                objectAccessService,
+                tenantScopeService
+        ));
         tools.addAll(AgentDiscoveryTools.all(
                 objectManager,
                 objectAccessService,

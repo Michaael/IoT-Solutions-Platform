@@ -337,8 +337,8 @@ final class AgentAutomationTools {
 
             @Override
             public String description() {
-                return "Reference for ALERT/CORRELATOR variables, dashboard templates, widgets, object tree, bindings, operator UI. "
-                        + "Optional arg: topic (alert|correlator|dashboard|widget|object|binding|operator|all).";
+                return "Reference for ALERT/CORRELATOR variables, dashboard templates, widgets, object tree, bindings, operator UI, reports. "
+                        + "Optional arg: topic (alert|correlator|dashboard|widget|object|binding|operator|report|all).";
             }
 
             @Override
@@ -358,6 +358,7 @@ final class AgentAutomationTools {
                     case "object", "objects" -> schema.put("objects", AgentObjectTreeGuide.summary());
                     case "binding" -> schema.put("binding", bindingSchema());
                     case "operator" -> schema.put("operator", operatorSchema());
+                    case "report", "reports" -> schema.put("reports", AgentPlaybooks.reportsGuide());
                     default -> {
                         schema.put("alert", alertSchema());
                         schema.put("correlator", correlatorSchema());
@@ -366,6 +367,7 @@ final class AgentAutomationTools {
                         schema.put("objects", AgentObjectTreeGuide.summary());
                         schema.put("binding", bindingSchema());
                         schema.put("operator", operatorSchema());
+                        schema.put("reports", AgentPlaybooks.reportsGuide());
                         schema.put("objectTypes", objectTypeGuide());
                     }
                 }

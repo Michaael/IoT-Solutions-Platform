@@ -492,7 +492,14 @@ public final class AgentWidgetPropertiesGuide {
 
         List<Map<String, String>> reportFields = new ArrayList<>();
         reportFields.add(f("reportPath", "string", true, "REPORT object path"));
+        reportFields.add(f("parametersJson", "string", false, "Static run parameters JSON"));
+        reportFields.add(f("contextParamsJson", "string", false, "Map reportParam to session.params key"));
         reportFields.add(f("emptyMessage", "string", false, "Text when no rows"));
+        reportFields.add(f("showCsv", "boolean", false, "CSV export button (default true)"));
+        reportFields.add(f("showPdf", "boolean", false, "PDF when YARG template"));
+        reportFields.add(f("showXlsx", "boolean", false, "XLSX when YARG template"));
+        reportFields.add(f("showHtml", "boolean", false, "HTML when YARG template"));
+        reportFields.add(f("showTruncatedWarning", "boolean", false, "Banner when rows truncated"));
         specs.put("report", spec("external", List.of("reportPath"), reportFields, null, null));
 
         List<Map<String, String>> eventFields = new ArrayList<>();

@@ -20,7 +20,13 @@ import com.ispf.server.object.ObjectManager;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -268,6 +274,43 @@ public class ReportService {
     }
 
     @Transactional
+    public ReportView saveTreeVariablesDefinition(
+            String path,
+            SaveTreeVariablesDefinitionRequest request
+    ) {
+        PlatformObject node = objectManager.require(path);
+        if (node.type() != ObjectType.REPORT) {
+            throw new IllegalArgumentException("Not a report object: " + path);
+        }
+        ensureTreeVariablesReportStructure(path);
+        ReportView current = getReport(path);
+        String devicePathPattern = request.devicePathPattern() != null
+                ? request.devicePathPattern().trim()
+                : "";
+        String variableName = request.variableName() != null ? request.variableName().trim() : "";
+        if (devicePathPattern.isBlank()) {
+            throw new IllegalArgumentException("Report devicePathPattern is required for tree-variables reports");
+        }
+        if (variableName.isBlank()) {
+            throw new IllegalArgumentException("Report variableName is required for tree-variables reports");
+        }
+        List<ReportColumn> columns = request.columns() != null && !request.columns().isEmpty()
+                ? request.columns()
+                : current.columns();
+        saveTreeVariablesDefinitionInternal(
+                path,
+                request.title() != null ? request.title() : current.title(),
+                devicePathPattern,
+                variableName,
+                columns,
+                request.maxRows() != null ? request.maxRows() : current.maxRows(),
+                request.refreshIntervalMs() != null ? request.refreshIntervalMs() : current.refreshIntervalMs(),
+                current.layout()
+        );
+        return getReport(path);
+    }
+
+    @Transactional
     public ReportView saveLayout(String path, String layoutJson) {
         getReport(path);
         setString(path, "layout", layoutJson != null ? layoutJson : "");
@@ -294,6 +337,30 @@ public class ReportService {
     public byte[] exportCsv(String path, Map<String, Object> parameters) {
         Map<String, Object> result = run(path, parameters);
         return toCsv(result);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportHtmlTable(String path, Map<String, Object> parameters) {
+        Map<String, Object> result = run(path, parameters);
+        return toHtmlTable(result);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportXlsxTable(String path, Map<String, Object> parameters) {
+        Map<String, Object> result = run(path, parameters);
+        return toXlsxTable(result);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportXlsTable(String path, Map<String, Object> parameters) {
+        Map<String, Object> result = run(path, parameters);
+        return toXlsTable(result);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasTemplate(String path) {
+        getReport(path);
+        return templateStore.exists(path);
     }
 
     @Transactional(readOnly = true)
@@ -492,8 +559,11 @@ public class ReportService {
     private static Map<String, Object> treeVariableRow(String devicePath, Map<?, ?> row) {
         Map<String, Object> mapped = new LinkedHashMap<>();
         mapped.put("devicepath", devicePath);
-        mapped.put("int", row.get("int"));
-        mapped.put("string", row.get("string"));
+        for (Map.Entry<?, ?> entry : row.entrySet()) {
+            if (entry.getKey() != null) {
+                mapped.put(entry.getKey().toString(), entry.getValue());
+            }
+        }
         return mapped;
     }
 
@@ -648,6 +718,122 @@ public class ReportService {
             csv.append('\n');
         }
         return csv.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private byte[] toHtmlTable(Map<String, Object> result) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> columns = (List<Map<String, String>>) result.get("columns");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("rows");
+        String title = String.valueOf(result.getOrDefault("title", "Report"));
+        boolean truncated = Boolean.TRUE.equals(result.get("truncated"));
+        int rowCount = result.get("rowCount") instanceof Number number ? number.intValue() : rows.size();
+
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>");
+        html.append(escapeHtml(title));
+        html.append("</title><style>");
+        html.append("body{font-family:system-ui,sans-serif;margin:1.5rem;color:#111}");
+        html.append("table{border-collapse:collapse;width:100%;font-size:14px}");
+        html.append("th,td{border:1px solid #ccc;padding:0.45rem 0.65rem;text-align:left}");
+        html.append("th{background:#f3f4f6}.note{color:#666;font-size:13px;margin:0 0 1rem}");
+        html.append("</style></head><body><h1>");
+        html.append(escapeHtml(title));
+        html.append("</h1>");
+        if (truncated) {
+            html.append("<p class=\"note\">Показаны первые ");
+            html.append(rowCount);
+            html.append(" строк (truncated).</p>");
+        }
+        html.append("<table><thead><tr>");
+        List<String> fields = columns.stream().map(col -> col.get("field")).toList();
+        for (Map<String, String> column : columns) {
+            html.append("<th>").append(escapeHtml(column.get("label"))).append("</th>");
+        }
+        html.append("</tr></thead><tbody>");
+        for (Map<String, Object> row : rows) {
+            html.append("<tr>");
+            for (String field : fields) {
+                Object value = row.get(field);
+                html.append("<td>").append(escapeHtml(value == null ? "" : value.toString())).append("</td>");
+            }
+            html.append("</tr>");
+        }
+        html.append("</tbody></table></body></html>");
+        return html.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private byte[] toXlsxTable(Map<String, Object> result) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> columns = (List<Map<String, String>>) result.get("columns");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("rows");
+        List<String> fields = columns.stream().map(col -> col.get("field")).toList();
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Report");
+            Row header = sheet.createRow(0);
+            for (int columnIndex = 0; columnIndex < columns.size(); columnIndex++) {
+                header.createCell(columnIndex).setCellValue(columns.get(columnIndex).get("label"));
+            }
+            for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+                Row row = sheet.createRow(rowIndex + 1);
+                Map<String, Object> values = rows.get(rowIndex);
+                for (int columnIndex = 0; columnIndex < fields.size(); columnIndex++) {
+                    Object value = values.get(fields.get(columnIndex));
+                    row.createCell(columnIndex).setCellValue(value == null ? "" : String.valueOf(value));
+                }
+            }
+            for (int columnIndex = 0; columnIndex < columns.size(); columnIndex++) {
+                sheet.autoSizeColumn(columnIndex);
+            }
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (Exception ex) {
+            throw new IllegalStateException("XLSX table export failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    private byte[] toXlsTable(Map<String, Object> result) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> columns = (List<Map<String, String>>) result.get("columns");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("rows");
+        List<String> fields = columns.stream().map(col -> col.get("field")).toList();
+
+        try (Workbook workbook = new HSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Report");
+            Row header = sheet.createRow(0);
+            for (int columnIndex = 0; columnIndex < columns.size(); columnIndex++) {
+                header.createCell(columnIndex).setCellValue(columns.get(columnIndex).get("label"));
+            }
+            for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+                Row row = sheet.createRow(rowIndex + 1);
+                Map<String, Object> values = rows.get(rowIndex);
+                for (int columnIndex = 0; columnIndex < fields.size(); columnIndex++) {
+                    Object value = values.get(fields.get(columnIndex));
+                    row.createCell(columnIndex).setCellValue(value == null ? "" : String.valueOf(value));
+                }
+            }
+            for (int columnIndex = 0; columnIndex < columns.size(); columnIndex++) {
+                sheet.autoSizeColumn(columnIndex);
+            }
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (Exception ex) {
+            throw new IllegalStateException("XLS table export failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 
     private void setString(String path, String variable, String value) {
@@ -831,6 +1017,16 @@ public class ReportService {
             Integer maxRows,
             Integer refreshIntervalMs,
             String layout
+    ) {
+    }
+
+    public record SaveTreeVariablesDefinitionRequest(
+            String title,
+            String devicePathPattern,
+            String variableName,
+            List<ReportColumn> columns,
+            Integer maxRows,
+            Integer refreshIntervalMs
     ) {
     }
 }

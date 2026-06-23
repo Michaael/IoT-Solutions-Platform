@@ -175,6 +175,14 @@ export default function DashboardBuilder({
     [objects.data]
   );
 
+  const reportObjects = useMemo(
+    () =>
+      (objects.data ?? [])
+        .filter((obj) => obj.type === "REPORT")
+        .map((obj) => ({ path: obj.path, displayName: obj.displayName })),
+    [objects.data]
+  );
+
   const selectedWidget =
     layout.widgets.find((widget) => widget.id === selectedWidgetId) ?? null;
 
@@ -388,6 +396,7 @@ export default function DashboardBuilder({
               widget={selectedWidget}
               objects={bindingObjects}
               dashboards={dashboardObjects}
+              reports={reportObjects}
               onChange={updateWidget}
               onDelete={deleteWidget}
             />
