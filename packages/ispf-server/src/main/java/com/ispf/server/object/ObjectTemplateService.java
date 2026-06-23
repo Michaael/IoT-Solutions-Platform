@@ -22,6 +22,8 @@ public class ObjectTemplateService {
 
     private static final Map<String, List<String>> COMPANION_MODELS_BY_NAME = Map.of(
             LabModelBootstrap.VIRTUAL_LAB_MODEL,
+            List.of(LabModelBootstrap.VIRTUAL_LAB_WAVES_SUM_MODEL),
+            LabModelBootstrap.VIRTUAL_UNIFIED_MODEL,
             List.of(LabModelBootstrap.VIRTUAL_LAB_WAVES_SUM_MODEL)
     );
 

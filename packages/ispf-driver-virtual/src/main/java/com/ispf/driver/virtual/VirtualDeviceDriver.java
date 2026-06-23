@@ -12,15 +12,15 @@ import java.util.Map;
 
 /**
  * Simulated device driver for demos and integration tests.
- * Profiles: demo (temperature), meter, weighbridge, rack-signals, lab (sine/sawtooth/triangle waves).
+ * Profiles: demo, meter, weighbridge, rack-signals, lab, unified (all types showcase).
  */
 public class VirtualDeviceDriver implements DeviceDriver {
 
     private static final DriverMetadata METADATA = new DriverMetadata(
             "virtual",
             "Virtual Simulator Driver",
-            "0.2.0",
-            "Synthetic telemetry: temperature demo, filling meter, weighbridge, rack safety signals, lab waves (sine/saw/triangle)",
+            "0.3.0",
+            "Synthetic telemetry: demo, meter, weighbridge, rack-signals, lab waves, unified multi-type showcase",
             "ISPF",
             Map.ofEntries(
                     Map.entry("profile", "demo"),
@@ -36,7 +36,12 @@ public class VirtualDeviceDriver implements DeviceDriver {
                     Map.entry("pollIntervalMs", "2000"),
                     Map.entry("sineAmplitude", "10.0"),
                     Map.entry("sawtoothAmplitude", "5.0"),
-                    Map.entry("triangleAmplitude", "5.0")
+                    Map.entry("triangleAmplitude", "5.0"),
+                    Map.entry("baseLatitude", "55.7558"),
+                    Map.entry("baseLongitude", "37.6173"),
+                    Map.entry("orbitRadiusM", "50"),
+                    Map.entry("serialNumber", "VIRT-UNIFIED-001"),
+                    Map.entry("firmwareVersion", "1.0.0-unified")
             )
     );
 
@@ -95,6 +100,7 @@ public class VirtualDeviceDriver implements DeviceDriver {
     private double meterLiters;
     private long lastPollAt;
     private final long startedAt = System.currentTimeMillis();
+    private final VirtualUnifiedPoll.UnifiedState unifiedState = new VirtualUnifiedPoll.UnifiedState();
     private volatile boolean connected;
 
     @Override
@@ -170,8 +176,17 @@ public class VirtualDeviceDriver implements DeviceDriver {
             case "weighbridge" -> readWeighbridgeProfile();
             case "rack-signals" -> readRackSignalsProfile();
             case "lab" -> readLabProfile();
+            case "unified" -> readUnifiedProfile();
             default -> readDemoProfile();
         }
+    }
+
+    private void readUnifiedProfile() {
+        VirtualUnifiedPoll.poll(
+                driverObject,
+                unifiedState,
+                VirtualUnifiedPoll.UnifiedConfig.fromMap(driverObject.configuration())
+        );
     }
 
     private void readDemoProfile() {

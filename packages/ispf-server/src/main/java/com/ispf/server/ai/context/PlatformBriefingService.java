@@ -33,7 +33,7 @@ public class PlatformBriefingService {
             feature("federation", "Federation bind", "overlay remote peer on local path", "federation peer bind"),
             feature("dashboards", "Dashboards", "DASHBOARD objects, layout.widgets[], widget types", "dashboard widget layout"),
             feature("events", "Event catalog", "events[] in bundle, WS subscribe_events", "event catalog subscribe"),
-            feature("virtual", "Virtual driver", "profiles demo, meter, weighbridge, rack-signals", "virtual profile meter"),
+            feature("virtual", "Virtual driver", "profiles demo, meter, weighbridge, rack-signals, lab, unified", "virtual profile meter"),
             feature("history", "Variable history", "historyEnabled, charts, export CSV", "variable history trend"),
             feature("ai-studio", "AI Studio", "tree-first agent, validate_bundle, import_package", "ai agent studio")
     );
@@ -43,7 +43,8 @@ public class PlatformBriefingService {
             Map.of("profile", "meter", "vars", "meterLiters, flowRate, filling", "use", "filling simulation"),
             Map.of("profile", "weighbridge", "vars", "grossWeight, tareKg", "use", "weighbridge + meter"),
             Map.of("profile", "rack-signals", "vars", "gasPresent, groundConnected", "use", "rack safety signals"),
-            Map.of("profile", "lab", "vars", "sineWave, sawtoothWave, triangleWave, status", "use", "wave simulators / virtual cluster")
+            Map.of("profile", "lab", "vars", "sineWave, sawtoothWave, triangleWave, status", "use", "wave simulators / virtual cluster"),
+            Map.of("profile", "unified", "vars", "all types: waves, geo, tables, binary, meter, health", "use", "showcase / virtual-unified-v1")
     );
 
     private final AiProperties aiProperties;
