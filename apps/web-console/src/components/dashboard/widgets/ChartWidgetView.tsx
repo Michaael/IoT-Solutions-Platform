@@ -1,6 +1,8 @@
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Line,
   LineChart,
@@ -32,6 +34,7 @@ export default function ChartWidgetView({
   const historyRange = widget.historyRange ?? "live";
   const color = widget.color ?? "#2f81f7";
   const chartStyle = widget.chartStyle ?? "area";
+  const chartType = widget.chartType ?? chartStyle;
   const decimals = widget.decimals ?? 1;
   const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey);
   const styles = useWidgetStyles(widget.stylesJson);
@@ -102,7 +105,15 @@ export default function ChartWidgetView({
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            {chartStyle === "line" ? (
+            {chartType === "bar" ? (
+              <BarChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis dataKey="time" tick={{ fontSize: 10 }} minTickGap={24} />
+                <YAxis tick={{ fontSize: 10 }} width={42} />
+                <Tooltip />
+                <Bar dataKey="value" fill={color} isAnimationActive={false} />
+              </BarChart>
+            ) : chartStyle === "line" ? (
               <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                 <XAxis dataKey="time" tick={{ fontSize: 10 }} minTickGap={24} />

@@ -8,6 +8,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,5 +53,25 @@ class DashboardApiTest {
         mockMvc.perform(get("/api/v1/models"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.name=='dashboard-v1')]").exists());
+    }
+
+    @Test
+    void putLayoutAndTitleRoundTrip() throws Exception {
+        String path = "root.platform.dashboards.demo-sensor";
+        mockMvc.perform(put("/api/v1/dashboards/by-path/layout")
+                        .param("path", path)
+                        .contentType("application/json")
+                        .content("""
+                                {"layoutJson":"{\\"columns\\":12,\\"rowHeight\\":72,\\"widgets\\":[]}"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.layout.widgets").isArray());
+
+        mockMvc.perform(put("/api/v1/dashboards/by-path/title")
+                        .param("path", path)
+                        .contentType("application/json")
+                        .content("{\"title\":\"Updated Demo\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Updated Demo"));
     }
 }

@@ -1,4 +1,5 @@
 import type { DashboardLinkWidget } from "../../../types/dashboard";
+import { parseJsonObject, parseSelectionJson } from "../dashboardUtils";
 import { useDashboardContext, triggerDashboardOpen } from "../DashboardContext";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
@@ -25,7 +26,11 @@ export default function DashboardLinkWidgetView({ widget, editable }: DashboardL
       widget.openMode ?? "navigate",
       targetPath,
       widget.modalTitle ?? widget.title,
-      actions
+      actions,
+      {
+        selection: parseSelectionJson(widget.contextSelectionJson),
+        params: parseJsonObject(widget.contextParamsJson),
+      }
     );
   };
 

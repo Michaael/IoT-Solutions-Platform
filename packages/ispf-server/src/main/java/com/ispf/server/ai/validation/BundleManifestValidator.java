@@ -19,9 +19,14 @@ import java.util.Set;
 public class BundleManifestValidator {
 
     private static final Set<String> KNOWN_WIDGET_TYPES = Set.of(
-            "value", "indicator", "chart", "sparkline", "progress", "gauge", "status-badge",
+            "value", "indicator", "toggle", "chart", "sparkline", "progress", "gauge", "status-badge",
             "function", "function-form", "pie-chart", "history-table", "variable-editor",
-            "svg-widget", "composite-widget", "dashboard-link", "event-feed"
+            "svg-widget", "composite-widget", "dashboard-link", "event-feed",
+            "object-table", "work-queue", "card-grid", "report",
+            "sub-dashboard", "panel", "tab-panel", "map",
+            "label", "image", "html-snippet", "object-tree", "breadcrumbs", "timer", "context-list",
+            "linear-gauge", "input-form", "drawer-panel", "carousel", "steps-panel",
+            "gantt-chart", "network-graph", "spreadsheet", "liquid-gauge", "nav-menu"
     );
 
     private final FunctionScriptValidator scriptValidator;

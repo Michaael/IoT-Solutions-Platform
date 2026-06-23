@@ -1,10 +1,11 @@
 import type { DashboardWidget, WidgetType } from "../../types/dashboard";
-import { WIDGET_HISTORY_RANGE_OPTIONS, WIDGET_TYPES } from "../../types/dashboard";
+import { newWidget, WIDGET_HISTORY_RANGE_OPTIONS, WIDGET_TYPES } from "../../types/dashboard";
 import { WIDGET_STYLE_KEYS_HINT } from "./widgetStyles";
 
 interface WidgetEditorPanelProps {
   widget: DashboardWidget | null;
   objects: Array<{ path: string; displayName: string; variableNames: string[] }>;
+  dashboards?: Array<{ path: string; displayName: string }>;
   onChange: (widget: DashboardWidget) => void;
   onDelete: () => void;
 }
@@ -12,6 +13,7 @@ interface WidgetEditorPanelProps {
 export default function WidgetEditorPanel({
   widget,
   objects,
+  dashboards = [],
   onChange,
   onDelete,
 }: WidgetEditorPanelProps) {
@@ -24,8 +26,10 @@ export default function WidgetEditorPanel({
     );
   }
 
+  const hintPath = widget.modelHintPath || widget.objectPath;
   const variables =
-    objects.find((ctx) => ctx.path === widget.objectPath)?.variableNames ?? [];
+    objects.find((ctx) => ctx.path === hintPath)?.variableNames ?? [];
+  const variableSelectEnabled = Boolean(hintPath) || Boolean(widget.selectionKey);
 
   const update = (patch: Partial<DashboardWidget>) => {
     onChange({ ...widget, ...patch } as DashboardWidget);
@@ -52,7 +56,19 @@ export default function WidgetEditorPanel({
           Тип
           <select
             value={widget.type}
-            onChange={(e) => update({ type: e.target.value as WidgetType })}
+            onChange={(e) => {
+              const nextType = e.target.value as WidgetType;
+              const next = newWidget(nextType, 0);
+              onChange({
+                ...next,
+                id: widget.id,
+                title: widget.title,
+                x: widget.x,
+                y: widget.y,
+                w: widget.w,
+                h: widget.h,
+              });
+            }}
           >
             {WIDGET_TYPES.map((item) => (
               <option key={item.type} value={item.type}>
@@ -80,7 +96,7 @@ export default function WidgetEditorPanel({
           <select
             value={widget.variableName}
             onChange={(e) => update({ variableName: e.target.value })}
-            disabled={!widget.objectPath}
+            disabled={!variableSelectEnabled}
           >
             <option value="">—</option>
             {variables.map((name) => (
@@ -89,6 +105,13 @@ export default function WidgetEditorPanel({
               </option>
             ))}
           </select>
+          {!widget.objectPath && widget.selectionKey && (
+            <input
+              placeholder="или введите имя переменной"
+              value={widget.variableName ?? ""}
+              onChange={(e) => update({ variableName: e.target.value })}
+            />
+          )}
         </label>
         <label>
           Поле значения
@@ -102,7 +125,35 @@ export default function WidgetEditorPanel({
           <input
             value={widget.selectionKey ?? ""}
             onChange={(e) => update({ selectionKey: e.target.value || undefined })}
-            placeholder="order"
+            placeholder="device"
+          />
+        </label>
+        <label>
+          Образец объекта (modelHintPath)
+          <select
+            value={widget.modelHintPath ?? ""}
+            onChange={(e) => update({ modelHintPath: e.target.value || undefined })}
+          >
+            <option value="">—</option>
+            {objects.map((ctx) => (
+              <option key={ctx.path} value={ctx.path}>
+                {ctx.displayName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          paramKey (из session.params)
+          <input
+            value={widget.paramKey ?? ""}
+            onChange={(e) => update({ paramKey: e.target.value || undefined })}
+          />
+        </label>
+        <label>
+          contextPathKey (путь из params)
+          <input
+            value={widget.contextPathKey ?? ""}
+            onChange={(e) => update({ contextPathKey: e.target.value || undefined })}
           />
         </label>
         <p className="hint full">Позицию и размер меняйте перетаскиванием на сетке.</p>
@@ -139,6 +190,19 @@ export default function WidgetEditorPanel({
                     {item.label}
                   </option>
                 ))}
+              </select>
+            </label>
+            <label>
+              chartType
+              <select
+                value={widget.chartType ?? widget.chartStyle ?? "area"}
+                onChange={(e) =>
+                  update({ chartType: e.target.value as typeof widget.chartType })
+                }
+              >
+                <option value="line">line</option>
+                <option value="area">area</option>
+                <option value="bar">bar</option>
               </select>
             </label>
             <label>
@@ -332,6 +396,23 @@ export default function WidgetEditorPanel({
                 <option value="modal">Модальное окно</option>
               </select>
             </label>
+            <label>
+              rowSelectionKey (ключ в целевом дашборде)
+              <input
+                value={widget.rowSelectionKey ?? ""}
+                onChange={(e) => update({ rowSelectionKey: e.target.value || undefined })}
+                placeholder="device"
+              />
+            </label>
+            <label>
+              rowParamsJson
+              <textarea
+                rows={2}
+                value={widget.rowParamsJson ?? ""}
+                onChange={(e) => update({ rowParamsJson: e.target.value || undefined })}
+                placeholder='{"clusterPath":"root..."}'
+              />
+            </label>
           </>
         )}
         {widget.type === "event-feed" && (
@@ -500,6 +581,24 @@ export default function WidgetEditorPanel({
                 onChange={(e) => update({ confirmMessage: e.target.value })}
               />
             </label>
+            <label>
+              contextSelectionJson
+              <textarea
+                rows={2}
+                value={widget.contextSelectionJson ?? ""}
+                onChange={(e) =>
+                  update({ contextSelectionJson: e.target.value || undefined })
+                }
+              />
+            </label>
+            <label>
+              contextParamsJson
+              <textarea
+                rows={2}
+                value={widget.contextParamsJson ?? ""}
+                onChange={(e) => update({ contextParamsJson: e.target.value || undefined })}
+              />
+            </label>
           </>
         )}
         {widget.type === "report" && (
@@ -616,16 +715,91 @@ export default function WidgetEditorPanel({
             </label>
           </>
         )}
-        {widget.type === "composite-widget" && (
+        {(widget.type === "composite-widget" ||
+          widget.type === "panel" ||
+          widget.type === "drawer-panel") && (
           <label className="full">
             Дочерние виджеты (childrenJson)
             <textarea
               rows={8}
               value={widget.childrenJson ?? "[]"}
               onChange={(e) => update({ childrenJson: e.target.value })}
-              placeholder='[{"type":"svg-widget","title":"Fan","svgUrl":"/lab-assets/fan.svg"}]'
             />
           </label>
+        )}
+        {widget.type === "sub-dashboard" && (
+          <>
+            <label>
+              Целевой дашборд
+              <select
+                value={widget.targetDashboardPath ?? ""}
+                onChange={(e) =>
+                  update({ targetDashboardPath: e.target.value || undefined })
+                }
+              >
+                <option value="">—</option>
+                {dashboards.map((d) => (
+                  <option key={d.path} value={d.path}>
+                    {d.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Или путь вручную
+              <input
+                value={widget.targetDashboardPath ?? ""}
+                onChange={(e) =>
+                  update({ targetDashboardPath: e.target.value || undefined })
+                }
+              />
+            </label>
+            <label>
+              targetDashboardPathKey (динамический путь)
+              <input
+                value={widget.targetDashboardPathKey ?? ""}
+                onChange={(e) =>
+                  update({ targetDashboardPathKey: e.target.value || undefined })
+                }
+              />
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={widget.inheritContext !== false}
+                onChange={(e) => update({ inheritContext: e.target.checked })}
+              />
+              Наследовать контекст (inheritContext)
+            </label>
+          </>
+        )}
+        {widget.type === "tab-panel" && (
+          <label className="full">
+            Вкладки (tabsJson)
+            <textarea
+              rows={8}
+              value={widget.tabsJson ?? "[]"}
+              onChange={(e) => update({ tabsJson: e.target.value })}
+            />
+          </label>
+        )}
+        {widget.type === "map" && (
+          <>
+            <label>
+              parentPath
+              <input
+                value={widget.parentPath}
+                onChange={(e) => update({ parentPath: e.target.value })}
+              />
+            </label>
+            <label>
+              latVariable
+              <input
+                value={widget.latVariable ?? "coordinates"}
+                onChange={(e) => update({ latVariable: e.target.value })}
+              />
+            </label>
+          </>
         )}
         <label className="full">
           Стили элементов (stylesJson)

@@ -391,6 +391,17 @@ export function saveDashboardTitle(path: string, title: string): Promise<Dashboa
   });
 }
 
+export async function saveDashboardRefreshInterval(
+  path: string,
+  refreshIntervalMs: number
+): Promise<DashboardView> {
+  await setVariable(path, "refreshIntervalMs", {
+    schema: { name: "refreshIntervalMs", fields: [{ name: "value", type: "INTEGER" }] },
+    rows: [{ value: refreshIntervalMs }],
+  });
+  return fetchDashboard(path);
+}
+
 export function fetchWorkflow(path: string): Promise<WorkflowView> {
   return request(`/api/v1/workflows/by-path?path=${encodeURIComponent(path)}`);
 }

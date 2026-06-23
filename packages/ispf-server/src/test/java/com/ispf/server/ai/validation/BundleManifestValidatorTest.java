@@ -106,6 +106,50 @@ class BundleManifestValidatorTest {
         assertEquals(BundleValidationResult.ERROR, result.status());
     }
 
+    @Test
+    void acceptsDashboardWithSubDashboardAndObjectTable() {
+        String layout = """
+                {"columns":12,"rowHeight":72,"widgets":[
+                  {"id":"t1","type":"object-table","title":"Devices","x":0,"y":0,"w":6,"h":4,"parentPath":"root.platform.devices"},
+                  {"id":"s1","type":"sub-dashboard","title":"Detail","x":6,"y":0,"w":6,"h":4,"targetDashboardPath":"root.platform.dashboards.demo-sensor"}
+                ]}
+                """;
+        ApplicationBundleDeployService.BundleManifest manifest = manifestWithDashboard(layout);
+        BundleValidationResult result = validator.validate("widgets-test", manifest);
+        assertEquals(BundleValidationResult.OK, result.status());
+    }
+
+    private ApplicationBundleDeployService.BundleManifest manifestWithDashboard(String layoutJson) {
+        return new ApplicationBundleDeployService.BundleManifest(
+                "1.0.0",
+                "Widget test",
+                "wt_",
+                "wt_schema",
+                null,
+                java.util.List.of(new ApplicationBundleDeployService.BundleDashboard(
+                        "root.platform.dashboards.widget-test",
+                        "Widget Test",
+                        layoutJson,
+                        5000
+                )),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
     private ApplicationBundleDeployService.BundleManifest readBundle(String resource) throws Exception {
         String json = new ClassPathResource(resource).getContentAsString(StandardCharsets.UTF_8);
         return objectMapper.readValue(json, ApplicationBundleDeployService.BundleManifest.class);

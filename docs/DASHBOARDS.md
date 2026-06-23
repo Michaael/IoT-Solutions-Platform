@@ -262,6 +262,33 @@ sequenceDiagram
 | `variable-editor` | Список переменных с inline write | `variablesJson` |
 | `svg-widget` | SVG-кнопка / иконка | `svgUrl`, `clickAction`, `toggleVariable`, `functionName` |
 | `composite-widget` | Вложенные виджеты | `childrenJson` |
+| `sub-dashboard` | Вложенный дашборд | `targetDashboardPath`, `targetDashboardPathKey`, `inheritContext` |
+| `panel` | Панель-контейнер | `childrenJson`, `collapsible` |
+| `tab-panel` | Вкладки | `tabsJson` |
+| `map` | Карта (OSM) | `parentPath`, `latVariable`, `selectionKey`, `rowTargetDashboard` |
+| `label`, `image`, `html-snippet` | Оформление | `text`, `imageUrl`, `htmlJson` |
+| `object-tree` | Дерево объектов | `parentPath`, `selectionKey` |
+| `input-form` | Форма ввода в переменные | `fieldsJson` |
+| `linear-gauge`, `liquid-gauge` | Шкалы | как `gauge` / горизонтальная |
+| `context-list` | Отладка session | — |
+
+## Контекст дашборда (DashboardSession)
+
+При открытии дашборда (navigate/modal) передаётся **атомарный** контекст:
+
+- `selection` — `{ "device": "root...devices.snmp-01" }` для `selectionKey`
+- `params` — произвольный JSON (`clusterPath`, …)
+
+Поля layout:
+
+| Поле | Назначение |
+|------|------------|
+| `rowSelectionKey` / `rowParamsJson` | object-table / card-grid / map при клике |
+| `contextSelectionJson` / `contextParamsJson` | dashboard-link |
+| `paramKey` / `contextPathKey` | чтение из session в виджете |
+| `modelHintPath` | образец объекта для dropdown переменных в редакторе |
+
+Operator URL: `?ctx.device=root.platform.devices.d1` или `?ctx={"selection":{"device":"..."}}`
 
 Исходники типов: `apps/web-console/src/types/dashboard.ts`  
 View-компоненты: `apps/web-console/src/components/dashboard/widgets/`  

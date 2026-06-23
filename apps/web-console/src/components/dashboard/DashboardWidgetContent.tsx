@@ -18,6 +18,21 @@ import PieChartWidgetView from "./widgets/PieChartWidgetView";
 import HistoryTableWidgetView from "./widgets/HistoryTableWidgetView";
 import VariableEditorWidgetView from "./widgets/VariableEditorWidgetView";
 import SvgWidgetView from "./widgets/SvgWidgetView";
+import LabelWidgetView from "./widgets/LabelWidgetView";
+import ImageWidgetView from "./widgets/ImageWidgetView";
+import HtmlSnippetWidgetView from "./widgets/HtmlSnippetWidgetView";
+import ObjectTreeWidgetView from "./widgets/ObjectTreeWidgetView";
+import BreadcrumbsWidgetView from "./widgets/BreadcrumbsWidgetView";
+import TimerWidgetView from "./widgets/TimerWidgetView";
+import ContextListWidgetView from "./widgets/ContextListWidgetView";
+import LinearGaugeWidgetView from "./widgets/LinearGaugeWidgetView";
+import InputFormWidgetView from "./widgets/InputFormWidgetView";
+import GanttChartWidgetView from "./widgets/GanttChartWidgetView";
+import NetworkGraphWidgetView from "./widgets/NetworkGraphWidgetView";
+import SpreadsheetWidgetView from "./widgets/SpreadsheetWidgetView";
+import LiquidGaugeWidgetView from "./widgets/LiquidGaugeWidgetView";
+import NavMenuWidgetView from "./widgets/NavMenuWidgetView";
+import MapWidgetView from "./widgets/MapWidgetView";
 
 interface DashboardWidgetContentProps {
   widget: DashboardWidget;
@@ -168,8 +183,98 @@ export default function DashboardWidgetContent({
           editable={editable}
         />
       );
+    case "label":
+      return <LabelWidgetView widget={widget} editable={editable} />;
+    case "image":
+      return <ImageWidgetView widget={widget} editable={editable} />;
+    case "html-snippet":
+      return <HtmlSnippetWidgetView widget={widget} editable={editable} />;
+    case "object-tree":
+      return (
+        <ObjectTreeWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
+    case "breadcrumbs":
+      return <BreadcrumbsWidgetView widget={widget} editable={editable} />;
+    case "timer":
+      return (
+        <TimerWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
+    case "context-list":
+      return <ContextListWidgetView widget={widget} editable={editable} />;
+    case "linear-gauge":
+      return (
+        <LinearGaugeWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
+    case "input-form":
+      return (
+        <InputFormWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
+    case "gantt-chart":
+      return (
+        <GanttChartWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
+    case "network-graph":
+      return (
+        <NetworkGraphWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
+    case "spreadsheet":
+      return (
+        <SpreadsheetWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
+    case "liquid-gauge":
+      return (
+        <LiquidGaugeWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
+    case "nav-menu":
+      return <NavMenuWidgetView widget={widget} editable={editable} />;
+    case "map":
+      return (
+        <MapWidgetView
+          widget={widget}
+          refreshIntervalMs={refreshIntervalMs}
+          editable={editable}
+        />
+      );
     case "composite-widget":
-      return <div className="hint">Nested composite widgets are not supported</div>;
+    case "panel":
+    case "tab-panel":
+    case "sub-dashboard":
+    case "drawer-panel":
+    case "carousel":
+    case "steps-panel":
+      return null;
     default:
       return <div className="dash-widget">Неизвестный виджет</div>;
   }

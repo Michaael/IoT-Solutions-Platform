@@ -1,15 +1,84 @@
 import type { DataSchema } from "../../types";
+import type { DashboardSession } from "./DashboardContext";
 import type { FunctionFormField } from "../../types/dashboard";
 
 export function resolveWidgetPath(
   objectPath: string | undefined,
   selectionKey: string | undefined,
-  selection: Record<string, string>
+  selection: Record<string, string>,
+  contextPathKey?: string,
+  params?: Record<string, unknown>
 ): string {
   if (selectionKey && selection[selectionKey]) {
     return selection[selectionKey];
   }
+  if (contextPathKey && params) {
+    const fromParams = params[contextPathKey];
+    if (typeof fromParams === "string" && fromParams.trim()) {
+      return fromParams;
+    }
+  }
   return objectPath ?? "";
+}
+
+export function resolveContextPath(
+  staticPath: string | undefined,
+  pathKey: string | undefined,
+  session: Pick<DashboardSession, "selection" | "params">
+): string {
+  if (staticPath?.trim()) {
+    return staticPath.trim();
+  }
+  if (!pathKey) {
+    return "";
+  }
+  const fromSelection = session.selection[pathKey];
+  if (fromSelection?.trim()) {
+    return fromSelection;
+  }
+  const fromParams = session.params[pathKey];
+  if (typeof fromParams === "string" && fromParams.trim()) {
+    return fromParams;
+  }
+  return "";
+}
+
+export function resolveContextParam(
+  paramKey: string | undefined,
+  params: Record<string, unknown>
+): unknown {
+  if (!paramKey) {
+    return undefined;
+  }
+  return params[paramKey];
+}
+
+export function parseJsonObject(
+  raw: string | undefined
+): Record<string, unknown> | undefined {
+  if (!raw?.trim()) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function parseSelectionJson(raw?: string): Record<string, string> | undefined {
+  const obj = parseJsonObject(raw);
+  if (!obj) {
+    return undefined;
+  }
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "string") {
+      result[key] = value;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 export function buildFunctionInput(

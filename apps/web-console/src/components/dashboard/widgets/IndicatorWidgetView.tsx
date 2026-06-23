@@ -73,7 +73,7 @@ export function ToggleWidgetView({
 }: ToggleWidgetViewProps & { editable?: boolean }) {
   const styles = useWidgetStyles(widget.stylesJson);
   const queryClient = useQueryClient();
-  const objectPath = widget.objectPath ?? "";
+  const objectPath = useWidgetObjectPath(widget.objectPath, widget.selectionKey, widget.contextPathKey);
   const { rawValue, variable, writable, isLoading } = useBoundVariable(
     objectPath,
     widget.variableName ?? "",
@@ -105,6 +105,9 @@ export function ToggleWidgetView({
       editable={editable}
       footer={!writable ? "только чтение" : undefined}
     >
+      {!objectPath && widget.selectionKey ? (
+        <p className="hint">Выберите устройство</p>
+      ) : (
       <button
         type="button"
         className={`dash-toggle-btn ${active ? "on" : "off"}`}
@@ -114,6 +117,7 @@ export function ToggleWidgetView({
       >
         {active ? (widget.trueLabel ?? "Вкл") : (widget.falseLabel ?? "Выкл")}
       </button>
+      )}
     </DashWidgetShell>
   );
 }

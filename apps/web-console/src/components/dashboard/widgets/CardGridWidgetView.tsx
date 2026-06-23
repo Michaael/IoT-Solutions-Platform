@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchObjects, fetchVariables } from "../../../api";
 import type { CardGridWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
+import { parseJsonObject } from "../dashboardUtils";
 import { triggerDashboardOpen, useDashboardContext } from "../DashboardContext";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
@@ -39,13 +40,19 @@ export default function CardGridWidgetView({
     if (editable) {
       return;
     }
+    const openOptions = {
+      selection: widget.cardSelectionKey
+        ? { [widget.cardSelectionKey]: path }
+        : undefined,
+      params: parseJsonObject(widget.cardParamsJson),
+    };
     if (widget.cardSelectionKey) {
       setSelection(widget.cardSelectionKey, path);
     }
     triggerDashboardOpen(widget.cardOpenMode, widget.cardTargetDashboard, widget.title, {
       navigateToDashboard,
       openDashboardModal,
-    });
+    }, openOptions);
   };
 
   const navigable = Boolean(widget.cardTargetDashboard?.trim()) && !editable;

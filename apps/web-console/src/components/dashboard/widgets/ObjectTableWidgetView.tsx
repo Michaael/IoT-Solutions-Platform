@@ -4,6 +4,7 @@ import { fetchObjects, fetchVariables } from "../../../api";
 import type { ObjectTableColumn, ObjectTableWidget } from "../../../types/dashboard";
 import { readFieldValue } from "../../../types/dashboard";
 import { useDashboardContext, triggerDashboardOpen } from "../DashboardContext";
+import { parseJsonObject } from "../dashboardUtils";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 
@@ -80,6 +81,14 @@ export default function ObjectTableWidgetView({
                     if (editable) {
                       return;
                     }
+                    const targetKey =
+                      widget.rowSelectionKey ?? widget.selectionKey;
+                    const openOptions = {
+                      selection: targetKey
+                        ? { [targetKey]: obj.path }
+                        : undefined,
+                      params: parseJsonObject(widget.rowParamsJson),
+                    };
                     if (widget.selectionKey) {
                       setSelection(widget.selectionKey, obj.path);
                     }
@@ -87,7 +96,8 @@ export default function ObjectTableWidgetView({
                       widget.rowOpenMode,
                       widget.rowTargetDashboard,
                       widget.title,
-                      { navigateToDashboard, openDashboardModal }
+                      { navigateToDashboard, openDashboardModal },
+                      openOptions
                     );
                   }}
                 />

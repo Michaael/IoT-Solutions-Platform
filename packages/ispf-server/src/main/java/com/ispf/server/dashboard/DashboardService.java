@@ -112,6 +112,16 @@ public class DashboardService {
         return getDashboard(path);
     }
 
+    @Transactional
+    public DashboardView updateRefreshInterval(String path, int refreshIntervalMs) {
+        objectManager.setVariableValue(
+                path,
+                "refreshIntervalMs",
+                DataRecord.single(REFRESH_SCHEMA, Map.of("value", refreshIntervalMs))
+        );
+        return getDashboard(path);
+    }
+
     public String resolveTemplateLayout(String template) {
         if (template == null || template.isBlank()) {
             throw new IllegalArgumentException("template is required");

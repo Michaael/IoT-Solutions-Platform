@@ -172,4 +172,5 @@ npm run build    # production dist/
 ## Кастомизация
 
 - Стили: `src/styles.css` (CSS variables `--bg`, `--border`, …)
-- Новый виджет: type в `types/dashboard.ts`, view в `widgets/`, case в `DashboardGrid.tsx`, editor в `WidgetEditorPanel.tsx`
+- Новый виджет: type в `types/dashboard.ts`, view в `widgets/`, dispatch в `renderDashboardWidget.tsx` / `DashboardWidgetContent.tsx`, editor в `WidgetEditorPanel.tsx`
+- **40+ типов** виджетов (см. `WIDGET_TYPES` в `types/dashboard.ts`)

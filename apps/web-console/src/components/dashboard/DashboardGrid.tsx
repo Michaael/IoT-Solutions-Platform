@@ -14,6 +14,7 @@ interface DashboardGridProps {
   selectedWidgetId?: string | null;
   onSelectWidget?: (id: string) => void;
   onLayoutChange?: (widgets: DashboardWidget[]) => void;
+  subDashboardDepth?: number;
 }
 
 interface GridMetrics {
@@ -81,6 +82,7 @@ export default function DashboardGrid({
   selectedWidgetId,
   onSelectWidget,
   onLayoutChange,
+  subDashboardDepth = 0,
 }: DashboardGridProps) {
   const { containerRef, width } = useContainerWidth();
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -228,6 +230,7 @@ export default function DashboardGrid({
                 widget,
                 refreshIntervalMs,
                 editable,
+                depth: subDashboardDepth,
               })}
               {editable && (
                 <div

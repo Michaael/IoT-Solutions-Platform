@@ -70,6 +70,9 @@ public class ApplicationBundleMetadataService {
         if (dashboard.layoutJson() != null) {
             dashboardService.saveLayout(dashboard.path(), dashboard.layoutJson());
         }
+        if (dashboard.refreshIntervalMs() != null) {
+            dashboardService.updateRefreshInterval(dashboard.path(), dashboard.refreshIntervalMs());
+        }
         return DeployOutcome.APPLIED;
     }
 

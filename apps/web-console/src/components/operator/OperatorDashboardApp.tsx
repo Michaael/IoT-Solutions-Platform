@@ -7,6 +7,8 @@ import {
   resolveOperatorReport,
   type OperatorUi,
 } from "../../types/operatorUi";
+import type { DashboardSession } from "../dashboard/DashboardContext";
+import { emptySession, mergeSession } from "../dashboard/DashboardContext";
 import DashboardBuilder from "../dashboard/DashboardBuilder";
 import ReportBuilder from "../report/ReportBuilder";
 import OperatorSidebar from "./OperatorSidebar";
@@ -29,6 +31,34 @@ function resolveReportFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("report");
 }
 
+function resolveSessionFromUrl(): DashboardSession {
+  const params = new URLSearchParams(window.location.search);
+  const session = emptySession();
+  for (const [key, value] of params.entries()) {
+    if (key.startsWith("ctx.")) {
+      session.selection[key.slice(4)] = value;
+    }
+  }
+  const rawCtx = params.get("ctx");
+  if (rawCtx) {
+    try {
+      const parsed = JSON.parse(rawCtx) as {
+        selection?: Record<string, string>;
+        params?: Record<string, unknown>;
+      };
+      if (parsed.selection) {
+        session.selection = { ...session.selection, ...parsed.selection };
+      }
+      if (parsed.params) {
+        session.params = { ...session.params, ...parsed.params };
+      }
+    } catch {
+      // ignore malformed ctx
+    }
+  }
+  return session;
+}
+
 function resolveViewKindFromUrl(): OperatorViewKind {
   return new URLSearchParams(window.location.search).get("report") ? "report" : "dashboard";
 }
@@ -45,7 +75,7 @@ export default function OperatorDashboardApp({
   const [viewKind, setViewKind] = useState<OperatorViewKind>(resolveViewKindFromUrl);
   const [dashboardPath, setDashboardPath] = useState<string | null>(resolveDashboardFromUrl);
   const [reportPath, setReportPath] = useState<string | null>(resolveReportFromUrl);
-  const [selection, setSelection] = useState<Record<string, string>>({});
+  const [dashboardSession, setDashboardSession] = useState<DashboardSession>(resolveSessionFromUrl);
 
   const ui = uiQuery.data;
   const activeDashboardPath = useMemo(
@@ -58,7 +88,10 @@ export default function OperatorDashboardApp({
   );
 
   const navigateDashboard = useCallback(
-    (path: string) => {
+    (path: string, options?: import("../dashboard/DashboardContext").OpenDashboardOptions) => {
+      if (options) {
+        setDashboardSession((current) => mergeSession(current, options));
+      }
       setViewKind("dashboard");
       setDashboardPath(path);
       const url = new URL(window.location.href);
@@ -152,8 +185,8 @@ export default function OperatorDashboardApp({
               key={activeDashboardPath}
               path={activeDashboardPath}
               operatorMode
-              selection={selection}
-              onSelectionChange={setSelection}
+              session={dashboardSession}
+              onSessionChange={setDashboardSession}
               onNavigateDashboard={navigateDashboard}
             />
           )}
