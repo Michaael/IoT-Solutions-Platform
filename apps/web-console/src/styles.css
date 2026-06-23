@@ -1456,12 +1456,91 @@ code,
   align-items: flex-start;
 }
 
-.dashboard-edit-bar {
+.dashboard-widget-palette {
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-widget-palette-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.dashboard-widget-palette-hint-icon {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.dashboard-widget-palette-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 0;
+}
+
+.dashboard-widget-palette-group {
+  padding: 0.55rem 0.65rem 0.7rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.dashboard-widget-palette-group-title {
+  margin: 0 0 0.4rem;
+  padding: 0 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dashboard-widget-palette-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--border);
+  gap: 0.3rem;
+}
+
+.dashboard-widget-palette-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.28rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.dashboard-widget-palette-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border);
+}
+
+.dashboard-widget-palette-item:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.widget-palette-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.dashboard-widget-palette-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .dashboard-body {
@@ -1581,13 +1660,6 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   border: 1px solid var(--border);
   background: linear-gradient(180deg, #1a2030 0%, #12161f 100%);
   overflow: hidden;
-}
-
-.dashboard-edit-hint {
-  align-self: center;
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  margin-right: 0.5rem;
 }
 
 .dash-widget-title {

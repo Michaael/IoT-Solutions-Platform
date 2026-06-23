@@ -8,12 +8,8 @@ import {
   saveDashboardRefreshInterval,
 } from "../../api";
 import type { DashboardLayout, DashboardWidget, WidgetType } from "../../types/dashboard";
-import {
-  layoutToJson,
-  newWidget,
-  parseLayoutJson,
-  WIDGET_TYPES,
-} from "../../types/dashboard";
+import { layoutToJson, newWidget, parseLayoutJson } from "../../types/dashboard";
+import WidgetPalette from "./WidgetPalette";
 import {
   DashboardProvider,
   mergeSession,
@@ -314,23 +310,7 @@ export default function DashboardBuilder({
         </header>
       )}
 
-      {!operatorMode && mode === "edit" && (
-        <div className="dashboard-edit-bar">
-          <span className="dashboard-edit-hint">
-            Перетаскивайте виджет за фон, размер — за угол справа снизу
-          </span>
-          {WIDGET_TYPES.map((item) => (
-            <button
-              key={item.type}
-              type="button"
-              className="btn"
-              onClick={() => addWidget(item.type)}
-            >
-              + {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {!operatorMode && mode === "edit" && <WidgetPalette onAdd={addWidget} />}
 
       <div
         className={`dashboard-body ${!operatorMode && mode === "edit" ? "with-sidebar" : ""}`}
