@@ -12,7 +12,7 @@ import com.ispf.server.correlator.CorrelatorActionType;
 import com.ispf.server.correlator.CorrelatorPatternType;
 import com.ispf.server.correlator.EventCorrelator;
 import com.ispf.server.persistence.AlertRuleRepository;
-import com.ispf.server.persistence.CorrelatorHitRepository;
+import com.ispf.server.correlator.CorrelatorWindowStore;
 import com.ispf.server.persistence.EventCorrelatorRepository;
 import com.ispf.server.persistence.entity.AlertRuleEntity;
 import com.ispf.server.persistence.entity.EventCorrelatorEntity;
@@ -47,7 +47,7 @@ public class AutomationTreeService {
     private final SystemObjectStructureService structureService;
     private final AlertRuleRepository legacyAlertRuleRepository;
     private final EventCorrelatorRepository legacyCorrelatorRepository;
-    private final CorrelatorHitRepository correlatorHitRepository;
+    private final CorrelatorWindowStore correlatorWindowStore;
     private final AutomationRuleIndex ruleIndex;
     private final AutomationIndexRefresh indexRefresh;
 
@@ -56,7 +56,7 @@ public class AutomationTreeService {
             SystemObjectStructureService structureService,
             AlertRuleRepository legacyAlertRuleRepository,
             EventCorrelatorRepository legacyCorrelatorRepository,
-            CorrelatorHitRepository correlatorHitRepository,
+            CorrelatorWindowStore correlatorWindowStore,
             AutomationRuleIndex ruleIndex,
             AutomationIndexRefresh indexRefresh
     ) {
@@ -64,7 +64,7 @@ public class AutomationTreeService {
         this.structureService = structureService;
         this.legacyAlertRuleRepository = legacyAlertRuleRepository;
         this.legacyCorrelatorRepository = legacyCorrelatorRepository;
-        this.correlatorHitRepository = correlatorHitRepository;
+        this.correlatorWindowStore = correlatorWindowStore;
         this.ruleIndex = ruleIndex;
         this.indexRefresh = indexRefresh;
     }
@@ -122,7 +122,7 @@ public class AutomationTreeService {
             }
         }
         for (Map.Entry<String, String> entry : correlatorIdMap.entrySet()) {
-            correlatorHitRepository.remapCorrelatorId(entry.getKey(), entry.getValue());
+            correlatorWindowStore.remapCorrelatorId(entry.getKey(), entry.getValue());
         }
         legacyCorrelatorRepository.deleteAll();
         indexRefresh.scheduleFullRebuild();
@@ -388,7 +388,7 @@ public class AutomationTreeService {
     @Transactional
     public void deleteCorrelator(String path) {
         EventCorrelator correlator = getCorrelator(path);
-        correlatorHitRepository.deleteByCorrelatorId(path);
+        correlatorWindowStore.clearCorrelator(path);
         objectManager.delete(path);
         indexRefresh.afterCorrelatorDeleted(correlator);
     }

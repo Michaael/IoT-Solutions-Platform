@@ -13,6 +13,7 @@ public class IspfRedisProperties {
     private String password = "";
     private int database = 0;
     private Duration timeout = Duration.ofSeconds(2);
+    private boolean correlatorWindowsEnabled = false;
     private Cache cache = new Cache();
 
     public boolean isEnabled() {
@@ -61,6 +62,14 @@ public class IspfRedisProperties {
 
     public void setTimeout(Duration timeout) {
         this.timeout = timeout;
+    }
+
+    public boolean isCorrelatorWindowsEnabled() {
+        return correlatorWindowsEnabled;
+    }
+
+    public void setCorrelatorWindowsEnabled(boolean correlatorWindowsEnabled) {
+        this.correlatorWindowsEnabled = correlatorWindowsEnabled;
     }
 
     public Cache getCache() {

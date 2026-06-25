@@ -1,5 +1,6 @@
 package com.ispf.server.correlator;
 
+import com.ispf.server.automation.AutomationRuleIndex;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,10 +16,19 @@ class EventCorrelatorSequenceTest {
     @Autowired
     private EventCorrelatorService correlatorService;
 
+    @Autowired
+    private AutomationRuleIndex ruleIndex;
+
+    private EventCorrelator createAndIndex(EventCorrelatorService.CreateCorrelatorRequest request) {
+        EventCorrelator created = correlatorService.create(request);
+        ruleIndex.addCorrelator(created);
+        return created;
+    }
+
     @Test
     @Transactional
     void sequencePatternTriggersOnlyAfterFirstThenSecondEvent() {
-        EventCorrelator created = correlatorService.create(new EventCorrelatorService.CreateCorrelatorRequest(
+        EventCorrelator created = createAndIndex(new EventCorrelatorService.CreateCorrelatorRequest(
                 "Test sequence",
                 "root.platform.devices.demo-sensor-01",
                 CorrelatorPatternType.SEQUENCE,
@@ -46,7 +56,7 @@ class EventCorrelatorSequenceTest {
     @Test
     @Transactional
     void sequenceDoesNotTriggerWhenSecondEventOutsideWindow() {
-        EventCorrelator created = correlatorService.create(new EventCorrelatorService.CreateCorrelatorRequest(
+        EventCorrelator created = createAndIndex(new EventCorrelatorService.CreateCorrelatorRequest(
                 "Short window sequence",
                 "root.test.device",
                 CorrelatorPatternType.SEQUENCE,

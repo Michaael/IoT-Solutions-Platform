@@ -115,6 +115,7 @@ ispf:
     password: ${ISPF_REDIS_PASSWORD:}
     database: ${ISPF_REDIS_DATABASE:0}
     timeout: ${ISPF_REDIS_TIMEOUT:2s}
+    correlator-windows-enabled: ${ISPF_REDIS_CORRELATOR_WINDOWS:false}
     cache:
       context-pack-ttl: ${ISPF_REDIS_CONTEXT_PACK_TTL:1h}
       platform-briefing-ttl: ${ISPF_REDIS_PLATFORM_BRIEFING_TTL:5m}

@@ -10,10 +10,8 @@ import com.ispf.core.object.ObjectEvent;
 import com.ispf.server.event.EventService;
 import com.ispf.server.event.RecentEventCache;
 import com.ispf.server.object.ObjectManager;
-import com.ispf.server.persistence.CorrelatorHitRepository;
 import com.ispf.server.persistence.EventHistoryRepository;
 import com.ispf.server.persistence.ObjectEntityMapper;
-import com.ispf.server.persistence.entity.CorrelatorHitEntity;
 import com.ispf.server.persistence.entity.EventHistoryEntity;
 import com.ispf.server.platform.AutomationMetricsRecorder;
 import com.ispf.server.workflow.WorkflowService;
@@ -53,7 +51,7 @@ public class EventCorrelatorService {
             .build();
 
     private final AutomationTreeService automationTreeService;
-    private final CorrelatorHitRepository hitRepository;
+    private final CorrelatorWindowStore windowStore;
     private final EventHistoryRepository eventHistoryRepository;
     private final WorkflowService workflowService;
     private final EventService eventService;
@@ -65,7 +63,7 @@ public class EventCorrelatorService {
 
     public EventCorrelatorService(
             AutomationTreeService automationTreeService,
-            CorrelatorHitRepository hitRepository,
+            CorrelatorWindowStore windowStore,
             EventHistoryRepository eventHistoryRepository,
             @Lazy WorkflowService workflowService,
             EventService eventService,
@@ -76,7 +74,7 @@ public class EventCorrelatorService {
             RecentEventCache recentEventCache
     ) {
         this.automationTreeService = automationTreeService;
-        this.hitRepository = hitRepository;
+        this.windowStore = windowStore;
         this.eventHistoryRepository = eventHistoryRepository;
         this.workflowService = workflowService;
         this.eventService = eventService;
@@ -193,10 +191,10 @@ public class EventCorrelatorService {
                 automationMetricsRecorder.recordCorrelatorTrigger();
                 executeAction(correlator, objectPath);
                 automationTreeService.setCorrelatorLastTriggeredAt(correlator.id(), now);
-                hitRepository.deleteByCorrelatorId(correlator.id());
+                windowStore.clearCorrelator(correlator.id());
             }
         }
-        hitRepository.deleteOlderThan(now.minus(1, ChronoUnit.HOURS));
+        windowStore.purgeOlderThan(now.minus(1, ChronoUnit.HOURS));
     }
 
     @Transactional
@@ -238,7 +236,7 @@ public class EventCorrelatorService {
         Instant since = correlator.windowSeconds() > 0
                 ? now.minusSeconds(correlator.windowSeconds())
                 : now.minusSeconds(1);
-        var firstHit = hitRepository.findFirstByCorrelatorIdAndObjectPathAndEventNameAndOccurredAtAfterOrderByOccurredAtAsc(
+        var firstHit = windowStore.findFirstHitSince(
                 correlator.id(),
                 objectPath,
                 firstEvent,
@@ -248,7 +246,7 @@ public class EventCorrelatorService {
             return false;
         }
         if (correlator.sequenceGapSeconds() > 0) {
-            long gap = java.time.temporal.ChronoUnit.SECONDS.between(firstHit.get().getOccurredAt(), now);
+            long gap = java.time.temporal.ChronoUnit.SECONDS.between(firstHit.get().occurredAt(), now);
             if (gap > correlator.sequenceGapSeconds()) {
                 return false;
             }
@@ -273,13 +271,12 @@ public class EventCorrelatorService {
         Instant since = correlator.windowSeconds() > 0
                 ? now.minusSeconds(correlator.windowSeconds())
                 : now.minusSeconds(3600);
-        List<CorrelatorHitEntity> hitEntities = hitRepository
-                .findByCorrelatorIdAndObjectPathAndOccurredAtAfterOrderByOccurredAtAsc(
-                        correlator.id(),
-                        objectPath,
-                        since
-                );
-        return matchesEventChainWithGap(chain, hitEntities, correlator.sequenceGapSeconds());
+        List<CorrelatorHit> hits = windowStore.listHitsSince(
+                correlator.id(),
+                objectPath,
+                since
+        );
+        return matchesEventChainWithGap(chain, hits, correlator.sequenceGapSeconds());
     }
 
     private static List<String> eventChain(EventCorrelator correlator) {
@@ -300,31 +297,31 @@ public class EventCorrelatorService {
 
     private static boolean matchesEventChainWithGap(
             List<String> chain,
-            List<CorrelatorHitEntity> hits,
+            List<CorrelatorHit> hits,
             int maxGapSeconds
     ) {
         int chainIndex = 0;
         Instant previousTime = null;
-        for (CorrelatorHitEntity hit : hits) {
+        for (CorrelatorHit hit : hits) {
             if (chainIndex >= chain.size()) {
                 break;
             }
-            if (!chain.get(chainIndex).equals(hit.getEventName())) {
+            if (!chain.get(chainIndex).equals(hit.eventName())) {
                 continue;
             }
             if (previousTime != null && maxGapSeconds > 0) {
-                long gap = java.time.temporal.ChronoUnit.SECONDS.between(previousTime, hit.getOccurredAt());
+                long gap = java.time.temporal.ChronoUnit.SECONDS.between(previousTime, hit.occurredAt());
                 if (gap > maxGapSeconds) {
                     chainIndex = 0;
                     previousTime = null;
-                    if (chain.get(0).equals(hit.getEventName())) {
+                    if (chain.get(0).equals(hit.eventName())) {
                         chainIndex = 1;
-                        previousTime = hit.getOccurredAt();
+                        previousTime = hit.occurredAt();
                     }
                     continue;
                 }
             }
-            previousTime = hit.getOccurredAt();
+            previousTime = hit.occurredAt();
             chainIndex++;
         }
         return chainIndex >= chain.size();
@@ -446,25 +443,16 @@ public class EventCorrelatorService {
     private boolean thresholdMet(EventCorrelator correlator, String objectPath, Instant now) {
         if (correlator.windowSeconds() <= 0) {
             return correlator.minOccurrences() <= 1
-                    || hitRepository.countByCorrelatorIdAndObjectPathAndOccurredAtAfter(
+                    || windowStore.countHitsSince(
                     correlator.id(), objectPath, now.minusSeconds(1)) >= correlator.minOccurrences();
         }
         Instant since = now.minusSeconds(correlator.windowSeconds());
-        long hits = hitRepository.countByCorrelatorIdAndObjectPathAndOccurredAtAfter(
-                correlator.id(),
-                objectPath,
-                since
-        );
+        long hits = windowStore.countHitsSince(correlator.id(), objectPath, since);
         return hits >= correlator.minOccurrences();
     }
 
     private void recordHit(String correlatorId, String objectPath, String eventName, Instant now) {
-        CorrelatorHitEntity hit = new CorrelatorHitEntity();
-        hit.setCorrelatorId(correlatorId);
-        hit.setObjectPath(objectPath);
-        hit.setEventName(eventName);
-        hit.setOccurredAt(now);
-        hitRepository.save(hit);
+        windowStore.recordHit(correlatorId, objectPath, eventName, now);
     }
 
     private static boolean isInCooldown(EventCorrelator correlator, Instant now) {
