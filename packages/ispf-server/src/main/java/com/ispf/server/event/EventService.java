@@ -11,11 +11,9 @@ import com.ispf.server.application.catalog.EventCatalogPayloadValidator;
 import com.ispf.server.object.ObjectChangeEvent;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.persistence.ObjectEntityMapper;
-import com.ispf.server.persistence.EventHistoryRepository;
 import com.ispf.server.persistence.entity.EventHistoryEntity;
 import com.ispf.server.platform.AutomationMetricsRecorder;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +28,7 @@ import java.util.Set;
 public class EventService {
 
     private final ObjectManager objectManager;
-    private final EventHistoryRepository eventHistoryRepository;
+    private final EventJournalStore eventJournalStore;
     private final ObjectEntityMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
     private final EventCatalogPayloadValidator catalogPayloadValidator;
@@ -40,7 +38,7 @@ public class EventService {
 
     public EventService(
             ObjectManager objectManager,
-            EventHistoryRepository eventHistoryRepository,
+            EventJournalStore eventJournalStore,
             ObjectEntityMapper mapper,
             ApplicationEventPublisher eventPublisher,
             EventCatalogPayloadValidator catalogPayloadValidator,
@@ -49,7 +47,7 @@ public class EventService {
             AutomationMetricsRecorder automationMetricsRecorder
     ) {
         this.objectManager = objectManager;
-        this.eventHistoryRepository = eventHistoryRepository;
+        this.eventJournalStore = eventJournalStore;
         this.mapper = mapper;
         this.eventPublisher = eventPublisher;
         this.catalogPayloadValidator = catalogPayloadValidator;
@@ -126,14 +124,11 @@ public class EventService {
             seen.add(event.id());
         }
         int remaining = capped - fromCache.size();
-        PageRequest page = PageRequest.of(0, remaining);
-        List<EventHistoryEntity> entities = objectPath == null || objectPath.isBlank()
-                ? eventHistoryRepository.findAllByOrderByOccurredAtDesc(page)
-                : eventHistoryRepository.findByObjectPathOrderByOccurredAtDesc(objectPath, page);
+        List<EventJournalRecord> records = eventJournalStore.queryRecent(objectPath, remaining);
         List<ObjectEvent> merged = new ArrayList<>(fromCache);
-        for (EventHistoryEntity entity : entities) {
-            if (seen.add(entity.getId())) {
-                merged.add(toObjectEvent(entity));
+        for (EventJournalRecord record : records) {
+            if (seen.add(record.id())) {
+                merged.add(toObjectEvent(record));
                 if (merged.size() >= capped) {
                     break;
                 }
@@ -164,20 +159,24 @@ public class EventService {
         return event;
     }
 
-    private ObjectEvent toObjectEvent(EventHistoryEntity entity) {
-        DataRecord payload = mapper.readDataRecord(entity.getPayloadJson());
+    private ObjectEvent toObjectEvent(EventJournalRecord record) {
+        DataRecord payload = mapper.readDataRecord(record.payloadJson());
         if (payload == null) {
             payload = DataRecord.empty(
                     com.ispf.core.model.DataSchema.builder("eventPayload").build()
             );
         }
         return new ObjectEvent(
-                entity.getId(),
-                entity.getObjectPath(),
-                entity.getEventName(),
-                EventLevel.valueOf(entity.getLevel()),
+                record.id(),
+                record.objectPath(),
+                record.eventName(),
+                EventLevel.valueOf(record.level()),
                 payload,
-                entity.getOccurredAt()
+                record.occurredAt()
         );
+    }
+
+    private ObjectEvent toObjectEvent(EventHistoryEntity entity) {
+        return toObjectEvent(EventJournalRecord.fromEntity(entity));
     }
 }

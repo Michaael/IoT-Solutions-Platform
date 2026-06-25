@@ -1,8 +1,6 @@
 package com.ispf.server.event;
 
 import com.ispf.server.config.EventJournalProperties;
-import com.ispf.server.history.TimescaleHypertableInitializer;
-import com.ispf.server.persistence.EventHistoryRepository;
 import com.ispf.server.platform.PlatformLeaderLockService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,20 +15,17 @@ public class EventHistoryRetentionService {
 
     static final String RETENTION_LOCK = "event-history-retention";
 
-    private final EventHistoryRepository eventHistoryRepository;
+    private final EventJournalStore eventJournalStore;
     private final EventJournalProperties properties;
-    private final TimescaleHypertableInitializer timescaleHypertableInitializer;
     private final PlatformLeaderLockService leaderLockService;
 
     public EventHistoryRetentionService(
-            EventHistoryRepository eventHistoryRepository,
+            EventJournalStore eventJournalStore,
             EventJournalProperties properties,
-            TimescaleHypertableInitializer timescaleHypertableInitializer,
             PlatformLeaderLockService leaderLockService
     ) {
-        this.eventHistoryRepository = eventHistoryRepository;
+        this.eventJournalStore = eventJournalStore;
         this.properties = properties;
-        this.timescaleHypertableInitializer = timescaleHypertableInitializer;
         this.leaderLockService = leaderLockService;
     }
 
@@ -48,7 +43,7 @@ public class EventHistoryRetentionService {
     }
 
     void purgeExpiredEventsInternal() {
-        if (timescaleHypertableInitializer.isEventHistoryTimescaleActive()) {
+        if (!eventJournalStore.supportsApplicationRetentionPurge()) {
             return;
         }
         int retentionDays = properties.getRetentionDays();
@@ -56,6 +51,6 @@ public class EventHistoryRetentionService {
             return;
         }
         Instant cutoff = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
-        eventHistoryRepository.deleteByOccurredAtBefore(cutoff);
+        eventJournalStore.purgeOlderThan(cutoff);
     }
 }

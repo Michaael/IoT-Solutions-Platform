@@ -1,0 +1,20 @@
+# Local ClickHouse for event journal throughput testing (P3b).
+# Usage:
+#   docker compose -f deploy/docker-compose.clickhouse.yml up -d
+#   ISPF_EVENT_JOURNAL_STORE=clickhouse
+#   ISPF_EVENT_JOURNAL_CLICKHOUSE_URL=http://localhost:8123
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+
+volumes:
+  clickhouse-data:

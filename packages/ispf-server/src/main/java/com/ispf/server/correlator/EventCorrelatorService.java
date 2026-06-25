@@ -7,10 +7,11 @@ import com.ispf.expression.ExpressionEngine;
 import com.ispf.expression.ExpressionException;
 import com.ispf.server.automation.AutomationTreeService;
 import com.ispf.core.object.ObjectEvent;
+import com.ispf.server.event.EventJournalRecord;
+import com.ispf.server.event.EventJournalStore;
 import com.ispf.server.event.EventService;
 import com.ispf.server.event.RecentEventCache;
 import com.ispf.server.object.ObjectManager;
-import com.ispf.server.persistence.EventHistoryRepository;
 import com.ispf.server.persistence.ObjectEntityMapper;
 import com.ispf.server.persistence.entity.EventHistoryEntity;
 import com.ispf.server.platform.AutomationMetricsRecorder;
@@ -52,7 +53,7 @@ public class EventCorrelatorService {
 
     private final AutomationTreeService automationTreeService;
     private final CorrelatorWindowStore windowStore;
-    private final EventHistoryRepository eventHistoryRepository;
+    private final EventJournalStore eventJournalStore;
     private final WorkflowService workflowService;
     private final EventService eventService;
     private final ObjectManager objectManager;
@@ -64,7 +65,7 @@ public class EventCorrelatorService {
     public EventCorrelatorService(
             AutomationTreeService automationTreeService,
             CorrelatorWindowStore windowStore,
-            EventHistoryRepository eventHistoryRepository,
+            EventJournalStore eventJournalStore,
             @Lazy WorkflowService workflowService,
             EventService eventService,
             ObjectManager objectManager,
@@ -75,7 +76,7 @@ public class EventCorrelatorService {
     ) {
         this.automationTreeService = automationTreeService;
         this.windowStore = windowStore;
-        this.eventHistoryRepository = eventHistoryRepository;
+        this.eventJournalStore = eventJournalStore;
         this.workflowService = workflowService;
         this.eventService = eventService;
         this.objectManager = objectManager;
@@ -383,14 +384,17 @@ public class EventCorrelatorService {
         if (filterExpr == null || filterExpr.isBlank()) {
             return true;
         }
-        Optional<EventHistoryEntity> fromDb = eventHistoryRepository
-                .findFirstByObjectPathAndEventNameOrderByOccurredAtDesc(objectPath, eventName);
-        if (fromDb.isPresent()) {
-            return evaluatePayloadFilter(filterExpr, fromDb.get());
+        Optional<EventJournalRecord> fromStore = eventJournalStore.findLatest(objectPath, eventName);
+        if (fromStore.isPresent()) {
+            return evaluatePayloadFilter(filterExpr, fromStore.get());
         }
         return recentEventCache.findLatest(objectPath, eventName)
                 .map(event -> evaluatePayloadFilter(filterExpr, event))
                 .orElse(false);
+    }
+
+    private boolean evaluatePayloadFilter(String filterExpr, EventJournalRecord record) {
+        return evaluatePayloadFilter(filterExpr, payloadMap(record));
     }
 
     private boolean evaluatePayloadFilter(String filterExpr, EventHistoryEntity entity) {
@@ -411,6 +415,18 @@ public class EventCorrelatorService {
         } catch (ExpressionException e) {
             log.warn("Payload filter evaluation failed: {}", e.getMessage());
             return false;
+        }
+    }
+
+    private Map<String, Object> payloadMap(EventJournalRecord record) {
+        if (record.payloadJson() == null || record.payloadJson().isBlank()) {
+            return Map.of();
+        }
+        try {
+            DataRecord dataRecord = entityMapper.readDataRecord(record.payloadJson());
+            return payloadMap(dataRecord);
+        } catch (Exception e) {
+            return Map.of();
         }
     }
 

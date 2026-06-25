@@ -2,7 +2,7 @@
 
 Нагрузочные сценарии для измерения пропускной способности **HTTP events API** и **внутреннего конвейера автоматизации** (driver → alert rule → event journal).
 
-Baseline зафиксирован на prod VPS `ispf.iot-solutions.ru`, версия **0.9.17**, июнь 2026.
+Baseline зафиксирован на prod VPS `ispf.iot-solutions.ru`, версия **0.9.18**, июнь 2026.
 
 См. также [OBSERVABILITY.md](OBSERVABILITY.md) — Prometheus scrape и OTLP export.
 
@@ -119,6 +119,14 @@ self.sineWave["value"] > -1000.0
 | `--poll-ms` | `3000,1000,500` | Интервалы опроса virtual driver |
 | `--telemetry-mix-ratio` | `0` | Доля устройств в `TELEMETRY_ONLY` (0.5 = половина без automation lane) |
 | `--max-devices` | 0 (all) | Лимит loadtest-устройств |
+
+### Baseline (0.9.18, 60 devices, poll=1000ms, warmup=45s, coalesce=250ms)
+
+| conditionExpr | Events/s | Alert fires/s |
+|---------------|----------|---------------|
+| `self.sineWave["value"] > -1000.0` | ~37.9 | ~25.6 |
+
+*(0.9.18 P3a: `event_history` Timescale hypertable + compression segmentby `object_path`, retention 90d. Report `deploy/events-internal-load-test-report-1782378017.json`. Прирост vs 0.9.17 скромный на 60 dev — основной выигрыш Timescale на больших объёмах journal и retention, не на micro-benchmark.)*
 
 ### Baseline (0.9.17, 60 devices, poll=1000ms, warmup=45s, coalesce=250ms)
 

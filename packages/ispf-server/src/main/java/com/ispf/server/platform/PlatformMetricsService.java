@@ -6,7 +6,7 @@ import com.ispf.server.application.schedule.PlatformSchedulerService;
 import com.ispf.server.config.VariableHistoryProperties;
 import com.ispf.server.driver.DriverRuntimeService;
 import com.ispf.server.event.EventHistoryRecordCounter;
-import com.ispf.server.persistence.EventHistoryRepository;
+import com.ispf.server.event.EventJournalStore;
 import com.ispf.server.persistence.ObjectNodeRepository;
 import com.ispf.server.persistence.ObjectVariableRepository;
 import com.ispf.server.persistence.VariableSampleRepository;
@@ -34,7 +34,7 @@ public class PlatformMetricsService {
     private final ObjectNodeRepository objectNodeRepository;
     private final ObjectVariableRepository objectVariableRepository;
     private final VariableSampleRepository variableSampleRepository;
-    private final EventHistoryRepository eventHistoryRepository;
+    private final EventJournalStore eventJournalStore;
     private final EventHistoryRecordCounter eventHistoryRecordCounter;
     private final WorkflowInstanceRepository workflowInstanceRepository;
     private final VariableHistoryProperties variableHistoryProperties;
@@ -51,7 +51,7 @@ public class PlatformMetricsService {
             ObjectNodeRepository objectNodeRepository,
             ObjectVariableRepository objectVariableRepository,
             VariableSampleRepository variableSampleRepository,
-            EventHistoryRepository eventHistoryRepository,
+            EventJournalStore eventJournalStore,
             EventHistoryRecordCounter eventHistoryRecordCounter,
             WorkflowInstanceRepository workflowInstanceRepository,
             VariableHistoryProperties variableHistoryProperties,
@@ -67,7 +67,7 @@ public class PlatformMetricsService {
         this.objectNodeRepository = objectNodeRepository;
         this.objectVariableRepository = objectVariableRepository;
         this.variableSampleRepository = variableSampleRepository;
-        this.eventHistoryRepository = eventHistoryRepository;
+        this.eventJournalStore = eventJournalStore;
         this.eventHistoryRecordCounter = eventHistoryRecordCounter;
         this.workflowInstanceRepository = workflowInstanceRepository;
         this.variableHistoryProperties = variableHistoryProperties;
@@ -186,7 +186,7 @@ public class PlatformMetricsService {
         Map<String, Object> section = new LinkedHashMap<>();
         section.put("eventHistoryRecords", eventHistoryRecordCounter.isInitialized()
                 ? eventHistoryRecordCounter.totalRecords()
-                : eventHistoryRepository.count());
+                : eventJournalStore.countTotal());
         section.put("workflowInstancesTotal", workflowInstanceRepository.count());
         section.put("workflowInstancesRunning", workflowInstanceRepository.countByStatus("RUNNING"));
         section.put("workflowInstancesCompleted", workflowInstanceRepository.countByStatus("COMPLETED"));

@@ -15,7 +15,7 @@ Historian телеметрии (`variable_samples`) уже использует 
 2. **Composite PK** `(occurred_at, id)` — требование Timescale; JPA по-прежнему использует `id` как `@Id` (тот же паттерн, что у historian).
 3. **Retention** — `ispf.event-journal.retention-days` (default **90**); на prod с Timescale — `add_retention_policy`; без Timescale — scheduled purge в приложении.
 4. **Compression** (optional) — segment by `object_path`, policy после 7 дней; при недоступности функции — skip без падения старта.
-5. **PostgreSQL** остаётся для relational core; отдельная column store (ClickHouse) — следующий инкремент P3b ([ADR-0021](0021-automation-pipeline-evolution.md) future transport/storage).
+5. **PostgreSQL** остаётся для relational core; column store (ClickHouse) — P3b ([ADR-0023](0023-clickhouse-event-journal.md)).
 
 ## Последствия
 

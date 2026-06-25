@@ -24,6 +24,7 @@
 | [0015](0015-federation-topology.md) | Federation hub–spoke topology | Accepted |
 | [0016](0016-timescaledb-retention.md) | TimescaleDB variable history retention | Accepted |
 | [0022](0022-event-history-timescale.md) | TimescaleDB event journal tier (P3a) | Accepted |
+| [0023](0023-clickhouse-event-journal.md) | ClickHouse event journal SPI (P3b) | Accepted |
 | [0017](0017-binding-rules-only.md) | Binding rules only (v0.8.0) | Accepted |
 | [0018](0018-model-type-semantics.md) | Blueprint + три вида моделей (RELATIVE/INSTANCE/ABSOLUTE) | Accepted |
 

@@ -83,6 +83,10 @@ public class TimescaleHypertableInitializer {
     }
 
     private void ensureEventHistoryHypertable() {
+        if (eventJournalProperties.isClickHouseStore()) {
+            log.info("TimescaleDB hypertable skipped for event_history (event-journal.store=clickhouse)");
+            return;
+        }
         try {
             jdbcTemplate.execute("ALTER TABLE event_history DROP CONSTRAINT IF EXISTS event_history_pkey");
             jdbcTemplate.execute("ALTER TABLE event_history ADD PRIMARY KEY (occurred_at, id)");
