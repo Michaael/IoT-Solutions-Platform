@@ -43,6 +43,7 @@
 | [Безопасность](SECURITY.md) | RBAC, Keycloak, профили |
 | [Развёртывание](DEPLOYMENT.md) | Docker, переменные окружения, профили Spring |
 | [Тестирование](TESTING.md) | Unit, integration, smoke |
+| [Load testing](LOAD_TESTING.md) | HTTP vs internal automation throughput, baseline 0.9.5 |
 | [Лицензия](LICENSE.md) | Apache 2.0 ядро; коммерческие плагины отдельно |
 | [Плагины и границы](PLUGINS.md) | Что не входит в `main` |
 | [Third-party](THIRD_PARTY_NOTICES.md) | Лицензии зависимостей (bpmn-js, Spring, …) |

@@ -86,6 +86,15 @@ npm run build   # tsc + vite build
 
 TypeScript strict check в CI-equivalent локально.
 
+## Load / throughput (prod VPS)
+
+Сценарии HTTP и internal automation load test, baseline метрики и dashboard probe — **[LOAD_TESTING.md](LOAD_TESTING.md)**.
+
+```bash
+python deploy/events-load-test.py --base-url https://ispf.iot-solutions.ru
+python deploy/events-internal-load-test.py --skip-monitor-setup --condition-expr-file deploy/loadtest-sinewave-condition.txt
+```
+
 ## CI (рекомендация)
 
 ```bash

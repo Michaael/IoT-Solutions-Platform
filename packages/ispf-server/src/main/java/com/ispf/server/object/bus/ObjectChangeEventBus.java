@@ -93,8 +93,8 @@ public class ObjectChangeEventBus {
             );
             telemetryLane.start();
             automationLane.start();
-            automationMetricsRecorder.bindObjectChangeQueue(telemetryLane.queue);
-            automationMetricsRecorder.bindObjectChangeQueue(automationLane.queue);
+            automationMetricsRecorder.bindObjectChangeQueue("telemetry", telemetryLane.queue);
+            automationMetricsRecorder.bindObjectChangeQueue("automation", automationLane.queue);
             log.info(
                     "Object change event bus started (split lanes: telemetry workers={}, queue={}; "
                             + "automation workers={}, queue={}; handlers={})",
@@ -112,7 +112,7 @@ public class ObjectChangeEventBus {
                     handlers
             );
             unifiedLane.start();
-            automationMetricsRecorder.bindObjectChangeQueue(unifiedLane.queue);
+            automationMetricsRecorder.bindObjectChangeQueue("unified", unifiedLane.queue);
             log.info(
                     "Object change event bus started (workers={}, queueCapacity={}, handlers={})",
                     properties.getWorkerThreads(),

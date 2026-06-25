@@ -26,6 +26,9 @@ def double_schema(name: str) -> dict:
 METRIC_VARS = [
     ("eventHistoryRecords", "INTEGER", True),
     ("eventsPerSecond", "DOUBLE", False),
+    ("alertFiresTotal", "INTEGER", True),
+    ("alertFiresPerSecond", "DOUBLE", False),
+    ("objectChangeQueueSize", "INTEGER", False),
     ("heapUsedMb", "DOUBLE", False),
     ("activeConnections", "INTEGER", False),
     ("threadsAwaitingConnection", "INTEGER", False),
@@ -93,10 +96,22 @@ def build_dashboard_layout() -> str:
             "decimals": 1,
         },
         {
+            "id": "alert-rate",
+            "type": "gauge",
+            "title": "Alert fires / s",
+            "x": 6, "y": 0, "w": 3, "h": 2,
+            "objectPath": probe,
+            "variableName": "alertFiresPerSecond",
+            "valueField": "value",
+            "min": 0,
+            "max": 500,
+            "decimals": 1,
+        },
+        {
             "id": "heap",
             "type": "value",
             "title": "Heap used (MB)",
-            "x": 6, "y": 0, "w": 3, "h": 2,
+            "x": 9, "y": 0, "w": 3, "h": 2,
             "objectPath": probe,
             "variableName": "heapUsedMb",
             "valueField": "value",
@@ -107,9 +122,19 @@ def build_dashboard_layout() -> str:
             "id": "db-active",
             "type": "value",
             "title": "DB active connections",
-            "x": 9, "y": 0, "w": 3, "h": 2,
+            "x": 0, "y": 2, "w": 3, "h": 2,
             "objectPath": probe,
             "variableName": "activeConnections",
+            "valueField": "value",
+            "decimals": 0,
+        },
+        {
+            "id": "oc-queue",
+            "type": "value",
+            "title": "Object-change queue",
+            "x": 3, "y": 2, "w": 3, "h": 2,
+            "objectPath": probe,
+            "variableName": "objectChangeQueueSize",
             "valueField": "value",
             "decimals": 0,
         },
@@ -117,7 +142,7 @@ def build_dashboard_layout() -> str:
             "id": "drivers",
             "type": "value",
             "title": "Active drivers",
-            "x": 0, "y": 2, "w": 3, "h": 2,
+            "x": 6, "y": 2, "w": 3, "h": 2,
             "objectPath": probe,
             "variableName": "activeDrivers",
             "valueField": "value",
@@ -127,7 +152,7 @@ def build_dashboard_layout() -> str:
             "id": "workflows",
             "type": "value",
             "title": "Workflows running",
-            "x": 3, "y": 2, "w": 3, "h": 2,
+            "x": 9, "y": 2, "w": 3, "h": 2,
             "objectPath": probe,
             "variableName": "workflowInstancesRunning",
             "valueField": "value",
@@ -137,7 +162,7 @@ def build_dashboard_layout() -> str:
             "id": "db-wait",
             "type": "indicator",
             "title": "DB pool pressure",
-            "x": 6, "y": 2, "w": 3, "h": 2,
+            "x": 0, "y": 4, "w": 3, "h": 2,
             "objectPath": probe,
             "variableName": "threadsAwaitingConnection",
             "valueField": "value",
@@ -148,9 +173,19 @@ def build_dashboard_layout() -> str:
             "id": "history-samples",
             "type": "value",
             "title": "Variable history samples",
-            "x": 9, "y": 2, "w": 3, "h": 2,
+            "x": 3, "y": 4, "w": 3, "h": 2,
             "objectPath": probe,
             "variableName": "variableHistorySamples",
+            "valueField": "value",
+            "decimals": 0,
+        },
+        {
+            "id": "alert-total",
+            "type": "value",
+            "title": "Alert fires (total)",
+            "x": 6, "y": 4, "w": 3, "h": 2,
+            "objectPath": probe,
+            "variableName": "alertFiresTotal",
             "valueField": "value",
             "decimals": 0,
         },
@@ -158,7 +193,7 @@ def build_dashboard_layout() -> str:
             "id": "events-chart",
             "type": "chart",
             "title": "Event journal growth",
-            "x": 0, "y": 4, "w": 12, "h": 4,
+            "x": 0, "y": 6, "w": 12, "h": 4,
             "objectPath": probe,
             "variableName": "eventHistoryRecords",
             "valueField": "value",
@@ -261,6 +296,7 @@ class MetricsSyncer:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._last_events: int | None = None
+        self._last_alert_fires: int | None = None
         self._last_ts: float | None = None
 
     def sync_once(self) -> dict:
@@ -274,17 +310,30 @@ class MetricsSyncer:
         history = section_values(data, "variableHistory")
 
         events = int(automation.get("eventHistoryRecords") or 0)
+        alert_fires = int(automation.get("alertFiresTotal") or 0)
         now = time.perf_counter()
         eps = 0.0
+        alert_eps = 0.0
         if self._last_events is not None and self._last_ts is not None:
             dt = now - self._last_ts
             if dt > 0:
                 eps = max(0.0, (events - self._last_events) / dt)
+                if self._last_alert_fires is not None:
+                    alert_eps = max(0.0, (alert_fires - self._last_alert_fires) / dt)
         self._last_events = events
+        self._last_alert_fires = alert_fires
         self._last_ts = now
 
         put_value(self.client, "eventHistoryRecords", "INTEGER", events)
         put_value(self.client, "eventsPerSecond", "DOUBLE", round(eps, 2))
+        put_value(self.client, "alertFiresTotal", "INTEGER", alert_fires)
+        put_value(self.client, "alertFiresPerSecond", "DOUBLE", round(alert_eps, 2))
+        put_value(
+            self.client,
+            "objectChangeQueueSize",
+            "INTEGER",
+            int(automation.get("objectChangeQueueSize") or 0),
+        )
         put_value(self.client, "heapUsedMb", "DOUBLE", float(runtime.get("heapUsedMb") or 0))
         put_value(self.client, "activeConnections", "INTEGER", int(database.get("activeConnections") or 0))
         put_value(
@@ -301,7 +350,11 @@ class MetricsSyncer:
             int(automation.get("workflowInstancesRunning") or 0),
         )
         put_value(self.client, "variableHistorySamples", "INTEGER", int(history.get("sampleCount") or 0))
-        return {"eventsPerSecond": eps, "eventHistoryRecords": events}
+        return {
+            "eventsPerSecond": eps,
+            "alertFiresPerSecond": alert_eps,
+            "eventHistoryRecords": events,
+        }
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():

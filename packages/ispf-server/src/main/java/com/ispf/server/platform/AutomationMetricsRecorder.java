@@ -92,11 +92,11 @@ public class AutomationMetricsRecorder {
         }
     }
 
-    public void bindObjectChangeQueue(BlockingQueue<?> queue) {
+    public void bindObjectChangeQueue(String lane, BlockingQueue<?> queue) {
         objectChangeQueues.add(queue);
         meterRegistry.ifPresent(registry -> registry.gauge(
                 "ispf.object_change.queue.size",
-                Tags.of("lane", String.valueOf(objectChangeQueues.size())),
+                Tags.of("lane", lane),
                 queue,
                 BlockingQueue::size
         ));
