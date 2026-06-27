@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: dark;
   --bg: #0d1117;
   --bg-elevated: #161b22;
@@ -3734,6 +3734,45 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   gap: 0.35rem;
   padding: 0.35rem 0.5rem;
   border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.dash-sheet-import-notice {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  color: var(--text-muted, #8b949e);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  background: var(--surface-1, #161b22);
+}
+
+.dash-sheet-import-dialog {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  background: var(--surface-1, #161b22);
+}
+
+.dash-sheet-import-dialog-label {
+  font-size: 0.75rem;
+  color: var(--text-muted, #8b949e);
+}
+
+.dash-sheet-import-dialog-select {
+  min-width: 12rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--surface-0, #0d1117);
+  color: var(--text, #e6edf3);
+}
+
+.dash-sheet-import-dialog-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
 }
 
 .dash-sheet-tool-btn {

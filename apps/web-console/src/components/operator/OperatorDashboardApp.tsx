@@ -67,6 +67,41 @@ function resolveViewKindFromUrl(): OperatorViewKind {
   return new URLSearchParams(window.location.search).get("report") ? "report" : "dashboard";
 }
 
+function operatorDashboardSessionKey(appId: string, dashboardPath: string): string {
+  return `ispf-operator-dashboard-session:${appId}:${dashboardPath}`;
+}
+
+function loadStoredDashboardSession(appId: string, dashboardPath: string): DashboardSession | null {
+  try {
+    const raw = sessionStorage.getItem(operatorDashboardSessionKey(appId, dashboardPath));
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as DashboardSession;
+    return {
+      selection: parsed.selection ?? {},
+      params: parsed.params ?? {},
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredDashboardSession(
+  appId: string,
+  dashboardPath: string,
+  session: DashboardSession
+): void {
+  try {
+    sessionStorage.setItem(
+      operatorDashboardSessionKey(appId, dashboardPath),
+      JSON.stringify(session)
+    );
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 export default function OperatorDashboardApp({
   appId,
   operatorId = "operator",
@@ -80,7 +115,19 @@ export default function OperatorDashboardApp({
   const [viewKind, setViewKind] = useState<OperatorViewKind>(resolveViewKindFromUrl);
   const [dashboardPath, setDashboardPath] = useState<string | null>(resolveDashboardFromUrl);
   const [reportPath, setReportPath] = useState<string | null>(resolveReportFromUrl);
-  const [dashboardSession, setDashboardSession] = useState<DashboardSession>(resolveSessionFromUrl);
+  const [sessionsByDashboard, setSessionsByDashboard] = useState<
+    Record<string, DashboardSession>
+  >(() => {
+    const path = resolveDashboardFromUrl();
+    if (!path) {
+      return {};
+    }
+    const stored = loadStoredDashboardSession(appId, path);
+    const urlSession = resolveSessionFromUrl();
+    return {
+      [path]: stored ? mergeSession(stored, urlSession) : urlSession,
+    };
+  });
 
   const ui = uiQuery.data;
   const activeDashboardPath = useMemo(
@@ -92,11 +139,43 @@ export default function OperatorDashboardApp({
     [ui, reportPath]
   );
 
+  const dashboardSession = useMemo(
+    () => (activeDashboardPath ? (sessionsByDashboard[activeDashboardPath] ?? emptySession()) : emptySession()),
+    [activeDashboardPath, sessionsByDashboard]
+  );
+
+  const handleDashboardSessionChange = useCallback(
+    (next: DashboardSession) => {
+      if (!activeDashboardPath) {
+        return;
+      }
+      setSessionsByDashboard((prev) => ({ ...prev, [activeDashboardPath]: next }));
+      saveStoredDashboardSession(appId, activeDashboardPath, next);
+    },
+    [activeDashboardPath, appId]
+  );
+
+  useEffect(() => {
+    if (!activeDashboardPath || viewKind !== "dashboard") {
+      return;
+    }
+    setSessionsByDashboard((prev) => {
+      if (prev[activeDashboardPath]) {
+        return prev;
+      }
+      const stored = loadStoredDashboardSession(appId, activeDashboardPath);
+      return { ...prev, [activeDashboardPath]: stored ?? emptySession() };
+    });
+  }, [activeDashboardPath, appId, viewKind]);
+
   const navigateDashboard = useCallback(
     (path: string, options?: import("../dashboard/DashboardContext").OpenDashboardOptions) => {
-      if (options) {
-        setDashboardSession((current) => mergeSession(current, options));
-      }
+      setSessionsByDashboard((prev) => {
+        const current = prev[path] ?? loadStoredDashboardSession(appId, path) ?? emptySession();
+        const next = options ? mergeSession(current, options) : current;
+        saveStoredDashboardSession(appId, path, next);
+        return { ...prev, [path]: next };
+      });
       setViewKind("dashboard");
       setDashboardPath(path);
       const url = new URL(window.location.href);
@@ -198,7 +277,7 @@ export default function OperatorDashboardApp({
               path={activeDashboardPath}
               operatorMode
               session={dashboardSession}
-              onSessionChange={setDashboardSession}
+              onSessionChange={handleDashboardSessionChange}
               onNavigateDashboard={navigateDashboard}
             />
           )}

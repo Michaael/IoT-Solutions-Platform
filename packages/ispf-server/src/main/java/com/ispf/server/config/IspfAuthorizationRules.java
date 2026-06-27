@@ -96,6 +96,12 @@ public final class IspfAuthorizationRules {
         auth.requestMatchers(HttpMethod.POST, "/api/v1/reports/by-path/run")
                 .hasAnyRole(IspfRoles.OPERATOR, IspfRoles.ADMIN);
 
+        // Object variable writes: operators allowed at HTTP layer; per-object ACL enforced in ObjectController.
+        auth.requestMatchers(HttpMethod.PUT, "/api/v1/objects/by-path/variables")
+                .hasAnyRole(IspfRoles.OPERATOR, IspfRoles.ADMIN);
+        auth.requestMatchers(HttpMethod.PATCH, "/api/v1/objects/by-path/variables/**")
+                .hasAnyRole(IspfRoles.OPERATOR, IspfRoles.ADMIN);
+
         auth.requestMatchers("/api/v1/**").hasRole(IspfRoles.ADMIN);
     }
 }

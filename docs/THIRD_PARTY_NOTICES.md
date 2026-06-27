@@ -12,7 +12,7 @@
 
 - **Платформа (`ispf-server`, `web-console`, core packages):** AGPL-3.0; Enterprise — optional `platform-license.json`.
 - **Device drivers:** только **driver packs** в `${ISPF_DRIVER_PACKS_DIR}`; каждый pack — свой `LICENSE` и `licenseType`.
-- **Собранный web-console bundle:** содержит `hyperformula` под GPL-3.0-only (виджет spreadsheet — решение отложено).
+- **Web console spreadsheet:** встроенный MIT/AGPL движок формул (`ispfSheetEval`); HyperFormula **не используется**.
 - **Copyleft driver packs** (BACnet, DLMS, IEC-104, …): отдельные packs с GPL/LGPL notices — не часть `ispf-server.jar`.
 - **Application bundles:** declarative JSON + EULA заказчика; не «исходники платформы» по AGPL.
 
@@ -20,7 +20,8 @@
 
 | Компонент | Где используется | Лицензия | Риск / действие |
 |-----------|------------------|----------|-----------------|
-| `hyperformula` | `apps/web-console`, виджет `spreadsheet` | **GPL-3.0-only** | Нельзя считать browser bundle Apache-only. Для permissive/closed поставки заменить engine, купить commercial license или вынести spreadsheet formulas в отдельный GPL/Commercial plugin. |
+| `hyperformula` | *(removed)* | — | Replaced by `ispfSheetEval` in web-console (2026-06). |
+| `exceljs` | `apps/web-console` (spreadsheet XLSX import/export) | **MIT** | Lazy-loaded; spreadsheet widget only. |
 | `com.infiniteautomation:bacnet4j` | `packages/ispf-driver-bacnet` (driver pack) | **GPL-3.0** | Ship only in `ispf-driver-bacnet` pack with GPL notice; optional RSA license block. |
 | `org.gurux:gurux.dlms`, `org.gurux:gurux.net` | `packages/ispf-driver-dlms` (driver pack) | **GPL-2.0** | Ship only in DLMS driver pack. |
 | `org.openmuc:j60870` | `packages/ispf-driver-iec104*` (driver packs) | **GPL** | Ship only in IEC-104 driver packs. |
@@ -37,7 +38,7 @@
 
 1. **Платформа** — AGPL-3.0; network use triggers source-offer obligations unless Enterprise EULA applies.
 2. **Drivers** — pack-only runtime; copyleft deps isolated per pack with pack `LICENSE`.
-3. **Web console** — AGPL; `hyperformula` in spreadsheet widget remains GPL-3.0-only (replace engine or commercial license for closed UI builds).
+3. **Web console** — AGPL; spreadsheet uses built-in `ispfSheetEval` (no GPL third-party formula engine).
 4. **Commercial/closed сценарий:** Enterprise platform license + per-pack RSA licenses where required; application bundles under separate EULA.
 
 ## Backend (Java / Gradle)
@@ -134,7 +135,6 @@
 | `@tanstack/react-virtual` | 3.14.3 | MIT | |
 | `bpmn-auto-layout` | 1.3.0 | MIT | |
 | `bpmn-js` | 18.18.0 | bpmn.io license | Watermark condition; see below |
-| `hyperformula` | 3.3.0 | **GPL-3.0-only** | Spreadsheet formula engine; copyleft risk |
 | `i18next` | 26.3.1 | MIT | |
 | `maplibre-gl` | 5.24.0 | BSD-3-Clause | |
 | `react` | 19.2.7 | MIT | |
@@ -155,7 +155,6 @@
 | Apache-2.0 | 3 |
 | MIT OR Apache-2.0 | 1 |
 | MIT AND ISC | 1 |
-| GPL-3.0-only | 1 |
 | SEE LICENSE IN LICENSE | 1 |
 | UNKNOWN | 1 |
 
@@ -164,7 +163,6 @@ Special npm packages:
 | Компонент | Лицензия | Примечание |
 |-----------|----------|------------|
 | `bpmn-js` | bpmn.io license | Requires visible bpmn.io watermark |
-| `hyperformula` | GPL-3.0-only | Must not be silently shipped in Apache-only/commercial bundle |
 | `@mapbox/jsonlint-lines-primitives` | UNKNOWN in package-lock | Verify upstream license before release |
 
 ### Dev-only npm dependencies

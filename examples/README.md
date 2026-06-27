@@ -9,6 +9,7 @@
 | [mes-reference](mes-reference/) | MES walkthrough: наряд → резервуар → эстакада |
 | [warehouse-app](warehouse-app/) | Reference app #2 (dogfooding REQ-PF) |
 | [lab-training](lab-training/) | Importable lab package (Phase 15) |
+| [spreadsheet-demo](spreadsheet-demo/) | Эталон: объект с `sheetValues` + виджет spreadsheet |
 | [mes-defect-demo](mes-defect-demo/) | MES defect routing demo (bundle + smoke test) |
 | [mes-ogp-events](mes-ogp-events/) | UC-25 OGP event registration: wizard, journal, roll map, 1C outbox |
 

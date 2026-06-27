@@ -472,7 +472,7 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
         </>
       )}
 
-      {binding === "object-variable" && (
+      {binding === "object-variable" && widget.type !== "spreadsheet" && (
         <FormRow>
           <FieldLabel caption={t("editor.variableName")}>
             <div
@@ -513,6 +513,10 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
             </div>
           </FieldLabel>
         </FormRow>
+      )}
+
+      {widget.type === "spreadsheet" && (
+        <p className="hint widget-editor-type-hint">{t("editor.spreadsheet.dataSourceHint")}</p>
       )}
 
       {binding === "parent-catalog" && (

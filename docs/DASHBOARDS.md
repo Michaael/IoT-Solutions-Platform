@@ -316,7 +316,7 @@ View-компоненты: `apps/web-console/src/components/dashboard/widgets/`
 
 ## spreadsheet sheetConfigJson
 
-Виджет **электронная таблица** — фиксированная сетка `rows × cols` с адресацией A1. Пересчёт на клиенте (HyperFormula).
+Виджет **электронная таблица** — фиксированная сетка `rows × cols` с адресацией A1. Пересчёт на клиенте (встроенный `ispfSheetEval`).
 
 ## Электронная таблица (spreadsheet)
 
@@ -392,7 +392,7 @@ Layout задаёт роли ячеек (`label`, `input`, `formula`, `binding`)
 
 ### Формулы
 
-Поддерживается подмножество функций Excel через HyperFormula: `SUM`, `AVERAGE`, `IF`, `ROUND`, ссылки на ячейки (`A1`, `B2:B10`) и т.д.
+Поддерживается подмножество функций Excel через `ispfSheetEval`: `SUM`, `AVERAGE`, `IF`, `ROUND`, ссылки на ячейки (`A1`, `B2:B10`) и ISPF-функции.
 
 **Функции платформы ISPF** (чтение данных объектов в формуле):
 
@@ -467,6 +467,8 @@ Layout задаёт роли ячеек (`label`, `input`, `formula`, `binding`)
 **conditionalStyles**: `[{ "when": "=B2>80", "style": { "backgroundColor": "#fee" } }]` — простые условия `>`, `<` для подсветки ячеек.
 
 Lab demo: `root.platform.dashboards.lab-calculator` (`sheetMode: configured`), переменная `sheetValues` на lab device.
+
+**Эталонный bundle:** [examples/spreadsheet-demo](../examples/spreadsheet-demo/) — модель `sheet-storage-v1`, устройство `root.platform.devices.sheet-demo-01`, два дашборда (session / variable persist).
 
 Полный справочник полей `sheetConfigJson`, `dataRegion`, `conditionalStyles` — в [SPREADSHEET_WIDGET.md](SPREADSHEET_WIDGET.md).
 

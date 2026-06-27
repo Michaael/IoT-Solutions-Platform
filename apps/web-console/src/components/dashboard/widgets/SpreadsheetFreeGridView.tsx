@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { SpreadsheetWidget } from "../../../types/dashboard";
@@ -20,6 +13,17 @@ import { useSheetFormulaEngine } from "../sheet/useSheetFormulaEngine";
 import { useSheetBindings } from "../sheet/useSheetBindings";
 import { useSheetDataRegion } from "../sheet/useSheetDataRegion";
 import { useSpreadsheetPersist } from "../sheet/useSpreadsheetPersist";
+import {
+  exportXlsxWorkbook,
+  importXlsxFile,
+  listXlsxSheets,
+  type SheetXlsxSheetInfo,
+} from "../sheet/sheetXlsx";
+import {
+  buildMergeHiddenSet,
+  findMergeAt,
+  mergeRuntimeIntoCells,
+} from "../sheet/sheetRuntimeMeta";
 
 const VIRTUALIZE_ROW_THRESHOLD = 50;
 const TABLE_ROW_ESTIMATE_PX = 36;
@@ -44,11 +48,18 @@ export default function SpreadsheetFreeGridView({
 
   const {
     sheetConfig,
+    sheetMode,
     localContents,
     setLocalContents,
     schedulePersist,
+    persistNow,
+    registerPersistSnapshot,
+    localMeta,
+    setLocalMeta,
+    hasPersistedContents,
     isLoading,
     canEdit: widgetEditable,
+    persistWarning,
   } = useSpreadsheetPersist(widget, objectPath, refreshIntervalMs);
 
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
@@ -56,16 +67,43 @@ export default function SpreadsheetFreeGridView({
   const [formulaBarEditing, setFormulaBarEditing] = useState(false);
   const [inlineCell, setInlineCell] = useState<string | null>(null);
   const [inlineDraft, setInlineDraft] = useState("");
+  const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [sheetPicker, setSheetPicker] = useState<{
+    file: File;
+    sheets: SheetXlsxSheetInfo[];
+    selectedIndex: number;
+  } | null>(null);
+  const xlsxInputRef = useRef<HTMLInputElement>(null);
+
+  const effectiveConfig = useMemo(() => {
+    const rows = localMeta?.rows ?? sheetConfig.rows;
+    const cols = localMeta?.cols ?? sheetConfig.cols;
+    const hasRuntimeFreeGrid = sheetMode === "free" && (Boolean(localMeta) || hasPersistedContents);
+    const baseCells = hasRuntimeFreeGrid ? {} : sheetConfig.cells;
+    return {
+      ...sheetConfig,
+      rows,
+      cols,
+      cells: mergeRuntimeIntoCells(baseCells, localMeta?.cellStyles),
+      mergedCells: localMeta?.mergedCells ?? sheetConfig.mergedCells,
+    };
+  }, [sheetConfig, sheetMode, localMeta, hasPersistedContents]);
+
+  const mergeHidden = useMemo(
+    () => buildMergeHiddenSet(effectiveConfig.mergedCells),
+    [effectiveConfig.mergedCells]
+  );
 
   const { externalByAddr, ispfContext } = useSheetBindings(
-    sheetConfig,
+    effectiveConfig,
     objectPath,
-    refreshIntervalMs
+    refreshIntervalMs,
+    localContents
   );
   const { regionContents } = useSheetDataRegion(sheetConfig, objectPath, refreshIntervalMs);
 
   const formula = useSheetFormulaEngine({
-    config: sheetConfig,
+    config: effectiveConfig,
     mode: "free",
     contents: localContents,
     externalByAddr,
@@ -93,6 +131,42 @@ export default function SpreadsheetFreeGridView({
   }, [inlineCell]);
 
   const canEdit = !editMode && widgetEditable;
+
+  const formulaRef = useRef(formula);
+  formulaRef.current = formula;
+  const localMetaRef = useRef(localMeta);
+  localMetaRef.current = localMeta;
+  const inlineCellRef = useRef(inlineCell);
+  inlineCellRef.current = inlineCell;
+  const inlineDraftRef = useRef(inlineDraft);
+  inlineDraftRef.current = inlineDraft;
+  const formulaBarEditingRef = useRef(formulaBarEditing);
+  formulaBarEditingRef.current = formulaBarEditing;
+  const formulaBarDraftRef = useRef(formulaBarDraft);
+  formulaBarDraftRef.current = formulaBarDraft;
+  const selectedCellRef = useRef(selectedCell);
+  selectedCellRef.current = selectedCell;
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
+
+  useEffect(
+    () =>
+      registerPersistSnapshot(() => {
+        const engine = formulaRef.current;
+        if (canEditRef.current) {
+          if (inlineCellRef.current) {
+            engine.setCellContent(inlineCellRef.current, inlineDraftRef.current);
+          } else if (formulaBarEditingRef.current && selectedCellRef.current) {
+            engine.setCellContent(selectedCellRef.current, formulaBarDraftRef.current);
+          }
+        }
+        return {
+          contents: engine.collectCellContents(),
+          meta: localMetaRef.current,
+        };
+      }),
+    [registerPersistSnapshot]
+  );
 
   const commitCell = useCallback(
     (address: string, raw: string) => {
@@ -168,15 +242,15 @@ export default function SpreadsheetFreeGridView({
       }
       const next = moveCellAddress(
         selectedCell,
-        sheetConfig.rows,
-        sheetConfig.cols,
+        effectiveConfig.rows,
+        effectiveConfig.cols,
         direction
       );
       if (next) {
         selectCell(next);
       }
     },
-    [selectedCell, sheetConfig.rows, sheetConfig.cols, selectCell]
+    [selectedCell, effectiveConfig.rows, effectiveConfig.cols, selectCell]
   );
 
   const exportCsv = useCallback(() => {
@@ -189,6 +263,90 @@ export default function SpreadsheetFreeGridView({
     link.click();
     URL.revokeObjectURL(url);
   }, [formula, widget.title]);
+
+  const exportXlsx = useCallback(async () => {
+    try {
+      const blob = await exportXlsxWorkbook({
+        rows: effectiveConfig.rows,
+        cols: effectiveConfig.cols,
+        getCellEditContent: (addr) => formula.getCellEditContent(addr),
+        getCellValue: (addr) => formula.getCellValue(addr),
+        sheetName: widget.title || "sheet",
+        meta: localMeta ?? undefined,
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${widget.title || "sheet"}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setImportNotice(t("spreadsheet.importXlsxError"));
+    }
+  }, [effectiveConfig.cols, effectiveConfig.rows, formula, localMeta, t, widget.title]);
+
+  const applyXlsxImport = useCallback(
+    async (file: File, sheetIndex: number) => {
+      const result = await importXlsxFile(file, sheetIndex);
+      setLocalMeta(result.meta);
+      setLocalContents(result.contents);
+      persistNow(result.contents, result.meta);
+      setSelectedCell("A1");
+      if (result.warnings.length > 0) {
+        setImportNotice(
+          t("spreadsheet.importXlsxWarnings", {
+            count: result.warnings.length,
+            details: result.warnings.slice(0, 5).join("; "),
+          })
+        );
+      } else {
+        setImportNotice(t("spreadsheet.importXlsxSuccess", { name: result.sheetName }));
+      }
+    },
+    [persistNow, setLocalContents, setLocalMeta, t]
+  );
+
+  const onXlsxFileSelected = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file || !canEdit) {
+        return;
+      }
+      try {
+        const sheets = await listXlsxSheets(file);
+        if (sheets.length > 1) {
+          setSheetPicker({ file, sheets, selectedIndex: 0 });
+          return;
+        }
+        await applyXlsxImport(file, 0);
+      } catch {
+        setImportNotice(t("spreadsheet.importXlsxError"));
+      }
+    },
+    [applyXlsxImport, canEdit, t]
+  );
+
+  const confirmSheetImport = useCallback(async () => {
+    if (!sheetPicker) {
+      return;
+    }
+    try {
+      await applyXlsxImport(sheetPicker.file, sheetPicker.selectedIndex);
+    } catch {
+      setImportNotice(t("spreadsheet.importXlsxError"));
+    } finally {
+      setSheetPicker(null);
+    }
+  }, [applyXlsxImport, sheetPicker, t]);
+
+  useEffect(() => {
+    if (!importNotice) {
+      return;
+    }
+    const timer = window.setTimeout(() => setImportNotice(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [importNotice]);
 
   const onContainerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (inlineCell || formulaBarEditing) {
@@ -253,13 +411,14 @@ export default function SpreadsheetFreeGridView({
   };
 
   const colLabels =
-    sheetConfig.colLabels ??
-    Array.from({ length: sheetConfig.cols }, (_, i) =>
-      rowColToA1(0, i).replace(/\d+$/, "")
-    );
+    effectiveConfig.colLabels && effectiveConfig.colLabels.length === effectiveConfig.cols
+      ? effectiveConfig.colLabels
+      : Array.from({ length: effectiveConfig.cols }, (_, i) =>
+          rowColToA1(0, i).replace(/\d+$/, "")
+        );
 
   const getDisplayText = (address: string): string => {
-    const seed = sheetConfig.cells[address];
+    const seed = effectiveConfig.cells[address];
     if (seed?.kind === "label") {
       return seed.text ?? "";
     }
@@ -268,8 +427,8 @@ export default function SpreadsheetFreeGridView({
   };
 
   const visibleRows = useMemo(
-    () => Array.from({ length: sheetConfig.rows }, (_, rowIndex) => rowIndex),
-    [sheetConfig.rows]
+    () => Array.from({ length: effectiveConfig.rows }, (_, rowIndex) => rowIndex),
+    [effectiveConfig.rows]
   );
 
   const shouldVirtualize = visibleRows.length >= VIRTUALIZE_ROW_THRESHOLD;
@@ -290,17 +449,24 @@ export default function SpreadsheetFreeGridView({
 
   const renderCell = (rowIndex: number, colIndex: number) => {
     const address = rowColToA1(rowIndex, colIndex);
-    const seed = sheetConfig.cells[address];
+    if (mergeHidden.has(address)) {
+      return null;
+    }
+    const merge = findMergeAt(effectiveConfig.mergedCells, address);
+    const seed = effectiveConfig.cells[address];
     const isBinding = formula.isBindingCell(address);
     const isSelected = selectedCell === address;
     const isInline = inlineCell === address;
     const cellStyle = resolveConditionalStyle(
-      sheetConfig.conditionalStyles,
+      effectiveConfig.conditionalStyles,
       (addr) => formula.getCellValue(addr),
-      sheetConfig.cells,
+      effectiveConfig.cells,
       address
     );
     const mergedStyle = { ...seed?.style, ...cellStyle };
+    const spanProps = merge
+      ? { rowSpan: merge.rowSpan, colSpan: merge.colSpan }
+      : {};
 
     if (seed?.kind === "label") {
       return (
@@ -308,6 +474,7 @@ export default function SpreadsheetFreeGridView({
           key={address}
           className={`dash-sheet-cell dash-sheet-label${isSelected ? " dash-sheet-selected" : ""}`}
           style={mergedStyle}
+          {...spanProps}
           onClick={() => selectCell(address)}
           onDoubleClick={() => startInlineEdit(address)}
         >
@@ -322,6 +489,7 @@ export default function SpreadsheetFreeGridView({
           key={address}
           className={`dash-sheet-cell dash-sheet-input dash-sheet-selected`}
           style={mergedStyle}
+          {...spanProps}
         >
           <input
             ref={inlineInputRef}
@@ -361,6 +529,7 @@ export default function SpreadsheetFreeGridView({
         key={address}
         className={`dash-sheet-cell${isBinding ? " dash-sheet-binding" : ""}${isSelected ? " dash-sheet-selected" : ""}${alignRight ? " dash-sheet-num" : ""}`}
         style={mergedStyle}
+        {...spanProps}
         onClick={() => selectCell(address)}
         onDoubleClick={() => startInlineEdit(address)}
       >
@@ -372,7 +541,7 @@ export default function SpreadsheetFreeGridView({
   const renderRow = (rowIndex: number) => (
     <tr key={rowIndex}>
       <th className="dash-sheet-row-header">{rowIndex + 1}</th>
-      {Array.from({ length: sheetConfig.cols }, (_, colIndex) => renderCell(rowIndex, colIndex))}
+      {Array.from({ length: effectiveConfig.cols }, (_, colIndex) => renderCell(rowIndex, colIndex))}
     </tr>
   );
 
@@ -450,12 +619,80 @@ export default function SpreadsheetFreeGridView({
             <button
               type="button"
               className="dash-sheet-tool-btn"
+              disabled={!canEdit}
+              onClick={() => xlsxInputRef.current?.click()}
+              title={t("spreadsheet.importXlsx")}
+            >
+              {t("spreadsheet.importXlsx")}
+            </button>
+            <button
+              type="button"
+              className="dash-sheet-tool-btn"
+              onClick={exportXlsx}
+              title={t("spreadsheet.exportXlsx")}
+            >
+              {t("spreadsheet.exportXlsx")}
+            </button>
+            <button
+              type="button"
+              className="dash-sheet-tool-btn"
               onClick={exportCsv}
               title={t("spreadsheet.exportCsv")}
             >
               {t("spreadsheet.exportCsv")}
             </button>
+            <input
+              ref={xlsxInputRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              hidden
+              onChange={onXlsxFileSelected}
+            />
           </div>
+          {sheetPicker ? (
+            <div className="dash-sheet-import-dialog" role="dialog" aria-label={t("spreadsheet.importSelectSheet")}>
+              <label className="dash-sheet-import-dialog-label" htmlFor="sheet-import-select">
+                {t("spreadsheet.importSelectSheet")}
+              </label>
+              <select
+                id="sheet-import-select"
+                className="dash-sheet-import-dialog-select"
+                value={sheetPicker.selectedIndex}
+                onChange={(e) =>
+                  setSheetPicker((prev) =>
+                    prev ? { ...prev, selectedIndex: Number.parseInt(e.target.value, 10) } : prev
+                  )
+                }
+              >
+                {sheetPicker.sheets.map((sheet) => (
+                  <option key={sheet.index} value={sheet.index}>
+                    {sheet.name}
+                  </option>
+                ))}
+              </select>
+              <div className="dash-sheet-import-dialog-actions">
+                <button type="button" className="dash-sheet-tool-btn" onClick={() => setSheetPicker(null)}>
+                  {t("common:action.cancel")}
+                </button>
+                <button type="button" className="dash-sheet-tool-btn" onClick={() => void confirmSheetImport()}>
+                  {t("spreadsheet.importConfirm")}
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {persistWarning ? (
+            <div className="dash-sheet-import-notice dash-sheet-persist-warning" role="status">
+              {t(persistWarning, {
+                name: widget.valuesVariable ?? "",
+                objectPath: objectPath || (widget.objectPath ?? ""),
+              })}
+            </div>
+          ) : null}
+          {importNotice ? (
+            <div className="dash-sheet-import-notice" role="status">
+              {importNotice}
+            </div>
+          ) : null}
           <div className="dash-sheet-formula-bar">
             <span className="dash-sheet-formula-label">{selectedCell ?? ""}</span>
             <input
@@ -511,7 +748,7 @@ export default function SpreadsheetFreeGridView({
                 {shouldVirtualize && paddingTop > 0 && (
                   <tr aria-hidden="true" className="dash-table-spacer">
                     <td
-                      colSpan={sheetConfig.cols + 1}
+                      colSpan={effectiveConfig.cols + 1}
                       style={{ height: paddingTop, padding: 0, border: 0 }}
                     />
                   </tr>
@@ -522,7 +759,7 @@ export default function SpreadsheetFreeGridView({
                 {shouldVirtualize && paddingBottom > 0 && (
                   <tr aria-hidden="true" className="dash-table-spacer">
                     <td
-                      colSpan={sheetConfig.cols + 1}
+                      colSpan={effectiveConfig.cols + 1}
                       style={{ height: paddingBottom, padding: 0, border: 0 }}
                     />
                   </tr>

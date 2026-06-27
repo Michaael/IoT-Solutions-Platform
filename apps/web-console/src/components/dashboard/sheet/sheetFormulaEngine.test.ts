@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { a1ToRowCol, rowColToA1, defaultColLabels } from "./sheetAddress";
 import { parseSheetConfig, DEFAULT_SHEET_CONFIG, FREE_SHEET_CONFIG } from "./sheetConfig";
 import { bindingCacheKey, createSheetFormulaEngine, setIspfFormulaContext } from "./sheetFormulaEngine";
-import { loadValuesFromVariable, saveValuesToVariableRecord } from "./sheetPersist";
+import { loadValuesFromVariable, loadValuesFromVariableRecord, loadMetaFromVariableRecord, saveValuesToVariableRecord, canWriteSheetValues } from "./sheetPersist";
+import { mergeLoadedContents } from "./useSpreadsheetPersist";
 
 describe("sheetAddress", () => {
   it("converts A1 and back", () => {
@@ -111,6 +112,58 @@ describe("sheetFormulaEngine", () => {
 });
 
 describe("sheetPersist", () => {
+  it("keeps imported free-grid session values authoritative", () => {
+    const loaded = mergeLoadedContents(FREE_SHEET_CONFIG, "free", { C3: "imported" }, {});
+
+    expect(loaded).toEqual({ C3: "imported" });
+  });
+
+  it("does not restore free-grid template seeds when variable meta exists without values", () => {
+    const loaded = mergeLoadedContents(
+      FREE_SHEET_CONFIG,
+      "free",
+      {},
+      {},
+      { persistMode: "variable", runtimeMeta: { rows: 12, cols: 8 } }
+    );
+
+    expect(loaded).toEqual({});
+  });
+
+  it("prefers variable record values over template seeds in free mode", () => {
+    const loaded = mergeLoadedContents(
+      FREE_SHEET_CONFIG,
+      "free",
+      {},
+      { A1: "Product", B1: "Q1" },
+      { persistMode: "variable" }
+    );
+
+    expect(loaded).toEqual({ A1: "Product", B1: "Q1" });
+  });
+
+  it("falls back to session cache in variable mode before template seeds", () => {
+    const loaded = mergeLoadedContents(
+      FREE_SHEET_CONFIG,
+      "free",
+      { A1: "Product" },
+      {},
+      { persistMode: "variable", runtimeMeta: { rows: 12, cols: 8 } }
+    );
+
+    expect(loaded).toEqual({ A1: "Product" });
+  });
+
+  it("keeps configured saved values compatible with template formulas", () => {
+    const loaded = mergeLoadedContents(DEFAULT_SHEET_CONFIG, "configured", { A2: "42" }, {});
+
+    expect(loaded.A2).toBe("42");
+
+    const engine = createSheetFormulaEngine(DEFAULT_SHEET_CONFIG, "configured", loaded);
+    expect(engine.getCellValue("B2")).toBe(84);
+    engine.destroy();
+  });
+
   it("round-trips cell values through variable record", () => {
     const loaded = loadValuesFromVariable(undefined, DEFAULT_SHEET_CONFIG, "configured");
     expect(loaded.A2).toBe("10");
@@ -118,6 +171,46 @@ describe("sheetPersist", () => {
     const saved = saveValuesToVariableRecord({ A2: "42", B2: "x" }, undefined);
     const restored = loadValuesFromVariable(saved, DEFAULT_SHEET_CONFIG, "configured");
     expect(restored.A2).toBe("42");
+  });
+
+  it("loads lab sheetValues nested RECORD_LIST shape", () => {
+    const stored = {
+      schema: {
+        name: "sheetValues",
+        fields: [
+          {
+            name: "rows",
+            type: "RECORD_LIST",
+            nestedSchema: {
+              name: "sheetCellRow",
+              fields: [
+                { name: "cell", type: "STRING" },
+                { name: "value", type: "STRING" },
+              ],
+            },
+          },
+        ],
+      },
+      rows: [{ rows: [{ cell: "A1", value: "ok" }] }],
+    };
+    expect(loadValuesFromVariableRecord(stored)).toEqual({ A1: "ok" });
+    const saved = saveValuesToVariableRecord({ A1: "10", B1: "20" }, stored);
+    expect(saved.rows).toEqual([
+      { rows: [{ cell: "A1", value: "10" }, { cell: "B1", value: "20" }] },
+    ]);
+    expect(saved.schema).toEqual(stored.schema);
+    expect(loadValuesFromVariableRecord(saved)).toEqual({ A1: "10", B1: "20" });
+  });
+
+  it("allows first write when variable value is null but writable", () => {
+    expect(canWriteSheetValues({ writable: true, value: null })).toBe(true);
+    expect(canWriteSheetValues({ writable: false, value: null })).toBe(false);
+    expect(
+      canWriteSheetValues({
+        writable: true,
+        value: { schema: { name: "x", fields: [{ name: "value", type: "STRING" }] }, rows: [] },
+      })
+    ).toBe(false);
   });
 
   it("round-trips formulas in free mode", () => {
@@ -129,5 +222,23 @@ describe("sheetPersist", () => {
     const engine = createSheetFormulaEngine(FREE_SHEET_CONFIG, "free", restored);
     expect(engine.getCellValue("B2")).toBe(20);
     engine.destroy();
+  });
+
+  it("round-trips layout meta through variable record metaJson", () => {
+    const meta = {
+      rows: 24,
+      cols: 10,
+      cellStyles: {
+        A1: { style: { backgroundColor: "#ff0000", fontWeight: "bold" as const } },
+      },
+      mergedCells: [{ anchor: "B2", rowSpan: 2, colSpan: 2 }],
+    };
+    const saved = saveValuesToVariableRecord({ A1: "title" }, undefined, meta);
+    expect(loadValuesFromVariableRecord(saved)).toEqual({ A1: "title" });
+    expect(loadMetaFromVariableRecord(saved)).toEqual(meta);
+    expect(saved.schema.fields.some((field) => field.name === "metaJson")).toBe(true);
+
+    const resaved = saveValuesToVariableRecord({ A1: "updated" }, saved);
+    expect(loadMetaFromVariableRecord(resaved)).toEqual(meta);
   });
 });

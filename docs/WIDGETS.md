@@ -328,7 +328,7 @@
 
 ### spreadsheet — Электронная таблица
 
-**Назначение:** сетка A1 с формулами HyperFormula.
+**Назначение:** сетка A1 с формулами (встроенный движок ISPF).
 
 **Полное описание:** [SPREADSHEET_WIDGET.md](SPREADSHEET_WIDGET.md). Операторский сценарий — [OPERATOR_GUIDE.md](OPERATOR_GUIDE.md).
 

@@ -119,7 +119,7 @@ public final class AgentWidgetPropertiesGuide {
                 
                 **timer** — mode: countdown|elapsed; durationSeconds; variableName (для elapsed).
                 
-                **spreadsheet** — сетка A1 с формулами (HyperFormula); sheetMode: free|configured;
+                **spreadsheet** — сетка A1 с формулами (ispfSheetEval); sheetMode: free|configured;
                 sheetConfigJson задаёт rows/cols/cells; persistMode: session|variable; valuesVariable при variable;
                 sessionKey; editable. free: любая ячейка = значение или =формула; configured: kind label|input|formula|readonly|binding.
                 binding + ISPREF/ISPSUM/ISPHIST для данных платформы.

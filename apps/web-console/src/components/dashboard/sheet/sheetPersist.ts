@@ -1,6 +1,80 @@
 import type { DataRecord } from "../../../types";
 import type { SheetConfig, SheetMode } from "../../../types/dashboard";
 import type { SheetValues } from "./sheetFormulaEngine";
+import { parseSheetRuntimeMeta, type SheetRuntimeMeta } from "./sheetRuntimeMeta";
+
+type SheetCellRow = { cell?: unknown; value?: unknown };
+
+export const SHEET_META_JSON_FIELD = "metaJson";
+
+/** Lab model stores cells under sheetValues.rows (RECORD_LIST) → [{ rows: [{ cell, value }] }]. */
+export function extractSheetCellRows(record: DataRecord | undefined): SheetCellRow[] {
+  if (!record?.rows?.length) {
+    return [];
+  }
+  const first = record.rows[0];
+  const nested = first?.rows;
+  if (Array.isArray(nested)) {
+    return nested as SheetCellRow[];
+  }
+  // Legacy flat rows: [{ cell, value }]
+  if (first && ("cell" in first || "value" in first)) {
+    return record.rows as SheetCellRow[];
+  }
+  return [];
+}
+
+export function sheetValuesRecordSchema(
+  existing: DataRecord | undefined,
+  includeMetaJson = false
+): DataRecord["schema"] {
+  if (existing?.schema) {
+    const fields = [...existing.schema.fields];
+    if (includeMetaJson && !fields.some((field) => field.name === SHEET_META_JSON_FIELD)) {
+      fields.push({ name: SHEET_META_JSON_FIELD, type: "STRING" });
+    }
+    return { ...existing.schema, fields };
+  }
+  const fields: DataRecord["schema"]["fields"] = [{ name: "rows", type: "RECORD_LIST" }];
+  if (includeMetaJson) {
+    fields.push({ name: SHEET_META_JSON_FIELD, type: "STRING" });
+  }
+  return {
+    name: "sheetValues",
+    fields,
+  };
+}
+
+export function serializeSheetMeta(meta: SheetRuntimeMeta | null | undefined): string | undefined {
+  if (!meta) {
+    return undefined;
+  }
+  const json = JSON.stringify(meta);
+  return parseSheetRuntimeMeta(JSON.parse(json)) ? json : undefined;
+}
+
+export function loadMetaFromVariableRecord(record: DataRecord | undefined): SheetRuntimeMeta | null {
+  const raw = record?.rows?.[0]?.[SHEET_META_JSON_FIELD];
+  if (typeof raw !== "string" || !raw.trim()) {
+    return null;
+  }
+  try {
+    return parseSheetRuntimeMeta(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function loadValuesFromVariableRecord(record: DataRecord | undefined): SheetValues {
+  const result: SheetValues = {};
+  for (const row of extractSheetCellRows(record)) {
+    const cell = String(row.cell ?? "").toUpperCase();
+    if (cell) {
+      result[cell] = String(row.value ?? "");
+    }
+  }
+  return result;
+}
 
 export function loadValuesFromSession(
   params: Record<string, unknown>,
@@ -39,17 +113,11 @@ export function loadCellContents(
   mode: SheetMode
 ): SheetValues {
   const seeds = mode === "free" ? seedsFromConfig(config) : defaultsFromConfig(config);
-  if (!record?.rows?.length) {
+  const stored = loadValuesFromVariableRecord(record);
+  if (Object.keys(stored).length === 0) {
     return seeds;
   }
-  const result = { ...seeds };
-  for (const row of record.rows) {
-    const cell = String(row.cell ?? "").toUpperCase();
-    if (cell) {
-      result[cell] = String(row.value ?? "");
-    }
-  }
-  return result;
+  return { ...seeds, ...stored };
 }
 
 function defaultsFromConfig(config: SheetConfig): SheetValues {
@@ -68,16 +136,40 @@ export function saveValuesToSessionPatch(values: SheetValues): Record<string, st
 
 export function saveValuesToVariableRecord(
   values: SheetValues,
-  existing: DataRecord | undefined
+  existing: DataRecord | undefined,
+  meta?: SheetRuntimeMeta | null
 ): DataRecord {
-  const schema = existing?.schema ?? {
-    name: "sheetValues",
-    fields: [{ name: "rows", type: "RECORD_LIST" as const }],
-  };
-  const rows = Object.entries(values)
+  const metaJson = serializeSheetMeta(meta);
+  const existingMetaJson = existing?.rows?.[0]?.[SHEET_META_JSON_FIELD];
+  const includeMetaJson = metaJson !== undefined || typeof existingMetaJson === "string";
+  const schema = sheetValuesRecordSchema(existing, includeMetaJson);
+  const cellRows = Object.entries(values)
     .filter(([, value]) => value.trim() !== "")
     .map(([cell, value]) => ({ cell, value }));
-  return { schema, rows };
+  const row: Record<string, unknown> = { rows: cellRows };
+  if (metaJson !== undefined) {
+    row[SHEET_META_JSON_FIELD] = metaJson;
+  } else if (typeof existingMetaJson === "string") {
+    row[SHEET_META_JSON_FIELD] = existingMetaJson;
+  }
+  return { schema, rows: [row] };
+}
+
+export function hasSheetValuesSchema(record: DataRecord | undefined): boolean {
+  const fields = record?.schema?.fields;
+  return Boolean(fields?.some((field) => field.name === "rows"));
+}
+
+export function canWriteSheetValues(
+  variable: { value?: DataRecord | null; writable?: boolean } | undefined
+): boolean {
+  if (!variable?.writable) {
+    return false;
+  }
+  if (!variable.value) {
+    return true;
+  }
+  return hasSheetValuesSchema(variable.value);
 }
 
 export function loadValuesFromVariable(

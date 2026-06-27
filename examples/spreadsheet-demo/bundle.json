@@ -1,0 +1,121 @@
+{
+  "version": "1.0.0",
+  "displayName": "Spreadsheet storage demo",
+  "tablePrefix": "",
+  "schemaName": "app_spreadsheet_demo",
+  "metadata": {
+    "purpose": "Minimal reference: device with sheetValues + dashboard spreadsheet widget"
+  },
+  "models": [
+    {
+      "name": "sheet-storage-v1",
+      "description": "Device that stores spreadsheet cell values in sheetValues (RECORD_LIST)",
+      "type": "RELATIVE",
+      "targetObjectType": "DEVICE",
+      "variables": [
+        {
+          "name": "status",
+          "description": "Device status",
+          "group": "status",
+          "schema": {
+            "name": "deviceStatus",
+            "fields": [
+              { "name": "online", "type": "BOOLEAN" },
+              { "name": "lastSeen", "type": "STRING" }
+            ]
+          },
+          "readable": true,
+          "writable": false,
+          "defaultValue": {
+            "schema": {
+              "name": "deviceStatus",
+              "fields": [
+                { "name": "online", "type": "BOOLEAN" },
+                { "name": "lastSeen", "type": "STRING" }
+              ]
+            },
+            "rows": [{ "online": true, "lastSeen": "init" }]
+          }
+        },
+        {
+          "name": "sheetValues",
+          "description": "Spreadsheet widget persisted cells: [{ cell, value }]",
+          "group": "config",
+          "schema": {
+            "name": "sheetValues",
+            "fields": [
+              {
+                "name": "rows",
+                "type": "RECORD_LIST",
+                "nestedSchema": {
+                  "name": "sheetCellRow",
+                  "fields": [
+                    { "name": "cell", "type": "STRING" },
+                    { "name": "value", "type": "STRING" }
+                  ]
+                }
+              }
+            ]
+          },
+          "readable": true,
+          "writable": true,
+          "defaultValue": {
+            "schema": {
+              "name": "sheetValues",
+              "fields": [
+                {
+                  "name": "rows",
+                  "type": "RECORD_LIST",
+                  "nestedSchema": {
+                    "name": "sheetCellRow",
+                    "fields": [
+                      { "name": "cell", "type": "STRING" },
+                      { "name": "value", "type": "STRING" }
+                    ]
+                  }
+                }
+              ]
+            },
+            "rows": [{ "rows": [] }]
+          }
+        }
+      ],
+      "events": [],
+      "functions": [],
+      "bindings": [],
+      "parameters": {}
+    }
+  ],
+  "objects": [
+    {
+      "parentPath": "root.platform.devices",
+      "name": "sheet-demo-01",
+      "type": "DEVICE",
+      "displayName": "Spreadsheet demo",
+      "templateId": "sheet-storage-v1"
+    }
+  ],
+  "dashboards": [
+    {
+      "path": "root.platform.dashboards.sheet-demo",
+      "title": "Spreadsheet demo",
+      "refreshIntervalMs": 5000,
+      "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"sheet-free\",\"type\":\"spreadsheet\",\"title\":\"Таблица (free, variable persist)\",\"x\":0,\"y\":0,\"w\":10,\"h\":8,\"objectPath\":\"root.platform.devices.sheet-demo-01\",\"sheetMode\":\"free\",\"persistMode\":\"variable\",\"valuesVariable\":\"sheetValues\",\"editable\":true,\"sheetConfigJson\":\"{\\\"rows\\\":12,\\\"cols\\\":8,\\\"cells\\\":{}}\"}]}"
+    },
+    {
+      "path": "root.platform.dashboards.sheet-demo-session",
+      "title": "Spreadsheet demo (session only)",
+      "refreshIntervalMs": 5000,
+      "layoutJson": "{\"columns\":12,\"rowHeight\":72,\"widgets\":[{\"id\":\"sheet-session\",\"type\":\"spreadsheet\",\"title\":\"Таблица (session persist)\",\"x\":0,\"y\":0,\"w\":10,\"h\":8,\"objectPath\":\"root.platform.devices.sheet-demo-01\",\"sheetMode\":\"free\",\"persistMode\":\"session\",\"editable\":true,\"sheetConfigJson\":\"{\\\"rows\\\":12,\\\"cols\\\":8,\\\"cells\\\":{}}\"}]}"
+    }
+  ],
+  "operatorManifest": {
+    "appId": "sheet-demo",
+    "title": "Spreadsheet demo",
+    "defaultDashboard": "root.platform.dashboards.sheet-demo",
+    "dashboards": [
+      { "path": "root.platform.dashboards.sheet-demo", "title": "Variable persist" },
+      { "path": "root.platform.dashboards.sheet-demo-session", "title": "Session persist" }
+    ]
+  }
+}

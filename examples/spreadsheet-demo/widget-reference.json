@@ -1,0 +1,72 @@
+{
+  "_comment": "Human-readable reference. Copy fields into Dashboard Builder or layout JSON.",
+  "devicePath": "root.platform.devices.sheet-demo-01",
+  "modelVariable": {
+    "name": "sheetValues",
+    "schema": "RECORD_LIST of { cell: string, value: string }",
+    "exampleStoredValue": {
+      "rows": [
+        { "cell": "A1", "value": "10" },
+        { "cell": "B1", "value": "=A1*2" },
+        { "cell": "C3", "value": "Hello" }
+      ]
+    }
+  },
+  "widgetVariablePersist": {
+    "id": "sheet-free",
+    "type": "spreadsheet",
+    "title": "Таблица",
+    "x": 0,
+    "y": 0,
+    "w": 10,
+    "h": 8,
+    "objectPath": "root.platform.devices.sheet-demo-01",
+    "sheetMode": "free",
+    "persistMode": "variable",
+    "valuesVariable": "sheetValues",
+    "editable": true,
+    "sheetConfigJson": "{\"rows\":12,\"cols\":8,\"cells\":{}}"
+  },
+  "widgetSessionPersist": {
+    "id": "sheet-session",
+    "type": "spreadsheet",
+    "title": "Таблица (черновик)",
+    "objectPath": "root.platform.devices.sheet-demo-01",
+    "sheetMode": "free",
+    "persistMode": "session",
+    "sessionKey": "sheet:sheet-session",
+    "editable": true,
+    "sheetConfigJson": "{\"rows\":12,\"cols\":8,\"cells\":{}}"
+  },
+  "widgetConfiguredTemplate": {
+    "id": "calc-sheet",
+    "type": "spreadsheet",
+    "title": "Калькулятор (шаблон)",
+    "objectPath": "root.platform.devices.sheet-demo-01",
+    "sheetMode": "configured",
+    "persistMode": "variable",
+    "valuesVariable": "sheetValues",
+    "editable": true,
+    "sheetConfigJson": {
+      "rows": 6,
+      "cols": 4,
+      "frozenRows": 1,
+      "cells": {
+        "A1": { "kind": "label", "text": "A" },
+        "B1": { "kind": "label", "text": "B" },
+        "C1": { "kind": "label", "text": "Sum" },
+        "A2": { "kind": "input", "default": "10" },
+        "B2": { "kind": "input", "default": "5" },
+        "C2": { "kind": "formula", "expr": "=A2+B2" }
+      }
+    }
+  },
+  "editorChecklist": {
+    "objectPath": "Full path to device, e.g. root.platform.devices.sheet-demo-01",
+    "selectionKey": "Leave empty if object is fixed",
+    "contextPathKey": "Name of session param key, NOT an object path",
+    "modelHintPath": "Optional — only helps variable dropdown in editor",
+    "valuesVariable": "sheetValues — in section «Таблица», NOT «Переменная» in data source",
+    "persistMode": "variable needs WRITE on object; session works without it"
+  }
+}

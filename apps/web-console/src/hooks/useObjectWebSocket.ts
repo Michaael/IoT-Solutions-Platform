@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getStoredSession } from "../auth/session";
+import { SESSION_INVALID_EVENT, SESSION_UPDATED_EVENT } from "../auth/validateSession";
 import { isFederatedCatalogPath } from "../utils/federationPath";
 import { refreshWorkQueue } from "./workQueueCache";
 
@@ -64,10 +65,24 @@ export function sendPresence(path: string, username: string, mode: "view" | "edi
   activeSocket.send(JSON.stringify({ type: "presence", path, username, mode }));
 }
 
-export function useObjectWebSocket() {
+export function useObjectWebSocket(enabled = true) {
   const queryClient = useQueryClient();
+  const [authToken, setAuthToken] = useState(() => getStoredSession()?.token ?? "");
 
   useEffect(() => {
+    const syncToken = () => setAuthToken(getStoredSession()?.token ?? "");
+    window.addEventListener(SESSION_UPDATED_EVENT, syncToken);
+    window.addEventListener(SESSION_INVALID_EVENT, syncToken);
+    return () => {
+      window.removeEventListener(SESSION_UPDATED_EVENT, syncToken);
+      window.removeEventListener(SESSION_INVALID_EVENT, syncToken);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || !authToken) {
+      return;
+    }
     let active = true;
     let socket: WebSocket | null = null;
     let retryTimer: number | undefined;
@@ -154,7 +169,7 @@ export function useObjectWebSocket() {
       }
       socket?.close();
     };
-  }, [queryClient]);
+  }, [queryClient, enabled, authToken]);
 }
 
 /** Subscribe WebSocket to a federated object/dashboard path for background refresh. */

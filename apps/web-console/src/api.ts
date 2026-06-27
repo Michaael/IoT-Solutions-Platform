@@ -13,20 +13,65 @@ import type {
 } from "./types";
 import type { DashboardView } from "./types/dashboard";
 import type { WorkflowLifecycleStatus, WorkflowView } from "./types/workflow";
-import { getAuthHeaders } from "./auth/session";
+import { getAuthHeaders, getStoredSession } from "./auth/session";
 import { parseApiError } from "./utils/parseApiError";
+import { invalidateStoredSession } from "./auth/validateSession";
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+let authFailureCheck: Promise<void> | null = null;
+
+async function handlePossibleAuthFailure(status: number): Promise<void> {
+  if (status !== 401 && status !== 403) {
+    return;
+  }
+  const token = getStoredSession()?.token;
+  if (!token) {
+    return;
+  }
+  if (authFailureCheck) {
+    await authFailureCheck;
+    return;
+  }
+  authFailureCheck = (async () => {
+    try {
+      const response = await fetch("/api/v1/auth/me", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        invalidateStoredSession();
+        return;
+      }
+      const me = (await response.json()) as { authenticated?: boolean };
+      if (!me.authenticated) {
+        invalidateStoredSession();
+      }
+    } catch {
+      invalidateStoredSession();
+    } finally {
+      authFailureCheck = null;
+    }
+  })();
+  await authFailureCheck;
+}
+
+type RequestOptions = RequestInit & { authToken?: string };
+
+async function request<T>(url: string, init?: RequestOptions): Promise<T> {
+  const { authToken, headers: extraHeaders, ...fetchInit } = init ?? {};
+  const authHeaders = authToken?.trim()
+    ? { Authorization: `Bearer ${authToken.trim()}` }
+    : getAuthHeaders();
   const response = await fetch(url, {
+    ...fetchInit,
     cache: "no-store",
     headers: {
       "Content-Type": "application/json",
-      ...getAuthHeaders(),
-      ...init?.headers,
+      ...authHeaders,
+      ...(extraHeaders ?? {}),
     },
-    ...init,
   });
   if (!response.ok) {
+    await handlePossibleAuthFailure(response.status);
     const text = await response.text();
     let message = parseApiError(text, `Request failed: ${response.status}`);
     try {
@@ -48,6 +93,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 export interface ObjectWriteOptions {
   revision?: number;
   force?: boolean;
+  authToken?: string;
 }
 
 function writeHeaders(options?: ObjectWriteOptions): Record<string, string> {
@@ -304,6 +350,7 @@ export function setVariable(
     method: "PUT",
     headers: writeHeaders(options),
     body: JSON.stringify(value),
+    authToken: options?.authToken,
   });
 }
 

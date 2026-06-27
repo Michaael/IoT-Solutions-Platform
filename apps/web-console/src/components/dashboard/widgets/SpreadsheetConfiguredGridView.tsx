@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { SpreadsheetWidget } from "../../../types/dashboard";
@@ -37,8 +37,10 @@ export default function SpreadsheetConfiguredGridView({
     localContents,
     setLocalContents,
     schedulePersist,
+    registerPersistSnapshot,
     isLoading,
     canEdit: widgetEditable,
+    persistWarning,
   } = useSpreadsheetPersist(widget, objectPath, refreshIntervalMs);
 
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
@@ -48,7 +50,8 @@ export default function SpreadsheetConfiguredGridView({
   const { externalByAddr, ispfContext } = useSheetBindings(
     sheetConfig,
     objectPath,
-    refreshIntervalMs
+    refreshIntervalMs,
+    localContents
   );
 
   const formula = useSheetFormulaEngine({
@@ -58,6 +61,18 @@ export default function SpreadsheetConfiguredGridView({
     externalByAddr,
     ispfContext,
   });
+
+  const formulaRef = useRef(formula);
+  formulaRef.current = formula;
+
+  useEffect(
+    () =>
+      registerPersistSnapshot(() => ({
+        contents: formulaRef.current.collectCellContents(),
+        meta: null,
+      })),
+    [registerPersistSnapshot]
+  );
 
   const handleInputBlur = (address: string, raw: string) => {
     const cell = sheetConfig.cells[address];
@@ -269,6 +284,14 @@ export default function SpreadsheetConfiguredGridView({
         <p className="hint">{t("common:action.loading")}</p>
       ) : (
         <>
+          {persistWarning ? (
+            <div className="dash-sheet-import-notice dash-sheet-persist-warning" role="status">
+              {t(persistWarning, {
+                name: widget.valuesVariable ?? "",
+                objectPath: objectPath || (widget.objectPath ?? ""),
+              })}
+            </div>
+          ) : null}
           <div className="dash-sheet-formula-bar">
             <span className="dash-sheet-formula-label">{selectedCell ?? ""}</span>
             <input

@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -91,6 +92,55 @@ class OperatorAccessTest {
                                   "actionType": "RUN_WORKFLOW",
                                   "actionTarget": "root.platform.workflows.demo-alarm-handler",
                                   "enabled": true
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "operator")
+    void operatorCanPutWritableVariableOnOpenObject() throws Exception {
+        mockMvc.perform(put("/api/v1/objects/by-path/variables")
+                        .param("path", "root.platform.devices.demo-sensor-01")
+                        .param("name", "temperature")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "schema": {
+                                    "name": "doubleValue",
+                                    "fields": [{"name": "value", "type": "DOUBLE"}]
+                                  },
+                                  "rows": [{"value": 21.5}]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("temperature"));
+    }
+
+    @Test
+    @WithMockUser(roles = "operator")
+    void operatorCannotPutVariableOnAclProtectedLabDevice() throws Exception {
+        mockMvc.perform(put("/api/v1/objects/by-path/variables")
+                        .param("path", "root.platform.devices.lab-userA-01")
+                        .param("name", "sheetValues")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "schema": {
+                                    "name": "sheetValues",
+                                    "fields": [{
+                                      "name": "rows",
+                                      "type": "RECORD_LIST",
+                                      "nestedSchema": {
+                                        "name": "sheetCellRow",
+                                        "fields": [
+                                          {"name": "cell", "type": "STRING"},
+                                          {"name": "value", "type": "STRING"}
+                                        ]
+                                      }
+                                    }]
+                                  },
+                                  "rows": [{"rows": [{"cell": "A1", "value": "1"}]}]
                                 }
                                 """))
                 .andExpect(status().isForbidden());

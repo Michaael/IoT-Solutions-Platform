@@ -57,6 +57,9 @@ export function parseSheetConfig(raw?: string): SheetConfig | undefined {
   const conditionalStyles = Array.isArray(obj.conditionalStyles)
     ? (obj.conditionalStyles as SheetConfig["conditionalStyles"])
     : undefined;
+  const mergedCells = Array.isArray(obj.mergedCells)
+    ? (obj.mergedCells as SheetConfig["mergedCells"])
+    : undefined;
   return {
     rows: Math.max(1, Math.min(500, obj.rows)),
     cols: Math.max(1, Math.min(52, obj.cols)),
@@ -69,6 +72,7 @@ export function parseSheetConfig(raw?: string): SheetConfig | undefined {
     columnFilters,
     dataRegion,
     conditionalStyles,
+    mergedCells,
   };
 }
 

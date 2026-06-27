@@ -14,7 +14,10 @@ export interface AuthSession {
 
 const SESSION_KEY = "ispf-auth-session";
 
-export function getStoredSession(): AuthSession | null {
+/** In-memory copy — stays in sync with localStorage (avoids race after clear). */
+let cachedSession: AuthSession | null | undefined;
+
+function readSessionFromStorage(): AuthSession | null {
   const raw = localStorage.getItem(SESSION_KEY);
   if (!raw) {
     return null;
@@ -26,11 +29,22 @@ export function getStoredSession(): AuthSession | null {
   }
 }
 
+export function getStoredSession(): AuthSession | null {
+  if (cachedSession !== undefined) {
+    return cachedSession;
+  }
+  cachedSession = readSessionFromStorage();
+  return cachedSession;
+}
+
 export function setStoredSession(session: AuthSession): void {
+  cachedSession = session;
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  window.dispatchEvent(new Event("ispf-session-updated"));
 }
 
 export function clearStoredSession(): void {
+  cachedSession = null;
   localStorage.removeItem(SESSION_KEY);
 }
 

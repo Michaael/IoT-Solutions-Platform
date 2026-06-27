@@ -43,6 +43,11 @@ export function useSheetFormulaEngine({
   ispfContext,
 }: UseSheetFormulaEngineOptions): UseSheetFormulaEngineResult {
   const engineRef = useRef<SheetFormulaEngine | null>(null);
+  const engineInputsRef = useRef<{
+    configKey: string;
+    contentsKey: string;
+    mode: SheetMode;
+  } | null>(null);
   const [revision, setRevision] = useState(0);
   const contentsKey = useMemo(() => JSON.stringify(contents), [contents]);
   const externalKey = useMemo(
@@ -50,22 +55,58 @@ export function useSheetFormulaEngine({
     [externalByAddr]
   );
   const configKey = useMemo(() => JSON.stringify(config), [config]);
+  const ispfContextKey = useMemo(
+    () =>
+      JSON.stringify(
+        ispfContext
+          ? [
+              [...ispfContext.bindingValues.entries()],
+              [...ispfContext.tableColumnSums.entries()],
+              [...ispfContext.histValues.entries()],
+            ]
+          : null
+      ),
+    [ispfContext]
+  );
 
-  useEffect(() => {
-    if (ispfContext) {
-      setIspfFormulaContext(ispfContext);
-    }
-  }, [ispfContext]);
+  if (ispfContext) {
+    setIspfFormulaContext(ispfContext);
+  }
 
-  useEffect(() => {
+  const engineContentsKey = engineRef.current
+    ? JSON.stringify(engineRef.current.collectCellContents())
+    : null;
+  const previousInputs = engineInputsRef.current;
+  const shouldRecreateEngine =
+    !engineRef.current ||
+    !previousInputs ||
+    previousInputs.configKey !== configKey ||
+    previousInputs.mode !== mode ||
+    (previousInputs.contentsKey !== contentsKey && engineContentsKey !== contentsKey);
+
+  if (shouldRecreateEngine) {
     engineRef.current?.destroy();
     engineRef.current = createSheetFormulaEngine(config, mode, contents, externalByAddr);
-    setRevision((n) => n + 1);
+    engineInputsRef.current = { configKey, contentsKey, mode };
+  } else if (previousInputs?.contentsKey !== contentsKey) {
+    engineInputsRef.current = { configKey, contentsKey, mode };
+  }
+
+  useEffect(() => {
     return () => {
       engineRef.current?.destroy();
       engineRef.current = null;
     };
-  }, [configKey, contentsKey, externalKey, mode]);
+  }, []);
+
+  useEffect(() => {
+    if (!ispfContext) {
+      return;
+    }
+    setIspfFormulaContext(ispfContext);
+    engineRef.current?.refreshComputed();
+    setRevision((n) => n + 1);
+  }, [ispfContextKey, ispfContext]);
 
   useEffect(() => {
     if (!engineRef.current || !externalByAddr) {

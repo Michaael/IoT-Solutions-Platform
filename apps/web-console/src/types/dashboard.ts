@@ -531,6 +531,13 @@ export interface SheetCellStyle {
   color?: string;
   backgroundColor?: string;
   fontWeight?: string;
+  textAlign?: "left" | "center" | "right";
+}
+
+export interface SheetMergeRange {
+  anchor: string;
+  rowSpan: number;
+  colSpan: number;
 }
 
 export interface SheetCellValidation {
@@ -582,6 +589,7 @@ export interface SheetConfig {
   columnFilters?: SheetColumnFilter[];
   dataRegion?: SheetDataRegion;
   conditionalStyles?: SheetConditionalStyle[];
+  mergedCells?: SheetMergeRange[];
 }
 
 export type SheetMode = "free" | "configured";

@@ -72,6 +72,7 @@ tasks.named<Test>("test") {
     val packsPath = driverPacksDir.get().asFile.absolutePath
     environment("ISPF_DRIVER_PACKS_DIR", packsPath)
     systemProperty("ISPF_DRIVER_PACKS_DIR", packsPath)
+    maxHeapSize = "2g"
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {

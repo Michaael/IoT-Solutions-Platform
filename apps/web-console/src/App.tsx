@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { fetchPlatformInfo, reorderObjectChildren } from "./api";
 import { logout } from "./auth/login";
 import { getPrimaryRole, getStoredSession, isAdminSession, setStoredSession, type AuthSession } from "./auth/session";
+import { SESSION_INVALID_EVENT, validateStoredSession } from "./auth/validateSession";
 import {
   clearOidcCallbackParams,
   completeOidcLogin,
@@ -107,6 +108,9 @@ function useAppMode(session: AuthSession | null): ["admin" | "operator", (mode: 
 export default function App() {
   const { t } = useTranslation(["shell", "common", "explorer"]);
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession());
+  const [authBootstrapping, setAuthBootstrapping] = useState(
+    () => Boolean(getStoredSession()?.token)
+  );
   const [appMode, setAppMode] = useAppMode(session);
   const queryClient = useQueryClient();
   const [workspaceTab, setWorkspaceTab] = useState<"explorer" | string>("explorer");
@@ -157,6 +161,32 @@ export default function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    if (!getStoredSession()?.token) {
+      setAuthBootstrapping(false);
+      return;
+    }
+    let cancelled = false;
+    void validateStoredSession().then((valid) => {
+      if (cancelled) {
+        return;
+      }
+      if (!valid) {
+        setSession(null);
+      }
+      setAuthBootstrapping(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- validate stored token once on load
+
+  useEffect(() => {
+    const onSessionInvalid = () => setSession(null);
+    window.addEventListener(SESSION_INVALID_EVENT, onSessionInvalid);
+    return () => window.removeEventListener(SESSION_INVALID_EVENT, onSessionInvalid);
   }, []);
 
   useEffect(() => {
@@ -459,7 +489,7 @@ export default function App() {
     }
   };
 
-  if (oidcBootstrapping) {
+  if (oidcBootstrapping || authBootstrapping) {
     return (
       <div className="login-shell">
         <div className="login-card">

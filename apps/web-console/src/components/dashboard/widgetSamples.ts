@@ -704,7 +704,7 @@ export function buildSampleWidget(type: WidgetType, index: number): DashboardWid
         objectPath: LAB,
         modelHintPath: LAB,
         sheetMode: "free",
-        persistMode: "variable",
+        persistMode: "session",
         valuesVariable: "sheetValues",
         editable: true,
         sheetConfigJson: sheetConfigToJson(FREE_SHEET_CONFIG),

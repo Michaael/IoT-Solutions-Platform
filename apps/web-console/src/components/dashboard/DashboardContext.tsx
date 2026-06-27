@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type DashboardOpenMode = "navigate" | "modal";
 
@@ -87,19 +95,23 @@ export function DashboardProvider({
 }: DashboardProviderProps) {
   const [internalSession, setInternalSession] = useState<DashboardSession>(emptySession);
 
+  const session =
+    controlledSession ??
+    ({
+      selection: controlledSelection ?? internalSession.selection,
+      params: controlledParams ?? internalSession.params,
+    } satisfies DashboardSession);
+
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
   const derivedValue = useMemo<DashboardContextValue>(() => {
     if (value) {
       return value;
     }
 
-    const session =
-      controlledSession ??
-      ({
-        selection: controlledSelection ?? internalSession.selection,
-        params: controlledParams ?? internalSession.params,
-      } satisfies DashboardSession);
-
     const publishSession = (next: DashboardSession) => {
+      sessionRef.current = next;
       if (onSessionChange) {
         onSessionChange(next);
       } else {
@@ -116,11 +128,19 @@ export function DashboardProvider({
     };
 
     const setSelection = (key: string, path: string) => {
-      publishSession({ ...session, selection: { ...session.selection, [key]: path } });
+      const current = sessionRef.current;
+      publishSession({
+        ...current,
+        selection: { ...current.selection, [key]: path },
+      });
     };
 
     const setParams = (patch: Record<string, unknown>) => {
-      publishSession({ ...session, params: { ...session.params, ...patch } });
+      const current = sessionRef.current;
+      publishSession({
+        ...current,
+        params: { ...current.params, ...patch },
+      });
     };
 
     return {
@@ -136,10 +156,7 @@ export function DashboardProvider({
     };
   }, [
     value,
-    controlledSession,
-    controlledSelection,
-    controlledParams,
-    internalSession,
+    session,
     onSessionChange,
     onSelectionChange,
     onParamsChange,
