@@ -32,7 +32,7 @@
 | **P1** | i18n tails | `WIDGET_TYPES` и binding hints на русском в TS | BL-07, 20.7 |
 | **P1** | Playwright e2e | Admin smoke (Phase 18.1 = BL-50) | BL-50, 18.1 |
 | **P1** | Driver write | Modbus, S7, OPC UA — `not implemented` | BL-20…22 |
-| **P2** | Bindings UX | Нет каталога 18 platform bindings в UI | BL-09 |
+| **P2** | Bindings UX | Каталог platform bindings в UI | — |
 | **P2** | History scale | ClickHouse только для events, не variables | BL-40 |
 | **P2** | System ops | Redis/NATS/AI/MCP toggles в UI | BL-13 |
 | **P3** | Federation | Dashboard write read-only на proxy; sync conflicts | BL-45,46 |
@@ -67,7 +67,7 @@
 | UI ↔ API parity | ~75% | change sets, leases, correlator actions, event catalog | BL-01…08, Phase 20 |
 | Dashboard widgets (advanced) | ~85% | chart OHLC/bubble-radar, network-graph, gantt | BL-64…65,10…11 |
 | Variable inline editor | ~85% | RECORD → structured editor | BL-03 |
-| Binding rules UX | ~80% | expression catalog, activators UI | BL-09,18 |
+| Binding rules UX | ~90% | activators UI | BL-18 |
 | Journals | ~90% | export, diff view | BL-15,16 |
 | ClickHouse (variables) | ~0% | только event journal | BL-40 |
 | Optional backends UI | ~30% | Redis, NATS, AI, MCP в System | BL-13,41,42,48 |

@@ -42,7 +42,7 @@
 
 | ID | Задача | P | Статус | Область |
 | -- | ------ | - | ------ | ------- |
-| **BL-09** | Binding expression builder: каталог 18 platform bindings + autocomplete | P2 | Planned | Bindings |
+| **BL-09** | Binding expression builder: каталог 18 platform bindings + autocomplete | P2 | Done | Bindings |
 | **BL-10** | `network-graph` widget: layout engine (Cytoscape / vis-network) | P2 | Planned | Dashboard |
 | **BL-11** | `gantt-chart` widget: интерактивный timeline | P2 | Planned | Dashboard |
 | **BL-12** | `history-table`: настраиваемое окно (сейчас ~5 min hardcoded) | P2 | Done | Dashboard |
@@ -281,6 +281,8 @@ RUN_WORKFLOW, FIRE_EVENT, SET_VARIABLE, OPEN_OPERATOR_REPORT
 - [ ] Optional: snippet insert по клику
 
 **Acceptance:** инженер собирает `movingAvg(ref(self, "temp"), 60)` без чтения BINDINGS.md.
+
+**Статус (2026-06-28):** Done — `utils/platformBindings.ts`, каталог + datalist + inline suggestions в `BindingExpressionField`.
 
 ---
 

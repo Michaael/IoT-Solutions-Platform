@@ -233,7 +233,7 @@ Track: **UI** (не REQ-PF — не меняет platform API). См. [0013](dec
 | 20.25 | Chart `bubble` / `radar` multi-axis | BL-65 | P3 | Planned |
 | 20.7 | i18n: widget type labels + binding hints | BL-07 | P1 | Done |
 | 20.8 | Application Event Catalog viewer | BL-08 | P1 | Done |
-| 20.9 | Binding expression builder (18 platform functions) | BL-09 | P2 | Planned |
+| 20.9 | Binding expression builder (18 platform functions) | BL-09 | P2 | Done |
 | 20.10 | Widgets: network-graph layout, gantt interactive, history-table window | BL-10…12,63 | P2 | Partial (BL-12,63 done) |
 | 20.11 | System settings: Redis/NATS/ClickHouse/AI/MCP toggles | BL-13 | P2 | Planned |
 | 20.12 | Automation index + journal export/diff | BL-14…16 | P2 | Planned |
