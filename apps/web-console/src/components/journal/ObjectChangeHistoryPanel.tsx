@@ -8,6 +8,7 @@ import {
   parseObjectAuditSummary,
 } from "../../utils/objectAuditSummary";
 import { mapObjectAuditExportRow } from "../../utils/journalExport";
+import { sortByNewestFirst } from "../../utils/journalSort";
 import JournalViewShell, { type JournalViewMode } from "./JournalViewShell";
 
 const LIVE_LIMIT = 25;
@@ -66,7 +67,7 @@ export default function ObjectChangeHistoryPanel({
         rows = rows.filter((e) => e.actor?.toLowerCase().includes(actor));
       }
     }
-    return rows;
+    return sortByNewestFirst(rows, (entry) => entry.occurredAt, (entry) => entry.id);
   }, [actorFilter, auditQuery.data, changeType, fieldFilter, mode]);
 
   const exportRows = useMemo(

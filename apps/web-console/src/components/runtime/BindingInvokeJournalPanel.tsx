@@ -1,11 +1,13 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchBindingAuditStatus, fetchBindingInvocations } from "../../api";
 import type { BindingInvokeAuditEntry } from "../../types/runtime";
 import { mapBindingInvokeExportRow } from "../../utils/journalExport";
+import { parseAuditBeforeAfter } from "../../utils/journalDetails";
 import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
+import JournalExpandableItem from "../journal/JournalExpandableItem";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -223,8 +225,9 @@ export default function BindingInvokeJournalPanel({
       <JournalVirtualList
         items={filtered}
         estimateSizePx={ITEM_ESTIMATE_PX}
+        getTime={(entry) => entry.invokedAt}
         getKey={(entry) => entry.id}
-        renderItem={(entry, style) => <BindingRow entry={entry} style={style} />}
+        renderItem={(entry) => <BindingRow entry={entry} />}
       />
     </JournalViewShell>
   );
@@ -232,18 +235,33 @@ export default function BindingInvokeJournalPanel({
 
 function BindingRow({
   entry,
-  style,
 }: {
   entry: BindingInvokeAuditEntry;
-  style?: CSSProperties;
 }) {
+  const { t } = useTranslation(["runtime", "journal"]);
   const label = entry.ruleName || entry.ruleId || entry.targetVariable || "binding";
   const status = !entry.success ? "FAIL" : entry.changed ? "CHANGED" : "OK";
+  const diff = useMemo(() => parseAuditBeforeAfter(entry.detailJson), [entry.detailJson]);
+  const sections = useMemo(
+    () => [
+      {
+        id: "before",
+        label: t("journal:details.before"),
+        value: diff.before,
+      },
+      {
+        id: "after",
+        label: t("journal:details.after"),
+        value: diff.after,
+      },
+    ],
+    [diff.after, diff.before, t],
+  );
 
   return (
-    <li
-      className={`event-journal-item ${entry.success ? (entry.changed ? "level-info" : "level-info") : "level-error"} dash-virtual-list-item`}
-      style={style}
+    <JournalExpandableItem
+      className={`event-journal-item ${entry.success ? (entry.changed ? "level-info" : "level-info") : "level-error"}`}
+      sections={sections}
     >
       <div className="event-journal-row-top">
         <strong>{label}</strong>
@@ -261,6 +279,6 @@ function BindingRow({
       <time className="hint event-journal-time">
         {new Date(entry.invokedAt).toLocaleString()}
       </time>
-    </li>
+    </JournalExpandableItem>
   );
 }

@@ -21,5 +21,13 @@
   "changeHistory.after": "Nachher",
   "export.label": "Journal exportieren",
   "export.csv": "CSV",
-  "export.json": "JSON"
+  "export.json": "JSON",
+  "details.show": "Details",
+  "details.hide": "Ausblenden",
+  "details.payload": "Payload",
+  "details.input": "Eingabe",
+  "details.output": "Ausgabe",
+  "details.before": "Vorher",
+  "details.after": "Nachher",
+  "details.correlation": "Korrelations-ID"
 }

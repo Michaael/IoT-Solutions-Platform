@@ -59,6 +59,7 @@ public class PlatformRuntimeController {
         return Map.of(
                 "masterEnabled", masterEnabled,
                 "objectEnabled", objectEnabled,
+                "mode", functionAuditService.auditMode().name().toLowerCase(),
                 "enabled", objectPath != null && !objectPath.isBlank()
                         ? objectEnabled
                         : masterEnabled

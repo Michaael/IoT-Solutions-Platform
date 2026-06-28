@@ -9,6 +9,7 @@ import { useWidgetStyles } from "../widgetStyles";
 import { parseDemoPreview } from "../widgetDemoPreview";
 import JournalViewShell, { type JournalViewMode } from "../../journal/JournalViewShell";
 import JournalVirtualList from "../../journal/JournalVirtualList";
+import JournalExpandableItem from "../../journal/JournalExpandableItem";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -177,21 +178,29 @@ export default function EventFeedWidgetView({
         <JournalVirtualList
           items={displayEvents}
           estimateSizePx={EVENT_ITEM_ESTIMATE_PX}
-          className="dash-event-feed-list dash-virtual-list"
+          className="dash-event-feed-list"
+          getTime={(event) => event.timestamp}
           getKey={(event) => event.id}
-          renderItem={(event, style) => {
+          renderItem={(event) => {
             const payload = event.payload?.rows?.[0];
             const detail = payload
               ? Object.entries(payload)
                   .map(([k, v]) => `${k}=${v}`)
                   .join(", ")
               : "";
+            const sections = [
+              {
+                id: "payload",
+                label: t("journal:details.payload"),
+                value: event.payload,
+              },
+            ];
             return (
-              <li
-                className={`dash-event-item level-${event.level.toLowerCase()} dash-virtual-list-item`}
-                style={{ ...styles.body, ...style }}
+              <JournalExpandableItem
+                className={`dash-event-item level-${event.level.toLowerCase()}`}
+                sections={sections}
               >
-                <div className="dash-event-row-top">
+                <div className="dash-event-row-top" style={styles.body}>
                   <strong>{event.eventName}</strong>
                   <time className="hint">
                     {new Date(event.timestamp).toLocaleTimeString()}
@@ -199,7 +208,7 @@ export default function EventFeedWidgetView({
                 </div>
                 <p className="hint">{event.objectPath}</p>
                 {detail && <p className="dash-event-detail">{detail}</p>}
-              </li>
+              </JournalExpandableItem>
             );
           }}
         />

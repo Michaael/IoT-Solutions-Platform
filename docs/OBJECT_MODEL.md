@@ -169,6 +169,8 @@ POST /api/v1/events/fire
 | `script` | JSON DSL (`steps`) — `ScriptFunctionHandler` |
 | `java` | Исходник public class → `ObjectJavaFunction`; **компиляция при сохранении** (`PUT .../functions`), invoke через `JavaFunctionHandler` |
 
+**Подробные примеры всех типов:** [OBJECT_FUNCTIONS.md](OBJECT_FUNCTIONS.md) (встроенные handlers, script steps, Java, bindings, workflow, REST).
+
 Вызов:
 
 ```http
@@ -178,9 +180,9 @@ Content-Type: application/json
 { "schema": {...}, "rows": [{...}] }
 ```
 
-**Java function (MVP):** класс должен `implements com.ispf.core.function.ObjectJavaFunction` с методом `invoke(DataRecord input, JavaFunctionContext context)`. Ограничения безопасности: запрет `Runtime`, `ProcessBuilder`, reflection, сеть и т.п. в `sourceBody`. Только admin save object.
+**Java function:** класс `implements com.ispf.core.function.ObjectJavaFunction`; compile on save; см. [OBJECT_FUNCTIONS.md § Java](OBJECT_FUNCTIONS.md#3-java-функции-sourcetype-java).
 
-Встроенный handler: `acknowledgeAlarm` на `demo-sensor-01` (сброс `alarmActive`).
+Встроенные handlers (имя функции на объекте + handler в сервере): `acknowledgeAlarm`, Virtual Lab (`calculate`, `fireEvent1`, …), Mini-TEC (`gpu_start`, …), `dispatchTelemetry` (MQTT gateway). Полный список и payload — в [OBJECT_FUNCTIONS.md](OBJECT_FUNCTIONS.md).
 
 Расширение platform: реализуйте `FunctionHandler` в `ispf-server` и зарегистрируйте как Spring `@Component`.
 

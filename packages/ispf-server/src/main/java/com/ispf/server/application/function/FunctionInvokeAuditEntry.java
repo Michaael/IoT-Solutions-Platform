@@ -11,6 +11,8 @@ public record FunctionInvokeAuditEntry(
         String appId,
         boolean success,
         String errorMessage,
+        String inputJson,
+        String outputJson,
         Instant invokedAt
 ) {
 }

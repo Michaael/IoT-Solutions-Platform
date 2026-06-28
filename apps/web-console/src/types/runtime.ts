@@ -6,6 +6,8 @@ export interface FunctionInvokeAuditEntry {
   appId: string | null;
   success: boolean;
   errorMessage: string | null;
+  inputJson: string | null;
+  outputJson: string | null;
   invokedAt: string;
 }
 
@@ -21,5 +23,6 @@ export interface BindingInvokeAuditEntry {
   changed: boolean;
   errorMessage: string | null;
   durationMs: number | null;
+  detailJson: string | null;
   invokedAt: string;
 }

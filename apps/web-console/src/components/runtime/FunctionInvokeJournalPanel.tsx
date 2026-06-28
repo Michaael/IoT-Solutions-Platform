@@ -1,9 +1,11 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFunctionAuditStatus, fetchFunctionInvocations } from "../../api";
 import type { FunctionInvokeAuditEntry } from "../../types/runtime";
 import { mapFunctionInvokeExportRow } from "../../utils/journalExport";
+import { parseOptionalJson } from "../../utils/journalDetails";
+import JournalExpandableItem from "../journal/JournalExpandableItem";
 import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
 
@@ -196,8 +198,9 @@ export default function FunctionInvokeJournalPanel({
       <JournalVirtualList
         items={filtered}
         estimateSizePx={INVOKE_ITEM_ESTIMATE_PX}
+        getTime={(entry) => entry.invokedAt}
         getKey={(entry) => entry.id}
-        renderItem={(entry, style) => <InvokeRow entry={entry} style={style} />}
+        renderItem={(entry) => <InvokeRow entry={entry} />}
       />
     </JournalViewShell>
   );
@@ -205,15 +208,35 @@ export default function FunctionInvokeJournalPanel({
 
 function InvokeRow({
   entry,
-  style,
 }: {
   entry: FunctionInvokeAuditEntry;
-  style?: CSSProperties;
 }) {
+  const { t } = useTranslation(["runtime", "journal"]);
+  const sections = useMemo(
+    () => [
+      {
+        id: "input",
+        label: t("journal:details.input"),
+        value: parseOptionalJson(entry.inputJson),
+      },
+      {
+        id: "output",
+        label: t("journal:details.output"),
+        value: parseOptionalJson(entry.outputJson),
+      },
+      {
+        id: "correlation",
+        label: t("journal:details.correlation"),
+        value: entry.correlationId,
+      },
+    ],
+    [entry.correlationId, entry.inputJson, entry.outputJson, t],
+  );
+
   return (
-    <li
-      className={`event-journal-item ${entry.success ? "level-info" : "level-error"} dash-virtual-list-item`}
-      style={style}
+    <JournalExpandableItem
+      className={`event-journal-item ${entry.success ? "level-info" : "level-error"}`}
+      sections={sections}
     >
       <div className="event-journal-row-top">
         <strong>{entry.functionName}</strong>
@@ -225,6 +248,6 @@ function InvokeRow({
       <time className="hint event-journal-time">
         {new Date(entry.invokedAt).toLocaleString()}
       </time>
-    </li>
+    </JournalExpandableItem>
   );
 }

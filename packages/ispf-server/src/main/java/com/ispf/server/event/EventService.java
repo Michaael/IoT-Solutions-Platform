@@ -134,6 +134,7 @@ public class EventService {
                 }
             }
         }
+        merged.sort((left, right) -> right.timestamp().compareTo(left.timestamp()));
         return merged;
     }
 

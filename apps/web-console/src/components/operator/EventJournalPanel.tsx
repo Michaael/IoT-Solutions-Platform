@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchEvents } from "../../api";
@@ -12,6 +12,7 @@ import { filterOperatorSidebarEvents } from "../../utils/operatorSidebarScope";
 import { mapEventJournalExportRow } from "../../utils/journalExport";
 import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
+import JournalExpandableItem from "../journal/JournalExpandableItem";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -237,8 +238,9 @@ export default function EventJournalPanel({
       <JournalVirtualList
         items={filtered}
         estimateSizePx={EVENT_ITEM_ESTIMATE_PX}
+        getTime={(event) => event.timestamp}
         getKey={(event) => event.id}
-        renderItem={(event, style) => <EventRow event={event} style={style} />}
+        renderItem={(event) => <EventRow event={event} />}
       />
     </JournalViewShell>
   );
@@ -246,21 +248,30 @@ export default function EventJournalPanel({
 
 function EventRow({
   event,
-  style,
 }: {
   event: ObjectEvent;
-  style?: CSSProperties;
 }) {
+  const { t } = useTranslation(["operator", "journal"]);
   const payload = event.payload?.rows?.[0];
   const detail =
     payload && typeof payload.value !== "undefined"
       ? `${payload.value}${payload.unit ? ` ${payload.unit}` : ""}`
       : null;
+  const sections = useMemo(
+    () => [
+      {
+        id: "payload",
+        label: t("journal:details.payload"),
+        value: event.payload,
+      },
+    ],
+    [event.payload, t],
+  );
 
   return (
-    <li
-      className={`event-journal-item level-${event.level.toLowerCase()} dash-virtual-list-item`}
-      style={style}
+    <JournalExpandableItem
+      className={`event-journal-item level-${event.level.toLowerCase()}`}
+      sections={sections}
     >
       <div className="event-journal-row-top">
         <strong>{event.eventName}</strong>
@@ -271,6 +282,6 @@ function EventRow({
       <time className="hint event-journal-time">
         {new Date(event.timestamp).toLocaleString()}
       </time>
-    </li>
+    </JournalExpandableItem>
   );
 }

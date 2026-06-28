@@ -1,52 +1,36 @@
-import { Fragment, useContext, useRef, type CSSProperties, type ReactNode } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { JournalScrollContext } from "./JournalViewShell";
+import { Fragment, useMemo, type ReactNode } from "react";
+import { sortByNewestFirst } from "../../utils/journalSort";
 
 interface JournalVirtualListProps<T> {
   items: T[];
+  /** @deprecated kept for call-site compatibility; journals use a plain list (≤200 rows). */
   estimateSizePx?: number;
   className?: string;
+  getTime: (item: T) => string | number | Date;
   getKey: (item: T, index: number) => string;
-  renderItem: (item: T, style?: CSSProperties) => ReactNode;
+  renderItem: (item: T) => ReactNode;
 }
 
+/** Renders journal rows newest-first in normal document flow. */
 export default function JournalVirtualList<T>({
   items,
-  estimateSizePx = 100,
-  className = "event-journal-list dash-virtual-list",
+  className = "event-journal-list",
+  getTime,
   getKey,
   renderItem,
 }: JournalVirtualListProps<T>) {
-  const scrollContext = useContext(JournalScrollContext);
-  const listRef = useRef<HTMLUListElement>(null);
-
-  const virtualizer = useVirtualizer({
-    count: items.length,
-    getScrollElement: () => scrollContext?.current ?? listRef.current,
-    estimateSize: () => estimateSizePx,
-    overscan: 6,
-    enabled: items.length > 0,
-  });
-
-  const virtualItems = virtualizer.getVirtualItems();
+  const sorted = useMemo(
+    () => sortByNewestFirst(items, getTime, (item) => getKey(item, 0)),
+    [getKey, getTime, items],
+  );
 
   return (
-    <ul ref={listRef} className={className}>
-      {items.length > 0 && (
-        <li
-          aria-hidden="true"
-          className="dash-virtual-list-spacer"
-          style={{ height: virtualizer.getTotalSize() }}
-        />
-      )}
-      {virtualItems.map((virtualItem) => {
-        const item = items[virtualItem.index];
-        return (
-          <Fragment key={getKey(item, virtualItem.index)}>
-            {renderItem(item, { transform: `translateY(${virtualItem.start}px)` })}
-          </Fragment>
-        );
-      })}
+    <ul className={className}>
+      {sorted.map((item, index) => (
+        <Fragment key={getKey(item, index)}>
+          {renderItem(item)}
+        </Fragment>
+      ))}
     </ul>
   );
 }

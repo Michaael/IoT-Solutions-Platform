@@ -62,10 +62,26 @@ public class FunctionService {
         if (resolved.handler() != null) {
             try {
                 DataRecord result = resolved.handler().invoke(objectPath, functionName, resolved.resolvedInput());
-                auditService.record(resolved.appId(), objectPath, functionName, true, null);
+                auditService.record(
+                        resolved.appId(),
+                        objectPath,
+                        functionName,
+                        resolved.resolvedInput(),
+                        result,
+                        true,
+                        null
+                );
                 return result;
             } catch (RuntimeException ex) {
-                auditService.record(resolved.appId(), objectPath, functionName, false, ex.getMessage());
+                auditService.record(
+                        resolved.appId(),
+                        objectPath,
+                        functionName,
+                        resolved.resolvedInput(),
+                        null,
+                        false,
+                        ex.getMessage()
+                );
                 throw ex;
             }
         }
@@ -75,7 +91,15 @@ public class FunctionService {
         }
 
         IllegalStateException ex = new IllegalStateException("No handler registered for function: " + functionName);
-        auditService.record(resolved.appId(), objectPath, functionName, false, ex.getMessage());
+        auditService.record(
+                resolved.appId(),
+                objectPath,
+                functionName,
+                resolved.resolvedInput(),
+                null,
+                false,
+                ex.getMessage()
+        );
         throw ex;
     }
 

@@ -9,8 +9,10 @@ import com.ispf.server.alert.AlertRuleService;
 import com.ispf.server.application.data.ApplicationDataStore;
 import com.ispf.server.application.data.ApplicationSchemaSession;
 import com.ispf.server.application.data.ApplicationSchemaSupport;
+import com.ispf.expression.BindingExpressionEvaluator;
 import com.ispf.server.binding.BindingInvokeAuditService;
 import com.ispf.server.object.ObjectManager;
+import com.ispf.server.persistence.ObjectEntityMapper;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,7 @@ public class ApplicationSqlBindingService {
     private final ObjectManager objectManager;
     private final AlertRuleService alertRuleService;
     private final BindingInvokeAuditService bindingAuditService;
+    private final ObjectEntityMapper entityMapper;
 
     public ApplicationSqlBindingService(
             ApplicationSqlBindingStore store,
@@ -41,7 +44,8 @@ public class ApplicationSqlBindingService {
             ApplicationDataStore dataStore,
             ObjectManager objectManager,
             @Lazy AlertRuleService alertRuleService,
-            BindingInvokeAuditService bindingAuditService
+            BindingInvokeAuditService bindingAuditService,
+            ObjectEntityMapper entityMapper
     ) {
         this.store = store;
         this.schemaSession = schemaSession;
@@ -49,6 +53,7 @@ public class ApplicationSqlBindingService {
         this.objectManager = objectManager;
         this.alertRuleService = alertRuleService;
         this.bindingAuditService = bindingAuditService;
+        this.entityMapper = entityMapper;
     }
 
     public void deploy(String appId, DeploySqlBindingRequest request) {
@@ -133,8 +138,10 @@ public class ApplicationSqlBindingService {
     private void executeRefresh(ApplicationSqlBindingStore.SqlBinding binding, String triggerKind) {
         long start = System.nanoTime();
         boolean success = true;
-        boolean changed = true;
+        boolean changed = false;
         String error = null;
+        DataRecord previous = null;
+        DataRecord next = null;
         try {
             String schemaName = resolveSchemaName(binding.appId());
             Object[] extractedHolder = new Object[1];
@@ -156,6 +163,13 @@ public class ApplicationSqlBindingService {
                 extractedHolder[0] = value;
             });
             DataRecord record = toValueRecord(extractedHolder[0], binding);
+            next = record;
+            previous = schemaSession.callWithPlatformCatalog(() ->
+                    objectManager.tree().findByPath(binding.objectPath())
+                            .flatMap(node -> node.getVariable(binding.variableName()))
+                            .flatMap(Variable::value)
+                            .orElse(null));
+            changed = !BindingExpressionEvaluator.recordsEqual(previous, record);
             schemaSession.runWithPlatformCatalog(() ->
                     objectManager.setSystemVariableValue(binding.objectPath(), binding.variableName(), record)
             );
@@ -177,7 +191,8 @@ public class ApplicationSqlBindingService {
                     success,
                     changed,
                     error,
-                    System.nanoTime() - start
+                    System.nanoTime() - start,
+                    entityMapper.auditDiff(previous, next)
             );
         }
     }

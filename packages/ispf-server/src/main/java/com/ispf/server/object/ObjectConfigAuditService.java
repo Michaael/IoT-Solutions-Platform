@@ -51,7 +51,7 @@ public class ObjectConfigAuditService {
                        occurred_at, revision_before, revision_after, summary_json
                 FROM object_config_audit
                 WHERE object_path = ?
-                ORDER BY occurred_at DESC
+                ORDER BY occurred_at DESC, id DESC
                 LIMIT ?
                 """,
                 (rs, rowNum) -> new AuditEntry(

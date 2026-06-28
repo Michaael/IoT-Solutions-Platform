@@ -83,10 +83,17 @@ GET /api/v1/applications/myapp/data/status
 | `buildRecord` | Сборка `Map` в var из `fields` (field mapping) |
 | `map` | Преобразование списка: `source` + `fields` с контекстом `${item.*}` |
 | `invoke_function` | Вызов другой deploy-функции; propagate `error_code` |
-| `cancel_workflows` | Отмена workflow instances по `workflowPath` + `statusIn` |
+| `when`, `if` | Ветвление (`then` / `else`) |
+| `readVariable` | Чтение поля переменной объекта (`objectPath: self`) |
+| `jsonParse` | Разбор JSON-строки в поля |
+| `setDriverTelemetry` | Запись driver-телеметрии |
+| `instantiateModelIfMissing` | Создание объекта из модели |
+| `cancel_workflows` | Отмена workflow instances |
 | `failIfNull` | Выход с `error_code` / `error_message` |
 | `failIfNotEquals` | Проверка значения var |
 | `return` | Сборка output (`fields`); массивы через `${var}` |
+
+Полные примеры script/java/встроенных функций на объектах дерева: [OBJECT_FUNCTIONS.md](OBJECT_FUNCTIONS.md). Те же шаги работают в `sourceType=script` на объекте (Inspector) и в application deploy.
 
 Один invoke = одна JDBC-транзакция (rollback при необработанном exception). Вложенные `invoke_function` — до 8 уровней. Невалидный script → **400** на deploy.
 

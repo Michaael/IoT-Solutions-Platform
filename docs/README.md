@@ -19,6 +19,7 @@
 | [Быстрый старт](GETTING_STARTED.md) | Установка, профили, первый запуск |
 | [Архитектура](ARCHITECTURE.md) | Видение, **основной принцип**, слои, расширяемость |
 | [Модель объектов](OBJECT_MODEL.md) | Дерево, переменные, события, функции |
+| [Функции на объектах](OBJECT_FUNCTIONS.md) | Примеры: встроенные handlers, script, Java, invoke |
 | [Привязки переменных](BINDINGS.md) | CEL, platform bindings (`counterRate`, `scale`, …) |
 | [История переменных](VARIABLE_HISTORY.md) | Time-series, флаги, retention, roadmap |
 | [REST API](API.md) | Полный справочник endpoints |

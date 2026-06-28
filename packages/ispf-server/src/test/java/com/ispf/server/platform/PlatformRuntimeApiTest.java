@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-        "ispf.function.audit.mode=ALL",
+        "ispf.function.audit.mode=errors",
         "ispf.function.audit.async-enabled=false"
 })
 class PlatformRuntimeApiTest {
@@ -54,6 +54,7 @@ class PlatformRuntimeApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].objectPath").value(DEVICE))
                 .andExpect(jsonPath("$[0].functionName").value("acknowledgeAlarm"))
-                .andExpect(jsonPath("$[0].success").value(true));
+                .andExpect(jsonPath("$[0].success").value(true))
+                .andExpect(jsonPath("$[0].outputJson").exists());
     }
 }

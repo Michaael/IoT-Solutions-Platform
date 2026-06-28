@@ -1014,7 +1014,10 @@ export default function ObjectPropertiesEditor({
           objectPath={path}
           fn={invokeFunctionTarget}
           onClose={() => setInvokeFunctionTarget(null)}
-          onInvoked={() => editorQuery.refetch()}
+          onInvoked={() => {
+            editorQuery.refetch();
+            queryClient.invalidateQueries({ queryKey: ["function-invocations"] });
+          }}
         />
       )}
     </div>

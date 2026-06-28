@@ -81,6 +81,8 @@ describe("runtime journal mappers", () => {
       appId: null,
       success: true,
       errorMessage: null,
+      inputJson: null,
+      outputJson: null,
       invokedAt: "2026-01-01T00:00:00Z",
     };
     expect(mapFunctionInvokeExportRow(entry)).toEqual(entry);
@@ -99,6 +101,7 @@ describe("runtime journal mappers", () => {
       changed: false,
       errorMessage: "division by zero",
       durationMs: 12,
+      detailJson: null,
       invokedAt: "2026-01-01T00:00:00Z",
     };
     expect(mapBindingInvokeExportRow(entry)).toEqual(entry);

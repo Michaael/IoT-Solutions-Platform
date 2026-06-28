@@ -11,6 +11,7 @@ import com.ispf.expression.BindingExpressionEvaluator;
 import com.ispf.expression.ExpressionEngine;
 import com.ispf.expression.ExpressionException;
 import com.ispf.server.binding.BindingInvokeAuditService;
+import com.ispf.server.persistence.ObjectEntityMapper;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,7 @@ public class BindingRuleEngine {
     private final ApplicationEventPublisher eventPublisher;
     private final BindingRuleAsyncExecutor asyncExecutor;
     private final BindingInvokeAuditService bindingAuditService;
+    private final ObjectEntityMapper entityMapper;
 
     public BindingRuleEngine(
             ObjectManager objectManager,
@@ -45,7 +47,8 @@ public class BindingRuleEngine {
             BindingEvaluationContext evaluationContext,
             ApplicationEventPublisher eventPublisher,
             BindingRuleAsyncExecutor asyncExecutor,
-            BindingInvokeAuditService bindingAuditService
+            BindingInvokeAuditService bindingAuditService,
+            ObjectEntityMapper entityMapper
     ) {
         this.objectManager = objectManager;
         this.bindingRulesService = bindingRulesService;
@@ -55,6 +58,7 @@ public class BindingRuleEngine {
         this.eventPublisher = eventPublisher;
         this.asyncExecutor = asyncExecutor;
         this.bindingAuditService = bindingAuditService;
+        this.entityMapper = entityMapper;
     }
 
     public void onStartup(String objectPath) {
@@ -181,6 +185,8 @@ public class BindingRuleEngine {
         boolean success = true;
         boolean changed = false;
         String error = null;
+        DataRecord previous = null;
+        DataRecord next = null;
         try {
             if (!conditionPasses(object, rule.condition())) {
                 return false;
@@ -203,10 +209,11 @@ public class BindingRuleEngine {
                 error = "Expression returned empty";
                 return false;
             }
-            DataRecord next = computed.get();
-            DataRecord previous = target.value().orElse(null);
-            if (!BindingExpressionEvaluator.recordsEqual(previous, next)) {
-                target.setComputedValue(next);
+            DataRecord nextValue = computed.get();
+            previous = target.value().orElse(null);
+            next = nextValue;
+            if (!BindingExpressionEvaluator.recordsEqual(previous, nextValue)) {
+                target.setComputedValue(nextValue);
                 objectManager.persistBindingRuleTarget(object.path(), target);
                 changedVariables.add(rule.target().variableName());
                 changed = true;
@@ -225,7 +232,8 @@ public class BindingRuleEngine {
                     success,
                     changed,
                     error,
-                    System.nanoTime() - start
+                    System.nanoTime() - start,
+                    entityMapper.auditDiff(previous, next)
             );
         }
     }

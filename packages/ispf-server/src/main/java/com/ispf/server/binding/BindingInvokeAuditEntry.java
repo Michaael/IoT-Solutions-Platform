@@ -15,6 +15,7 @@ public record BindingInvokeAuditEntry(
         boolean changed,
         String errorMessage,
         Integer durationMs,
+        String detailJson,
         Instant invokedAt
 ) {
 }

@@ -29,6 +29,7 @@ public class BindingInvokeAuditService {
 
     private static final Logger log = LoggerFactory.getLogger(BindingInvokeAuditService.class);
     private static final int MAX_ERROR_MESSAGE_LENGTH = 1024;
+    private static final int MAX_JSON_LENGTH = 32_768;
 
     record PendingRecord(
             String bindingKind,
@@ -40,7 +41,8 @@ public class BindingInvokeAuditService {
             boolean success,
             boolean changed,
             String errorMessage,
-            int durationMs
+            int durationMs,
+            String detailJson
     ) {
     }
 
@@ -65,6 +67,7 @@ public class BindingInvokeAuditService {
             rs.getBoolean("changed"),
             rs.getString("error_message"),
             rs.getObject("duration_ms") != null ? rs.getInt("duration_ms") : null,
+            rs.getString("detail_json"),
             rs.getTimestamp("invoked_at").toInstant()
     );
 
@@ -124,7 +127,8 @@ public class BindingInvokeAuditService {
             boolean success,
             boolean changed,
             String errorMessage,
-            long durationNanos
+            long durationNanos,
+            String detailJson
     ) {
         record(new PendingRecord(
                 "cel",
@@ -136,7 +140,8 @@ public class BindingInvokeAuditService {
                 success,
                 changed,
                 errorMessage,
-                toDurationMs(durationNanos)
+                toDurationMs(durationNanos),
+                detailJson
         ));
     }
 
@@ -148,7 +153,8 @@ public class BindingInvokeAuditService {
             boolean success,
             boolean changed,
             String errorMessage,
-            long durationNanos
+            long durationNanos,
+            String detailJson
     ) {
         record(new PendingRecord(
                 "sql",
@@ -160,7 +166,8 @@ public class BindingInvokeAuditService {
                 success,
                 changed,
                 errorMessage,
-                toDurationMs(durationNanos)
+                toDurationMs(durationNanos),
+                detailJson
         ));
     }
 
@@ -183,7 +190,7 @@ public class BindingInvokeAuditService {
         int cappedLimit = Math.max(1, Math.min(limit, 200));
         StringBuilder sql = new StringBuilder("""
                 SELECT id, binding_kind, object_path, rule_id, rule_name, trigger_kind,
-                       target_variable, success, changed, error_message, duration_ms, invoked_at
+                       target_variable, success, changed, error_message, duration_ms, detail_json, invoked_at
                 FROM %s
                 WHERE 1=1
                 """.formatted(auditTable));
@@ -208,7 +215,7 @@ public class BindingInvokeAuditService {
             sql.append(" AND changed = ?");
             args.add(changed);
         }
-        sql.append(" ORDER BY invoked_at DESC LIMIT ?");
+        sql.append(" ORDER BY invoked_at DESC, id DESC LIMIT ?");
         args.add(cappedLimit);
         return jdbcTemplate.query(sql.toString(), ROW_MAPPER, args.toArray());
     }
@@ -303,8 +310,8 @@ public class BindingInvokeAuditService {
         jdbcTemplate.update("""
                 INSERT INTO %s (
                     id, binding_kind, object_path, rule_id, rule_name, trigger_kind,
-                    target_variable, success, changed, error_message, duration_ms, invoked_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    target_variable, success, changed, error_message, duration_ms, detail_json, invoked_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.formatted(auditTable),
                 UUID.randomUUID(),
                 pending.bindingKind(),
@@ -317,6 +324,7 @@ public class BindingInvokeAuditService {
                 pending.changed(),
                 truncate(pending.errorMessage()),
                 pending.durationMs(),
+                truncateJson(pending.detailJson()),
                 Timestamp.from(Instant.now())
         );
     }
@@ -330,5 +338,12 @@ public class BindingInvokeAuditService {
             return value;
         }
         return value.substring(0, MAX_ERROR_MESSAGE_LENGTH - 3) + "...";
+    }
+
+    private static String truncateJson(String value) {
+        if (value == null || value.length() <= MAX_JSON_LENGTH) {
+            return value;
+        }
+        return value.substring(0, MAX_JSON_LENGTH - 3) + "...";
     }
 }
