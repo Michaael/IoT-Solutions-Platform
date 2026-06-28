@@ -70,5 +70,12 @@
   "deploy.bundleObjectsSuccess": "Bundle objects {{action}} completed ({{status}}).",
   "deploy.bundleObjectsAppliedCount": "Applied: {{count}}.",
   "deploy.bundleObjectsRemovedCount": "Removed: {{count}}.",
-  "deploy.bundleObjectsSkippedCount": "Skipped: {{count}}."
+  "deploy.bundleObjectsSkippedCount": "Skipped: {{count}}.",
+  "deploy.eventCatalogTitle": "Event catalog",
+  "deploy.eventCatalogHint": "Events declared in the active bundle manifest (FW-31). Used for operator WebSocket subscribe_events role checks.",
+  "deploy.eventCatalogLoading": "Loading event catalog…",
+  "deploy.eventCatalogEmpty": "No events in catalog. Deploy a bundle with events[] or use GET /api/v1/applications/{{appId}}/events.",
+  "deploy.eventCatalogId": "Event ID",
+  "deploy.eventCatalogRoles": "Roles",
+  "deploy.eventCatalogAnyRole": "any"
 }

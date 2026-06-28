@@ -43,5 +43,14 @@
   "correlator.title": "事件关联器",
   "correlator.windowSec": "窗口 (秒)",
   "correlator.windowSeconds": "窗口 (秒)",
-  "correlator.workflowTarget": "目标（工作流路径）*"
+  "correlator.workflowTarget": "目标（工作流路径）*",
+  "correlator.actionSetVariable": "SET_VARIABLE — 设置对象变量",
+  "correlator.actionOpenOperatorReport": "OPEN_OPERATOR_REPORT — 打开操作员报表",
+  "correlator.actionTargetEvent": "事件名 (actionTarget) *",
+  "correlator.actionTargetSetVariable": "变量赋值 (actionTarget) *",
+  "correlator.actionTargetReport": "报表路径 (actionTarget) *",
+  "correlator.actionTargetEventPlaceholder": "thresholdAcknowledged",
+  "correlator.actionTargetSetVariablePlaceholder": "alarmLatched=true",
+  "correlator.actionTargetReportPlaceholder": "root.platform.reports.shift-summary",
+  "correlator.actionTargetWorkflowPlaceholder": "root.platform.workflows.demo-alarm-handler"
 }

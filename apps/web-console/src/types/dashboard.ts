@@ -52,17 +52,27 @@ export type ChartType = "line" | "area" | "bar" | "candlestick" | "bubble" | "ra
 /** How chart/sparkline loads historian data. `live` = sliding window + live tail (default). */
 export type WidgetHistoryRange = "live" | "1h" | "6h" | "24h" | "7d" | "all";
 
-export const WIDGET_HISTORY_RANGE_OPTIONS: { id: WidgetHistoryRange; label: string }[] = [
-  { id: "live", label: "Live — последние N точек" },
-  { id: "1h", label: "1 час" },
-  { id: "6h", label: "6 часов" },
-  { id: "24h", label: "24 часа" },
-  { id: "7d", label: "7 дней (avg/1h)" },
-  { id: "all", label: "Весь retention (avg/6h)" },
+export const WIDGET_HISTORY_RANGE_IDS: WidgetHistoryRange[] = [
+  "live",
+  "1h",
+  "6h",
+  "24h",
+  "7d",
+  "all",
 ];
 
-export function widgetHistoryRangeLabel(range: WidgetHistoryRange | undefined): string | undefined {
-  return WIDGET_HISTORY_RANGE_OPTIONS.find((item) => item.id === (range ?? "live"))?.label;
+export const WIDGET_HISTORY_RANGE_OPTIONS: { id: WidgetHistoryRange; label: string }[] =
+  WIDGET_HISTORY_RANGE_IDS.map((id) => ({ id, label: id }));
+
+export function widgetHistoryRangeLabel(
+  range: WidgetHistoryRange | undefined,
+  t?: (key: string, options?: { ns?: string }) => string
+): string | undefined {
+  const id = range ?? "live";
+  if (t) {
+    return t(`history.${id}`, { ns: "widgets" });
+  }
+  return WIDGET_HISTORY_RANGE_OPTIONS.find((item) => item.id === id)?.label;
 }
 
 export interface DashboardWidgetBase {
@@ -679,50 +689,53 @@ export interface DashboardView {
   layoutJson: string;
 }
 
-export const WIDGET_TYPES: Array<{ type: WidgetType; label: string }> = [
-  { type: "value", label: "Значение" },
-  { type: "indicator", label: "Индикатор" },
-  { type: "toggle", label: "Переключатель" },
-  { type: "chart", label: "График / тренд" },
-  { type: "sparkline", label: "Спарклайн" },
-  { type: "function", label: "Функция (кнопка)" },
-  { type: "function-form", label: "Функция (форма)" },
-  { type: "progress", label: "Прогресс" },
-  { type: "object-table", label: "Таблица объектов" },
-  { type: "event-feed", label: "Лента событий" },
-  { type: "work-queue", label: "Очередь задач" },
-  { type: "status-badge", label: "Статус (badge)" },
-  { type: "gauge", label: "Шкала / gauge" },
-  { type: "card-grid", label: "Карточки объектов" },
-  { type: "dashboard-link", label: "Переход / модальный дашборд" },
-  { type: "report", label: "SQL-отчёт" },
-  { type: "pie-chart", label: "Круговая диаграмма" },
-  { type: "history-table", label: "Таблица истории (5 мин)" },
-  { type: "variable-editor", label: "Редактор переменных" },
-  { type: "svg-widget", label: "SVG (lab)" },
-  { type: "composite-widget", label: "Композитный виджет" },
-  { type: "sub-dashboard", label: "Сабдашборд" },
-  { type: "panel", label: "Панель" },
-  { type: "tab-panel", label: "Вкладки" },
-  { type: "map", label: "Карта" },
-  { type: "label", label: "Метка" },
-  { type: "image", label: "Изображение" },
-  { type: "html-snippet", label: "HTML" },
-  { type: "object-tree", label: "Дерево объектов" },
-  { type: "breadcrumbs", label: "Хлебные крошки" },
-  { type: "timer", label: "Таймер" },
-  { type: "context-list", label: "Контекст" },
-  { type: "linear-gauge", label: "Линейная шкала" },
-  { type: "input-form", label: "Форма ввода" },
-  { type: "drawer-panel", label: "Выдвижная панель" },
-  { type: "carousel", label: "Карусель" },
-  { type: "steps-panel", label: "Шаги" },
-  { type: "gantt-chart", label: "Гантт" },
-  { type: "network-graph", label: "Граф сети" },
-  { type: "spreadsheet", label: "Электронная таблица" },
-  { type: "liquid-gauge", label: "Жидкий gauge" },
-  { type: "nav-menu", label: "Меню навигации" },
-];
+export const WIDGET_TYPES: Array<{ type: WidgetType; label: string }> = (
+  [
+    "value",
+    "indicator",
+    "toggle",
+    "chart",
+    "sparkline",
+    "function",
+    "function-form",
+    "progress",
+    "object-table",
+    "event-feed",
+    "work-queue",
+    "status-badge",
+    "gauge",
+    "card-grid",
+    "dashboard-link",
+    "report",
+    "pie-chart",
+    "history-table",
+    "variable-editor",
+    "svg-widget",
+    "composite-widget",
+    "sub-dashboard",
+    "panel",
+    "tab-panel",
+    "map",
+    "label",
+    "image",
+    "html-snippet",
+    "object-tree",
+    "breadcrumbs",
+    "timer",
+    "context-list",
+    "linear-gauge",
+    "input-form",
+    "drawer-panel",
+    "carousel",
+    "steps-panel",
+    "gantt-chart",
+    "network-graph",
+    "spreadsheet",
+    "liquid-gauge",
+    "nav-menu",
+    "mini-tec-sld",
+  ] as WidgetType[]
+).map((type) => ({ type, label: type }));
 
 export function emptyLayout(): DashboardLayout {
   return { columns: 12, rowHeight: 72, widgets: [] };

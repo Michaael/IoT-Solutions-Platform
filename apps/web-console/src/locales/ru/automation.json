@@ -43,5 +43,14 @@
   "correlator.title": "Коррелятор событий",
   "correlator.windowSec": "Окно (сек)",
   "correlator.windowSeconds": "Окно (с)",
-  "correlator.workflowTarget": "Цель (путь workflow) *"
+  "correlator.workflowTarget": "Цель (путь workflow) *",
+  "correlator.actionSetVariable": "SET_VARIABLE — установить переменную",
+  "correlator.actionOpenOperatorReport": "OPEN_OPERATOR_REPORT — открыть отчёт оператора",
+  "correlator.actionTargetEvent": "Имя события (actionTarget) *",
+  "correlator.actionTargetSetVariable": "Присвоение переменной (actionTarget) *",
+  "correlator.actionTargetReport": "Путь отчёта (actionTarget) *",
+  "correlator.actionTargetEventPlaceholder": "thresholdAcknowledged",
+  "correlator.actionTargetSetVariablePlaceholder": "alarmLatched=true",
+  "correlator.actionTargetReportPlaceholder": "root.platform.reports.shift-summary",
+  "correlator.actionTargetWorkflowPlaceholder": "root.platform.workflows.demo-alarm-handler"
 }

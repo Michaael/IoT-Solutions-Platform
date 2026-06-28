@@ -1,4 +1,8 @@
-export type CorrelatorActionType = "RUN_WORKFLOW" | "FIRE_EVENT";
+export type CorrelatorActionType =
+  | "RUN_WORKFLOW"
+  | "FIRE_EVENT"
+  | "SET_VARIABLE"
+  | "OPEN_OPERATOR_REPORT";
 
 export type CorrelatorPatternType = "COUNT" | "SEQUENCE" | "EVENT_CHAIN";
 
@@ -47,4 +51,6 @@ export const WORKFLOW_ISPF_ACTIONS: {
   { action: "start_workflow", label: "Start child workflow", attrs: ["ispf:workflowPath", "ispf:targetObject"] },
   { action: "invoke_function", label: "Invoke function", attrs: ["ispf:objectPath", "ispf:function", "ispf:inputJson"] },
   { action: "setVariable", label: "Set variable", attrs: ["ispf:targetObject", "ispf:variable", "ispf:value"] },
+  { action: "log", label: "Log message", attrs: ["ispf:message"] },
+  { action: "publishNats", label: "Publish NATS", attrs: ["ispf:subject", "ispf:message", "ispf:channel"] },
 ];

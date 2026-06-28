@@ -80,6 +80,30 @@ export function isNestedFieldType(type: string): boolean {
   return type === "RECORD" || type === "RECORD_LIST";
 }
 
+export function fieldHasNestedEditor(field: DataSchema["fields"][number]): boolean {
+  return isNestedFieldType(field.type) && Boolean(field.nestedSchema?.fields?.length);
+}
+
+export function fieldValueToRecord(
+  field: DataSchema["fields"][number],
+  value: unknown
+): DataRecord {
+  const schema = field.nestedSchema ?? { name: field.name, fields: [] };
+  if (field.type === "RECORD_LIST") {
+    const rows = Array.isArray(value)
+      ? (value as Record<string, unknown>[])
+      : value && typeof value === "object"
+        ? [value as Record<string, unknown>]
+        : [];
+    return { schema, rows };
+  }
+  const row =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  return { schema, rows: [row] };
+}
+
 export function normalizeFunctionDescriptor(fn: {
   name: string;
   description: string;

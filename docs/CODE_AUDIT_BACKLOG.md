@@ -29,14 +29,14 @@
 
 | ID | Задача | P | Статус | Область |
 | -- | ------ | - | ------ | ------- |
-| **BL-01** | Correlator actions `SET_VARIABLE`, `OPEN_OPERATOR_REPORT` в Web Console | P0 | Planned | Automation UI |
-| **BL-02** | Workflow ISPF actions `log`, `publishNats` в справочнике редактора | P0 | Planned | Workflow UI |
-| **BL-03** | `DataRecordValueEditor` в `VariableFieldEditor` (RECORD/RECORD_LIST) | P1 | Planned | Inspector |
+| **BL-01** | Correlator actions `SET_VARIABLE`, `OPEN_OPERATOR_REPORT` в Web Console | P0 | Done | Automation UI |
+| **BL-02** | Workflow ISPF actions `log`, `publishNats` в справочнике редактора | P0 | Done | Workflow UI |
+| **BL-03** | `DataRecordValueEditor` в `VariableFieldEditor` (RECORD/RECORD_LIST) | P1 | Done | Inspector |
 | **BL-04** | UI для Platform Change Sets (list/create/preview/apply) | P1 | Planned | Platform ops |
 | **BL-05** | Edit lease: индикатор «кто редактирует» + acquire/release в Explorer | P1 | Planned | Collaboration |
 | **BL-06** | Chart widget: реализовать candlestick/bubble/radar/range **или** убрать из редактора | P1 | Planned | Dashboard |
-| **BL-07** | i18n: `WIDGET_TYPES`, `WIDGET_HISTORY_RANGE_OPTIONS`, `widgetEditorBinding` hints → locale | P1 | Planned | i18n |
-| **BL-08** | Application Event Catalog viewer (`GET .../applications/{id}/events`) | P1 | Planned | Applications |
+| **BL-07** | i18n: `WIDGET_TYPES`, `WIDGET_HISTORY_RANGE_OPTIONS`, `widgetEditorBinding` hints → locale | P1 | Done | i18n |
+| **BL-08** | Application Event Catalog viewer (`GET .../applications/{id}/events`) | P1 | Done | Applications |
 
 ### Wave B — HMI и автоматизация (polish)
 

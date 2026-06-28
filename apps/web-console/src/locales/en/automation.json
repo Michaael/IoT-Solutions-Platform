@@ -41,7 +41,16 @@
   "correlator.patternEventChain": "EVENT_CHAIN — chain of 3+ events (comma-separated)",
   "correlator.actionRunWorkflow": "RUN_WORKFLOW — start workflow",
   "correlator.actionFireEvent": "FIRE_EVENT — publish event",
+  "correlator.actionSetVariable": "SET_VARIABLE — set object variable",
+  "correlator.actionOpenOperatorReport": "OPEN_OPERATOR_REPORT — open operator report",
   "correlator.actionEvent": "Event (actionTarget) *",
   "correlator.actionWorkflow": "Workflow (actionTarget) *",
-  "correlator.workflowTarget": "Target (workflow path) *"
+  "correlator.workflowTarget": "Target (workflow path) *",
+  "correlator.actionTargetEvent": "Event name (actionTarget) *",
+  "correlator.actionTargetSetVariable": "Variable assignment (actionTarget) *",
+  "correlator.actionTargetReport": "Report path (actionTarget) *",
+  "correlator.actionTargetEventPlaceholder": "thresholdAcknowledged",
+  "correlator.actionTargetSetVariablePlaceholder": "alarmLatched=true",
+  "correlator.actionTargetReportPlaceholder": "root.platform.reports.shift-summary",
+  "correlator.actionTargetWorkflowPlaceholder": "root.platform.workflows.demo-alarm-handler"
 }

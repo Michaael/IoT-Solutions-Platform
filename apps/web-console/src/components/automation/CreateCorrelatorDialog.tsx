@@ -3,6 +3,12 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { createCorrelator } from "../../api";
 import type { CreateCorrelatorPayload, CorrelatorPatternType } from "../../types/automation";
+import {
+  CORRELATOR_ACTION_LABEL_KEYS,
+  CORRELATOR_ACTION_TYPES,
+  correlatorActionTargetLabel,
+  correlatorActionTargetPlaceholder,
+} from "../../utils/correlatorAction";
 
 interface CreateCorrelatorDialogProps {
   onClose: () => void;
@@ -155,18 +161,20 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
                 setForm((f) => ({ ...f, actionType: e.target.value as CreateCorrelatorPayload["actionType"] }))
               }
             >
-              <option value="RUN_WORKFLOW">{t("automation:correlator.actionRunWorkflow")}</option>
-              <option value="FIRE_EVENT">{t("automation:correlator.actionFireEvent")}</option>
+              {CORRELATOR_ACTION_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {t(`automation:${CORRELATOR_ACTION_LABEL_KEYS[type]}`)}
+                </option>
+              ))}
             </select>
           </label>
           <label className="full">
-            {form.actionType === "FIRE_EVENT"
-              ? t("automation:correlator.actionEvent")
-              : t("automation:correlator.workflowTarget")}
+            {correlatorActionTargetLabel(form.actionType, t)}
             <input
               value={form.actionTarget}
               onChange={(e) => setForm((f) => ({ ...f, actionTarget: e.target.value }))}
               required
+              placeholder={correlatorActionTargetPlaceholder(form.actionType, t)}
             />
           </label>
           <label className="checkbox-row">

@@ -107,7 +107,7 @@ export default function ChartWidgetView({
             title={widget.title}
             historyEnabled={historyEnabled}
             historyRangeLabel={
-              historyRange !== "live" ? widgetHistoryRangeLabel(historyRange) : undefined
+              historyRange !== "live" ? widgetHistoryRangeLabel(historyRange, t) : undefined
             }
           />
         </div>

@@ -39,19 +39,19 @@ const BINDING_BY_TYPE: Record<WidgetType, WidgetDataBinding> = {
   label: "session",
   breadcrumbs: "session",
   "context-list": "session",
-  image: "static",
-  "html-snippet": "static",
-  report: "external",
   "dashboard-link": "external",
+  "sub-dashboard": "external",
+  report: "external",
   "event-feed": "external",
   "work-queue": "external",
-  "sub-dashboard": "external",
-  "composite-widget": "composition",
+  image: "static",
+  "html-snippet": "static",
   panel: "composition",
   "tab-panel": "composition",
   "drawer-panel": "composition",
   carousel: "composition",
   "steps-panel": "composition",
+  "composite-widget": "composition",
   "nav-menu": "composition",
   "mini-tec-sld": "composition",
 };
@@ -60,32 +60,28 @@ export function widgetDataBinding(type: WidgetType): WidgetDataBinding {
   return BINDING_BY_TYPE[type];
 }
 
-export const DATA_BINDING_HINTS: Record<WidgetDataBinding, string> = {
-  "object-variable":
-    "Данные с объекта: objectPath (или selectionKey из сессии) + variableName + valueField.",
-  "object-only":
-    "Объект для вызова функций / формы: objectPath или selectionKey; переменные задаются в полях виджета.",
-  "parent-catalog":
-    "Список дочерних объектов каталога parentPath (API GET /objects?parent=…).",
-  session:
-    "Текст/путь из session.params (paramKey, pathKey) или статическое поле виджета.",
-  static: "Статический контент (URL, HTML, текст) без привязки к переменным объекта.",
-  external: "Внешний ресурс платформы (отчёт, дашборд, очередь, события) — пути в полях ниже.",
-  composition: "Вложенные виджеты или пункты меню в JSON-полях.",
+export const DATA_BINDING_HINT_KEYS: Record<WidgetDataBinding, string> = {
+  "object-variable": "editor.bindingHint.objectVariable",
+  "object-only": "editor.bindingHint.objectOnly",
+  "parent-catalog": "editor.bindingHint.parentCatalog",
+  session: "editor.bindingHint.session",
+  static: "editor.bindingHint.static",
+  external: "editor.bindingHint.external",
+  composition: "editor.bindingHint.composition",
 };
 
-export const WIDGET_TYPE_HINTS: Partial<Record<WidgetType, string>> = {
-  value: "Читает поле valueField переменной variableName на объекте.",
-  toggle: "Переключает writable-переменную на объекте.",
-  indicator: "Булево/строковое состояние переменной; цвета и подписи — trueLabel/falseLabel.",
-  chart: "История variableName; historyRange и maxPoints управляют выборкой.",
-  sparkline: "Компактный тренд variableName.",
-  gauge: "Значение variableName; min/max — константы или minVariable/maxVariable.",
-  progress: "Две переменные на одном объекте: currentVariable и maxVariable.",
-  "status-badge": "Статус из variableName (по умолчанию status).",
-  map: "Маркеры для каждого ребёнка parentPath; координаты из latVariable.",
-  "object-table": "Таблица детей parentPath; колонки — columnsJson.",
-  "event-feed": "События платформы; фильтр по objectPathPrefix и eventNamesJson.",
-  spreadsheet: "Сетка A1; sheetMode free|configured; sheetConfigJson; persistMode session|variable.",
-  timer: "mode=countdown — таймер; elapsed — variableName как старт/длительность.",
+export const WIDGET_TYPE_HINT_KEYS: Partial<Record<WidgetType, string>> = {
+  value: "editor.typeHint.value",
+  toggle: "editor.typeHint.toggle",
+  indicator: "editor.typeHint.indicator",
+  chart: "editor.typeHint.chart",
+  sparkline: "editor.typeHint.sparkline",
+  gauge: "editor.typeHint.gauge",
+  progress: "editor.typeHint.progress",
+  "status-badge": "editor.typeHint.statusBadge",
+  map: "editor.typeHint.map",
+  "object-table": "editor.typeHint.objectTable",
+  "event-feed": "editor.typeHint.eventFeed",
+  spreadsheet: "editor.typeHint.spreadsheet",
+  timer: "editor.typeHint.timer",
 };

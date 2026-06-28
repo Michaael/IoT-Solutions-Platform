@@ -6,9 +6,9 @@ import { fetchReport } from "../../api/reports";
 import type { DashboardWidget } from "../../types/dashboard";
 import { WIDGET_HISTORY_RANGE_OPTIONS } from "../../types/dashboard";
 import {
-  DATA_BINDING_HINTS,
+  DATA_BINDING_HINT_KEYS,
   widgetDataBinding,
-  WIDGET_TYPE_HINTS,
+  WIDGET_TYPE_HINT_KEYS,
 } from "./widgetEditorBinding";
 import {
   CALCULATOR_SHEET_CONFIG,
@@ -419,13 +419,15 @@ export function WidgetDataSourceFields(ctx: WidgetFieldContext) {
   const { t } = useTranslation(["widgets", "common"]);
   const { widget, objects, variables, variableSelectEnabled, update } = ctx;
   const binding = widgetDataBinding(widget.type);
-  const typeHint = WIDGET_TYPE_HINTS[widget.type];
+  const bindingHint = t(DATA_BINDING_HINT_KEYS[binding], { defaultValue: "" });
+  const typeHintKey = WIDGET_TYPE_HINT_KEYS[widget.type];
+  const typeHint = typeHintKey ? t(typeHintKey, { defaultValue: "" }) : "";
 
   return (
     <FieldPairs>
       <Section
         title={t("editor.dataSource")}
-        hint={[DATA_BINDING_HINTS[binding], typeHint].filter(Boolean).join(" ")}
+        hint={[bindingHint, typeHint].filter(Boolean).join(" ")}
       />
 
       {(binding === "object-variable" || binding === "object-only") && (

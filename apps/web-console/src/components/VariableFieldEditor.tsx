@@ -1,4 +1,6 @@
 import type { DataSchema } from "../types";
+import { fieldHasNestedEditor, fieldValueToRecord } from "../utils/dataSchema";
+import DataRecordValueEditor from "./schema/DataRecordValueEditor";
 
 interface FieldEditorProps {
   field: DataSchema["fields"][number];
@@ -14,6 +16,29 @@ export default function VariableFieldEditor({
   onChange,
 }: FieldEditorProps) {
   const id = `field-${field.name}`;
+
+  if (fieldHasNestedEditor(field)) {
+    return (
+      <div className="field-block full nested-record-field">
+        <span className="field-label">
+          {field.description || field.name}
+          <span className="field-type-tag">{field.type}</span>
+        </span>
+        <DataRecordValueEditor
+          record={fieldValueToRecord(field, value)}
+          disabled={disabled}
+          allowMultipleRows={field.type === "RECORD_LIST"}
+          onChange={(next) => {
+            if (field.type === "RECORD_LIST") {
+              onChange(next.rows);
+            } else {
+              onChange(next.rows[0] ?? null);
+            }
+          }}
+        />
+      </div>
+    );
+  }
 
   switch (field.type) {
     case "BOOLEAN":

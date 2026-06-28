@@ -2,6 +2,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { updateCorrelator } from "../../api";
 import type { CorrelatorActionType, CorrelatorPatternType, CreateCorrelatorPayload } from "../../types/automation";
+import {
+  CORRELATOR_ACTION_LABEL_KEYS,
+  CORRELATOR_ACTION_TYPES,
+  correlatorActionTargetLabel,
+} from "../../utils/correlatorAction";
 import { variableBoolean, variableNumber, variableString } from "../../utils/variableFieldValue";
 import { inspectorQueryLoading, useInspectorVariables } from "../../hooks/useInspectorQueries";
 import ObjectFederationBindSection from "../ObjectFederationBindSection";
@@ -19,6 +24,8 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
   const variables = variablesQuery.data ?? [];
   const patternType = (variableString(variables, "patternType") || "COUNT") as CorrelatorPatternType;
   const actionType = (variableString(variables, "actionType") || "RUN_WORKFLOW") as CorrelatorActionType;
+  const needsSecondEvent =
+    patternType === "SEQUENCE" || patternType === "EVENT_CHAIN";
 
   const saveMutation = useMutation({
     mutationFn: (payload: Partial<CreateCorrelatorPayload>) => updateCorrelator(path, payload),
@@ -85,8 +92,11 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
         <label>
           {t("automation:correlator.action")}
           <select name="actionType" defaultValue={actionType} disabled={!canManage}>
-            <option value="RUN_WORKFLOW">RUN_WORKFLOW</option>
-            <option value="FIRE_EVENT">FIRE_EVENT</option>
+            {CORRELATOR_ACTION_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t(CORRELATOR_ACTION_LABEL_KEYS[type])}
+              </option>
+            ))}
           </select>
         </label>
         <label>
@@ -99,8 +109,10 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label>
-          {actionType === "FIRE_EVENT"
-            ? t("automation:correlator.actionEvent")
+          {needsSecondEvent
+            ? patternType === "EVENT_CHAIN"
+              ? t("automation:correlator.eventChain")
+              : t("automation:correlator.eventB")
             : t("automation:correlator.secondEventChain")}
           <input
             name="secondEventName"
@@ -140,9 +152,7 @@ export default function CorrelatorInspector({ path, canManage = false }: Correla
           />
         </label>
         <label className="full">
-          {actionType === "FIRE_EVENT"
-            ? t("automation:correlator.actionEvent")
-            : t("automation:correlator.actionWorkflow")}
+          {correlatorActionTargetLabel(actionType, t)}
           <input
             name="actionTarget"
             defaultValue={variableString(variables, "actionTarget")}

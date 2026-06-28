@@ -5,6 +5,7 @@ import {
   createBundleObjects,
   deleteBundleObjects,
   fetchDeployHistory,
+  fetchApplicationEventCatalog,
   listFunctionVersions,
   rollbackDeploy,
   rollbackFunction,
@@ -37,6 +38,12 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
     queryKey: ["function-versions", appId, fnObjectPath, fnName],
     queryFn: () => listFunctionVersions(appId, fnObjectPath.trim(), fnName.trim()),
     enabled: Boolean(appId && fnObjectPath.trim() && fnName.trim()),
+  });
+
+  const eventCatalogQuery = useQuery({
+    queryKey: ["application-event-catalog", appId],
+    queryFn: () => fetchApplicationEventCatalog(appId),
+    enabled: Boolean(appId),
   });
 
   const rollbackMutation = useMutation({
@@ -162,6 +169,40 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
             ? ` → ${t("deploy.versionLabel", { version: rollbackMutation.data.rolledBackTo })}`
             : ""}
         </div>
+      )}
+
+      <hr />
+
+      <h3>{t("deploy.eventCatalogTitle")}</h3>
+      <p className="op-muted">{t("deploy.eventCatalogHint")}</p>
+      {eventCatalogQuery.isLoading && <p className="op-muted">{t("deploy.eventCatalogLoading")}</p>}
+      {eventCatalogQuery.error && (
+        <div className="op-alert op-alert-error">{String(eventCatalogQuery.error)}</div>
+      )}
+      {eventCatalogQuery.data && eventCatalogQuery.data.length === 0 && (
+        <p className="op-muted">{t("deploy.eventCatalogEmpty")}</p>
+      )}
+      {eventCatalogQuery.data && eventCatalogQuery.data.length > 0 && (
+        <table className="data-table compact">
+          <thead>
+            <tr>
+              <th>{t("deploy.eventCatalogId")}</th>
+              <th>{t("deploy.eventCatalogRoles")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {eventCatalogQuery.data.map((entry) => (
+              <tr key={entry.id}>
+                <td><code>{entry.id}</code></td>
+                <td>
+                  {(entry.roles ?? []).length > 0
+                    ? entry.roles!.join(", ")
+                    : t("deploy.eventCatalogAnyRole")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       <hr />

@@ -43,5 +43,14 @@
   "correlator.title": "Ereigniskorrelator",
   "correlator.windowSec": "Fenster (Sek.)",
   "correlator.windowSeconds": "Fenster (s)",
-  "correlator.workflowTarget": "Ziel (Workflow-Pfad) *"
+  "correlator.workflowTarget": "Ziel (Workflow-Pfad) *",
+  "correlator.actionSetVariable": "SET_VARIABLE — Objektvariable setzen",
+  "correlator.actionOpenOperatorReport": "OPEN_OPERATOR_REPORT — Operator-Bericht öffnen",
+  "correlator.actionTargetEvent": "Ereignisname (actionTarget) *",
+  "correlator.actionTargetSetVariable": "Variablenzuweisung (actionTarget) *",
+  "correlator.actionTargetReport": "Berichtspfad (actionTarget) *",
+  "correlator.actionTargetEventPlaceholder": "thresholdAcknowledged",
+  "correlator.actionTargetSetVariablePlaceholder": "alarmLatched=true",
+  "correlator.actionTargetReportPlaceholder": "root.platform.reports.shift-summary",
+  "correlator.actionTargetWorkflowPlaceholder": "root.platform.workflows.demo-alarm-handler"
 }
