@@ -7399,6 +7399,133 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   font-size: 0.95rem;
 }
 
+.function-script-steps-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.script-step-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.script-step-toolbar .field-block.compact {
+  min-width: 14rem;
+}
+
+.script-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.script-steps-list.nested {
+  margin-top: 0.35rem;
+  padding-left: 0.65rem;
+  border-left: 2px solid var(--border);
+}
+
+.script-step-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-elevated, var(--bg));
+  overflow: hidden;
+}
+
+.script-step-card-header {
+  display: grid;
+  grid-template-columns: auto minmax(10rem, 14rem) 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.script-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--accent-soft, rgba(59, 130, 246, 0.12));
+  color: var(--accent, #3b82f6);
+}
+
+.script-step-type-select {
+  min-width: 0;
+  font-size: 0.82rem;
+}
+
+.script-step-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.script-step-card-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.script-step-fields {
+  padding: 0.65rem;
+}
+
+.script-step-nested-block {
+  grid-column: 1 / -1;
+  margin-top: 0.35rem;
+}
+
+.script-step-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.widget-editor-list-row.script-step-single-col {
+  grid-template-columns: 1fr auto;
+}
+
+@media (max-width: 720px) {
+  .script-step-card-header {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .script-step-desc {
+    grid-column: 1 / -1;
+  }
+}
+
+.java-function-editor {
+  margin-top: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.java-function-editor .cm-editor {
+  font-size: 0.82rem;
+}
+
+.java-function-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
+.java-function-editor .cm-scroller {
+  font-family: Consolas, "Cascadia Code", "Segoe UI Mono", monospace;
+  min-height: 420px;
+}
+
 .section-inline-tools {
   display: flex;
   align-items: center;

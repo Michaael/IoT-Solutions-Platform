@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { upsertEvent, upsertFunction } from "../api";
@@ -6,7 +6,10 @@ import type { DataSchema, EventDescriptor, FunctionDescriptor } from "../types";
 import DataSchemaEditor from "./schema/DataSchemaEditor";
 import { cloneSchema, emptySchema, normalizeFunctionDescriptor } from "../utils/dataSchema";
 import { DEFAULT_JAVA_FUNCTION_TEMPLATE } from "../utils/javaFunctionTemplate";
+import { defaultScriptBody } from "../utils/functionScriptSteps";
+import FunctionScriptStepsEditor from "./functionScript/FunctionScriptStepsEditor";
 
+const JavaFunctionEditor = lazy(() => import("./functionScript/JavaFunctionEditor"));
 type DescriptorKind = "function" | "event";
 
 interface EditDescriptorDialogProps {
@@ -240,6 +243,9 @@ export default function EditDescriptorDialog({
                     if (next === "java" && !sourceBody.trim()) {
                       setSourceBody(DEFAULT_JAVA_FUNCTION_TEMPLATE);
                     }
+                    if (next === "script" && !sourceBody.trim()) {
+                      setSourceBody(defaultScriptBody());
+                    }
                   }}
                 >
                   <option value="">{t("descriptor.sourceTypeHandler")}</option>
@@ -263,19 +269,44 @@ export default function EditDescriptorDialog({
                   placeholder="root.platform.data-sources.app_myapp"
                 />
               </label>
-              {(sourceType === "script" || sourceType === "java" || sourceBody.trim()) && (
+              {sourceType === "script" && (
+                <div className="full">
+                  <FunctionScriptStepsEditor
+                    value={sourceBody || defaultScriptBody()}
+                    onChange={setSourceBody}
+                  />
+                </div>
+              )}
+              {sourceType === "java" && (
+                <div className="full">
+                  <span className="field-label">{t("descriptor.sourceBodyJava")}</span>
+                  <Suspense
+                    fallback={
+                      <textarea
+                        className="json-editor"
+                        rows={16}
+                        value={sourceBody}
+                        onChange={(e) => setSourceBody(e.target.value)}
+                        spellCheck={false}
+                      />
+                    }
+                  >
+                    <JavaFunctionEditor
+                      value={sourceBody || DEFAULT_JAVA_FUNCTION_TEMPLATE}
+                      onChange={setSourceBody}
+                    />
+                  </Suspense>
+                </div>
+              )}
+              {sourceType !== "script" && sourceType !== "java" && sourceBody.trim() && (
                 <label className="full">
-                  {sourceType === "java" ? t("descriptor.sourceBodyJava") : t("descriptor.sourceBody")}
+                  {t("descriptor.sourceBody")}
                   <textarea
                     className="json-editor"
-                    rows={sourceType === "java" ? 16 : 10}
+                    rows={10}
                     value={sourceBody}
                     onChange={(e) => setSourceBody(e.target.value)}
-                    placeholder={
-                      sourceType === "java"
-                        ? "public class MyObjectFunction implements ObjectJavaFunction { ... }"
-                        : '{"steps":[{"type":"return","value":{}}]}'
-                    }
+                    placeholder='{"steps":[{"type":"return","value":{}}]}'
                     spellCheck={false}
                   />
                 </label>

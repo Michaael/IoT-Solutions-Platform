@@ -14,6 +14,18 @@ npm ci
 npm run test:e2e:install
 ```
 
+## Coverage (mocked)
+
+| Scenario | Spec |
+| -------- | ---- |
+| Login form | `login page` |
+| Explorer shell + tree | `admin explorer`, `explorer device variables` |
+| Device selection (`?path=` deep link) | `selects a device in the tree` |
+| Dashboard layout API | `dashboard preview` |
+| Operator `?mode=operator&app=demo` | `operator deep link` |
+
+**In progress:** inspector Variables tab + Dashboard builder UI render (React Query / lazy-tree timing).
+
 ## Run mocked smoke tests (default)
 
 Starts Vite on `http://127.0.0.1:5173` automatically unless `E2E_BASE_URL` is set:

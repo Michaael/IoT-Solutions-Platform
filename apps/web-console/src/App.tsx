@@ -250,7 +250,7 @@ export default function App() {
         writeSelectedPath("root");
         clearInvalidAdminPathFromUrl();
       }
-    }, 400);
+    }, 2000);
     return () => window.clearTimeout(timer);
   }, [objectList, selectedPath]);
 

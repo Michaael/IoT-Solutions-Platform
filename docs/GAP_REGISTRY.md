@@ -29,8 +29,9 @@
 | **P1** | Inspector | RECORD inline editor | BL-03 Done |
 | **P2** | Dashboard | Chart bubble / radar | BL-65, 20.25 |
 | **P1** | i18n tails | widget types + binding hints в locale | BL-07 Done |
-| **P1** | Playwright e2e | Admin smoke (Phase 18.1 = BL-50) | BL-50, 18.1 |
-| **P1** | Driver write | Modbus, S7, OPC UA — `not implemented` | BL-20…22 |
+| **P1** | Playwright e2e | Admin smoke baseline (Phase 18.1 = BL-50) | BL-50 Partial, 18.1 |
+| **P1** | Driver write | Modbus, S7, OPC UA | BL-20…22 Done |
+| **P2** | Driver write (tail) | BACnet, IEC 104, DNP3 poll, DLMS | BL-23…25 |
 | **P2** | Bindings UX | Каталог platform bindings + activators UI | BL-09,18 Done; runtime engine in progress |
 | **P2** | History scale | ClickHouse только для events, не variables | BL-40 |
 | **P2** | System ops | Redis/NATS/AI/MCP toggles в UI | BL-13 Done |
@@ -59,16 +60,16 @@
 | MCP adapter (0006) | ~100% | — | ContextPack `resources/list` + `resources/read` |
 | Tree-first agent (FW-44) | ~100% | — | [0005](decisions/0005-tree-first-ai-agent.md), **FW-45** briefing |
 | Licensed driver packs | ~100% | — | FW-50, [LICENSED_DRIVER_PACKS.md](LICENSED_DRIVER_PACKS.md) |
-| Driver stub catalog | ~95% | write path + 6 STUB/BETA promotion | BL-20…30, [DRIVERS.md](DRIVERS.md) |
+| Driver stub catalog | ~95% | BACnet/IEC104/DNP3/DLMS write; STUB/BETA promotion | BL-23…26, [DRIVERS.md](DRIVERS.md) |
 | Driver maturity labels | ~70% | PRODUCTION в каталоге при read-only v0.1 | BL-27 |
-| Frontend e2e (Playwright) | ~0% | Admin critical paths | BL-50, Phase 18.1 |
+| Frontend e2e (Playwright) | ~25% | Smoke only; critical paths TBD | BL-50 Partial, Phase 18.1 |
 | Web Console i18n | ~98% | tails | BL-07 Done |
 | UI ↔ API parity | ~95% | — | BL-01…18 Done |
 | Dashboard widgets (advanced) | ~95% | chart bubble/radar | BL-65 |
 | Variable inline editor | ~95% | — | BL-03 Done |
 | Binding rules UX | ~95% | runtime `onEvent`/`periodicMs` engine | in progress |
-| Journals | ~100% | — | BL-15,16 Done |
-| ClickHouse (variables) | ~0% | только event journal | BL-40 |
+| Journals | ~100% | invoke/binding audit payloads (V51), drill-down UI | BL-15,16 Done |
+| ClickHouse (variables) | ~15% | UI settings Done; backend store Planned | BL-40 Partial |
 | Optional backends UI | ~100% | — | BL-41,42 Done |
 | Platform change management | ~95% | — | BL-04 Done |
 | Collaboration (leases) | ~95% | — | BL-05 Done |
@@ -85,6 +86,7 @@
 
 | Дата | Изменение |
 |------|-----------|
+| 2026-06-28 | ROADMAP Phase 20 sync с CODE_AUDIT: BL-20…22/28/41/42 Done; Partial на 20.15–17,19–21; журналы 0.9.33 |
 | 2026-06-28 | BL-55 Partial: binding activators, journal export, chart/gantt vitest utils |
 | 2026-06-28 | Sprint BL-C close: BL-13…18, journals, system settings, binding activators UI |
 | 2026-06-28 | Wave G: Haystack/Brick → BL-56…62 (P3 deferred), ROADMAP 20.22 |

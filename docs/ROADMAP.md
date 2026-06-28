@@ -220,6 +220,8 @@ Track: **UI** (не REQ-PF — не меняет platform API). См. [0013](dec
 
 Волна после code audit (2026-06-28): закрытие пробелов **backend ↔ frontend**, polish HMI, driver write, scale integrations. Полный реестр — [CODE_AUDIT_BACKLOG.md](CODE_AUDIT_BACKLOG.md).
 
+**Дополнение (июнь 2026, prod 0.9.31–0.9.33):** журналы — fix function audit opt-in, отображение списка, сортировка newest-first, drill-down (payload / input·output / before·after, Flyway V51). См. [OBJECT_FUNCTIONS.md](OBJECT_FUNCTIONS.md).
+
 | # | Тема | BL | P | Статус |
 |---|------|----|---|--------|
 | 20.1 | Correlator actions `SET_VARIABLE`, `OPEN_OPERATOR_REPORT` в UI | BL-01 | P0 | Done |
@@ -228,25 +230,29 @@ Track: **UI** (не REQ-PF — не меняет platform API). См. [0013](dec
 | 20.4 | Platform Change Sets UI | BL-04 | P1 | Done |
 | 20.5 | Edit lease indicator + acquire/release | BL-05 | P1 | Done |
 | 20.6 | Chart types: убрать нереализованные options (opt. B) | BL-06 | P1 | Done |
-| 20.23 | Chart `range` min/max band | BL-63 | P2 | Done |
-| 20.24 | Chart `candlestick` OHLC | BL-64 | P2 | Done |
-| 20.25 | Chart `bubble` / `radar` multi-axis | BL-65 | P3 | Planned |
 | 20.7 | i18n: widget type labels + binding hints | BL-07 | P1 | Done |
 | 20.8 | Application Event Catalog viewer | BL-08 | P1 | Done |
 | 20.9 | Binding expression builder (18 platform functions) | BL-09 | P2 | Done |
-| 20.10 | Widgets: network-graph layout, gantt interactive, history-table window | BL-10…12,63 | P2 | Done |
+| 20.10 | Widgets: network-graph layout, gantt interactive, history-table window | BL-10…12 | P2 | Done |
 | 20.11 | System settings: Redis/NATS/ClickHouse/AI/MCP toggles | BL-13 | P2 | Done |
-| 20.12 | Automation index + journal export/diff | BL-14…16 | P2 | Done |
-| 20.13 | Driver write: Modbus, S7, OPC UA (demand-driven) | BL-20…22 | P1 | Planned |
+| 20.12 | Automation index + journals (export/diff, invoke audit payloads, drill-down) | BL-14…16 | P2 | Done |
+| 20.23 | Chart `range` min/max band | BL-63 | P2 | Done |
+| 20.24 | Chart `candlestick` OHLC | BL-64 | P2 | Done |
+| 20.25 | Chart `bubble` / `radar` multi-axis | BL-65 | P3 | Planned |
+| 20.13 | Driver write: Modbus, S7, OPC UA | BL-20…22 | P1 | Done |
 | 20.14 | Driver write: BACnet, IEC104, DNP3 poll, DLMS | BL-23…25 | P2 | Planned |
-| 20.15 | Driver maturity sync + write UI + tests | BL-27,28,30 | P2 | Planned |
-| 20.16 | ClickHouse variable history | BL-40 | P2 | Planned |
-| 20.17 | Scale ops: Redis/NATS health, YARG PDF hint | BL-41…43 | P2 | Planned |
+| 20.15 | Driver maturity sync + write UI + tests | BL-27,28,30 | P2 | Partial |
+| 20.16 | ClickHouse variable history | BL-40 | P2 | Partial |
+| 20.17 | Scale ops: Redis/NATS health, YARG PDF hint | BL-41…43 | P2 | Partial |
 | 20.18 | Notifications, federation polish, backup/restore, MCP admin | BL-44…48 | P3 | Planned |
-| 20.19 | Playwright e2e (см. также Phase 18.1) | BL-50 | P1 | Planned |
-| 20.20 | Operator manifest screens + spreadsheet history binding | BL-51…54 | P3 | Planned |
+| 20.19 | Playwright e2e (см. также Phase 18.1) | BL-50 | P1 | Partial |
+| 20.20 | Operator manifest screens + spreadsheet history binding | BL-51…54 | P3 | Partial |
 | 20.21 | Frontend component tests (widgets, inspector) | BL-55 | P2 | Partial |
 | 20.22 | Haystack/Brick semantic layer (ADR, tags mixin, export) | BL-56…62 | P3 | Deferred |
+
+**Partial — расшифровка:** 20.15 — **BL-28 Done** (write UI), BL-27/30 Planned; 20.16 — settings UI Done, backend write/query Planned; 20.17 — **BL-41,42 Done**, BL-43 Planned; 20.19 = Phase 18.1 smoke baseline; 20.20 — **BL-53 Done**, BL-51/52/54 Planned.
+
+**Следующие приоритеты:** BL-50 (e2e), BL-40 (CH variables backend), BL-23…25 (driver write), BL-65 (bubble/radar).
 
 **Спринты:** см. [CODE_AUDIT_BACKLOG.md § Sprint planning](CODE_AUDIT_BACKLOG.md#sprint-planning-рекомендация).
 

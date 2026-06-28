@@ -419,8 +419,10 @@ RUN_WORKFLOW, FIRE_EVENT, SET_VARIABLE, OPEN_OPERATOR_REPORT
 - [x] Operator deep link `?mode=operator&app=demo` (public manifest)
 - [x] Optional live login when `E2E_USERNAME` / `E2E_PASSWORD` set
 - [x] CI job `web-console` (mocked e2e + vitest + build)
-- [ ] Explorer: select device, open variables tab (mock editor API + tree expand)
-- [ ] Dashboard preview render (mock dashboard layout + editor tab)
+- [x] Explorer: expand Devices, select device (`?path=` deep link)
+- [x] Dashboard layout API mock (label widget payload)
+- [ ] Explorer: Variables tab after inspector load
+- [ ] Dashboard builder UI render (double-click / Open in editor)
 - [ ] CI against staging / prod URL (`E2E_BASE_URL`)
 
 **Запуск:**

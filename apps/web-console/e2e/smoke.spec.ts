@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 import {
+  expandTreeTo,
   mockAuthConfig,
   mockAuthenticatedApi,
+  MOCK_DASHBOARD_PATH,
+  MOCK_DEVICE_PATH,
   seedAuthSession,
 } from "./fixtures/apiMocks";
 
@@ -27,6 +30,46 @@ test.describe("admin explorer", () => {
     await expect(page.getByRole("button", { name: "Explorer" })).toHaveClass(/active/);
     await expect(page.getByText("Object tree")).toBeVisible();
     await expect(page.locator(".tree-label", { hasText: "Platform" })).toBeVisible();
+  });
+});
+
+test.describe("explorer device variables", () => {
+  test("selects a device in the tree (deep link)", async ({ page }) => {
+    await mockAuthenticatedApi(page);
+    await seedAuthSession(page);
+    await page.goto("/?mode=admin");
+
+    await expandTreeTo(page, "Devices");
+    const sensorRow = page.locator(".tree-row").filter({ hasText: "Lab sensor" });
+    await sensorRow.scrollIntoViewIfNeeded();
+    await sensorRow.click();
+
+    await expect(page).toHaveURL(/lab-sensor/);
+  });
+
+  test("expands the tree to a nested device row", async ({ page }) => {
+    await mockAuthenticatedApi(page);
+    await seedAuthSession(page);
+    await page.goto("/?mode=admin");
+
+    await expandTreeTo(page, "Devices");
+    await expect(page.locator(".tree-label", { hasText: "Lab sensor" })).toBeVisible();
+  });
+});
+
+test.describe("dashboard preview", () => {
+  test("loads dashboard layout via API mock", async ({ page }) => {
+    await mockAuthenticatedApi(page);
+    await seedAuthSession(page);
+    await page.goto("/?mode=admin");
+
+    const payload = await page.evaluate(async (path) => {
+      const response = await fetch(`/api/v1/dashboards/by-path?path=${encodeURIComponent(path)}`);
+      return response.json() as Promise<{ title: string; layoutJson: string }>;
+    }, MOCK_DASHBOARD_PATH);
+
+    expect(payload.title).toBe("Ops board");
+    expect(payload.layoutJson).toContain("42.5 °C");
   });
 });
 
