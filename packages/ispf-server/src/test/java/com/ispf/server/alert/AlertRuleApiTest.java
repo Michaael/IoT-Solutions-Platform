@@ -7,6 +7,9 @@ import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectTemplateService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Isolated
+@Execution(ExecutionMode.SAME_THREAD)
 class AlertRuleApiTest {
 
     private static final String DEMO_DEVICE = "root.platform.devices.demo-sensor-01";

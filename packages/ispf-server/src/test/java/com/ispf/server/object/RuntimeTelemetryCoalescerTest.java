@@ -181,6 +181,7 @@ class RuntimeTelemetryCoalescerTest {
 
     @Test
     void coalescesSameTopicWithoutPayloadLanesIntoOneLane() {
+        clearInvocations(eventPublisher);
         coalescer = newCoalescer(true, 1_000, false, false);
         DataSchema ingress = DataSchema.builder("mqttIngress")
                 .field("topic", FieldType.STRING)
@@ -199,7 +200,9 @@ class RuntimeTelemetryCoalescerTest {
         );
         coalescer.flushNow();
 
-        verify(eventPublisher, times(1)).publishEvent(org.mockito.ArgumentMatchers.any());
+        ArgumentCaptor<ObjectChangeEvent> captor = ArgumentCaptor.forClass(ObjectChangeEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(captor.capture());
+        assertThat(captor.getValue().variableName()).isEqualTo("lastIngress");
     }
 
     @Test

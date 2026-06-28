@@ -47,6 +47,7 @@ class CommercialBundleDeployApiTest {
     static void licenseProperties(DynamicPropertyRegistry registry) {
         registry.add("ispf.license.enforce", () -> "true");
         registry.add("ispf.license.public-key-pem", () -> publicKeyPem);
+        registry.add("ispf.bootstrap.fixtures-enabled", () -> "false");
     }
 
     @Test

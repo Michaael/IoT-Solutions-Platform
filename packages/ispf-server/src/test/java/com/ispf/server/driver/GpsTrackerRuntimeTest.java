@@ -1,6 +1,9 @@
 package com.ispf.server.driver;
 
+import com.ispf.server.object.ObjectManager;
+import com.ispf.server.plugin.model.ModelApplicationService;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,22 +29,39 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class GpsTrackerRuntimeTest {
 
-    private static final String DEMO_DEVICE = "root.platform.devices.demo-sensor-01";
+    private static final String DEVICE_NAME = "gps-tracker-it";
     private static final String NMEA_LINE =
             "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
 
     @Autowired
+    private ObjectManager objectManager;
+
+    @Autowired
+    private ModelApplicationService modelApplicationService;
+
+    @Autowired
+    private DriverRuntimeService driverRuntimeService;
+
+    @Autowired
     private MockMvc mockMvc;
+
+    private String devicePath;
 
     private int listenPort;
 
+    @BeforeEach
+    void createDevice() {
+        devicePath = DriverIntegrationTestSupport.createDevice(
+                objectManager,
+                modelApplicationService,
+                driverRuntimeService,
+                DEVICE_NAME
+        );
+    }
+
     @AfterEach
     void stopDriver() throws Exception {
-        try {
-            mockMvc.perform(post("/api/v1/drivers/runtime/stop").param("devicePath", DEMO_DEVICE));
-        } catch (Exception ignored) {
-            // best effort
-        }
+        DriverIntegrationTestSupport.deleteDevice(objectManager, driverRuntimeService, devicePath);
     }
 
     @Test
@@ -50,11 +70,11 @@ class GpsTrackerRuntimeTest {
             listenPort = probe.getLocalPort();
         }
 
-        mockMvc.perform(post("/api/v1/drivers/runtime/stop").param("devicePath", DEMO_DEVICE))
+        mockMvc.perform(post("/api/v1/drivers/runtime/stop").param("devicePath", devicePath))
                 .andExpect(status().isOk());
 
         mockMvc.perform(put("/api/v1/drivers/runtime/configure")
-                        .param("devicePath", DEMO_DEVICE)
+                        .param("devicePath", devicePath)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -82,16 +102,16 @@ class GpsTrackerRuntimeTest {
             Thread.sleep(300);
         }
 
-        mockMvc.perform(post("/api/v1/drivers/runtime/poll").param("devicePath", DEMO_DEVICE))
+        mockMvc.perform(post("/api/v1/drivers/runtime/poll").param("devicePath", devicePath))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/objects/by-path/variables")
-                        .param("path", DEMO_DEVICE))
+                        .param("path", devicePath))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].name", hasItem("gpsFeed")));
 
         mockMvc.perform(get("/api/v1/objects/by-path/variables/detail")
-                        .param("path", DEMO_DEVICE)
+                        .param("path", devicePath)
                         .param("name", "gpsFeed"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.value.rows[0].value").value(NMEA_LINE));
