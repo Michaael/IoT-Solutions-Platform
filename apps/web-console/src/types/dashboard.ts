@@ -543,6 +543,10 @@ export interface NetworkGraphWidget extends DashboardWidgetBase {
   nodesVariable?: string;
   edgesVariable?: string;
   labelField?: string;
+  idField?: string;
+  edgeFromField?: string;
+  edgeToField?: string;
+  layout?: "cose" | "circle" | "grid" | "breadthfirst";
 }
 
 export type SheetCellKind = "label" | "input" | "formula" | "readonly" | "binding";

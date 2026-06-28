@@ -43,7 +43,7 @@
 | ID | Задача | P | Статус | Область |
 | -- | ------ | - | ------ | ------- |
 | **BL-09** | Binding expression builder: каталог 18 platform bindings + autocomplete | P2 | Done | Bindings |
-| **BL-10** | `network-graph` widget: layout engine (Cytoscape / vis-network) | P2 | Planned | Dashboard |
+| **BL-10** | `network-graph` widget: layout engine (Cytoscape / vis-network) | P2 | Done | Dashboard |
 | **BL-11** | `gantt-chart` widget: интерактивный timeline | P2 | Planned | Dashboard |
 | **BL-12** | `history-table`: настраиваемое окно (сейчас ~5 min hardcoded) | P2 | Done | Dashboard |
 | **BL-63** | Chart widget: тип **range** (min/max band из historian aggregate) | P2 | Done | Dashboard |

@@ -28,7 +28,7 @@
 | **P1** | UI ↔ API | Change sets, edit leases, event catalog viewer | BL-04,05,08 |
 | **P1** | Inspector | RECORD inline — JSON textarea вместо `DataRecordValueEditor` | BL-03, 20.3 |
 | **P2** | Dashboard | Chart candlestick / bubble / radar | BL-64…65, 20.24…25 |
-| **P1** | Dashboard | network-graph stub layout | BL-10, 20.10 |
+| **P1** | Dashboard | gantt interactive timeline | BL-11, 20.10 |
 | **P1** | i18n tails | `WIDGET_TYPES` и binding hints на русском в TS | BL-07, 20.7 |
 | **P1** | Playwright e2e | Admin smoke (Phase 18.1 = BL-50) | BL-50, 18.1 |
 | **P1** | Driver write | Modbus, S7, OPC UA — `not implemented` | BL-20…22 |
@@ -65,7 +65,7 @@
 | Frontend e2e (Playwright) | ~0% | Admin critical paths | BL-50, Phase 18.1 |
 | Web Console i18n | ~95% | widget labels + binding hints в TS, не в locale | BL-07, Phase 19 |
 | UI ↔ API parity | ~75% | change sets, leases, correlator actions, event catalog | BL-01…08, Phase 20 |
-| Dashboard widgets (advanced) | ~85% | chart OHLC/bubble-radar, network-graph, gantt | BL-64…65,10…11 |
+| Dashboard widgets (advanced) | ~90% | chart OHLC/bubble-radar, gantt | BL-64…65,11 |
 | Variable inline editor | ~85% | RECORD → structured editor | BL-03 |
 | Binding rules UX | ~90% | activators UI | BL-18 |
 | Journals | ~90% | export, diff view | BL-15,16 |
@@ -86,7 +86,7 @@
 
 | Дата | Изменение |
 |------|-----------|
-| 2026-06-28 | BL-63…65: chart types implementation backlog (range P2, candlestick P2, bubble/radar P3) |
+| 2026-06-28 | BL-10: network-graph Cytoscape layout (nodes/edges RECORD_LIST, cose/circle/grid/breadthfirst) |
 | 2026-06-28 | Wave G: Haystack/Brick → BL-56…62 (P3 deferred), ROADMAP 20.22 |
 | 2026-06-28 | Code audit → [CODE_AUDIT_BACKLOG.md](CODE_AUDIT_BACKLOG.md) (BL-01…55), ROADMAP Phase 20, gap-registry расширен |
 | 2026-06-28 | Phase 18 сужена: mini-TEC acceptance и v0.8.0 prod rollout сняты; остались Playwright e2e + demand-driven drivers |

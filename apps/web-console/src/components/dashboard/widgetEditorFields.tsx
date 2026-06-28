@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchReport } from "../../api/reports";
-import type { DashboardWidget } from "../../types/dashboard";
+import type { DashboardWidget, NetworkGraphWidget } from "../../types/dashboard";
 import { WIDGET_HISTORY_RANGE_OPTIONS, HISTORY_TABLE_RANGE_IDS } from "../../types/dashboard";
 import {
   DATA_BINDING_HINT_KEYS,
@@ -2043,9 +2043,48 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext, t: TFunction): ReactNod
           <label>
             labelField
             <input
-              value={widget.labelField ?? "label"}
+              value={widget.labelField ?? "name"}
               onChange={(e) => update({ labelField: e.target.value })}
             />
+          </label>
+          <label>
+            idField
+            <input
+              value={widget.idField ?? "id"}
+              onChange={(e) => update({ idField: e.target.value })}
+            />
+          </label>
+          <label>
+            edgeFromField
+            <input
+              value={widget.edgeFromField ?? "from"}
+              onChange={(e) => update({ edgeFromField: e.target.value })}
+            />
+          </label>
+          <label>
+            edgeToField
+            <input
+              value={widget.edgeToField ?? "to"}
+              onChange={(e) => update({ edgeToField: e.target.value })}
+            />
+          </label>
+          <label>
+            layout
+            <select
+              value={widget.layout ?? "cose"}
+              onChange={(e) =>
+                update({
+                  layout: e.target.value as NetworkGraphWidget["layout"],
+                })
+              }
+            >
+              <option value="cose">{t("editor.networkGraphLayout.cose")}</option>
+              <option value="circle">{t("editor.networkGraphLayout.circle")}</option>
+              <option value="grid">{t("editor.networkGraphLayout.grid")}</option>
+              <option value="breadthfirst">
+                {t("editor.networkGraphLayout.breadthfirst")}
+              </option>
+            </select>
           </label>
         </>
       );

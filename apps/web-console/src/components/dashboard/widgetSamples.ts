@@ -690,8 +690,19 @@ export function buildSampleWidget(type: WidgetType, index: number): DashboardWid
         edgesVariable: "edges",
         labelField: "name",
         demoPreviewJson: j({
-          nodes: ["Шлюз", "Датчик 1", "Датчик 2", "ПЛК"],
-          edges: 5,
+          nodes: [
+            { id: "gw", label: "Шлюз" },
+            { id: "s1", label: "Датчик 1" },
+            { id: "s2", label: "Датчик 2" },
+            { id: "plc", label: "ПЛК" },
+          ],
+          edges: [
+            { from: "gw", to: "s1" },
+            { from: "gw", to: "s2" },
+            { from: "gw", to: "plc" },
+            { from: "s1", to: "s2" },
+            { from: "plc", to: "s2" },
+          ],
         }),
       };
     case "spreadsheet":

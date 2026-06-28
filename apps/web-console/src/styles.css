@@ -2490,8 +2490,23 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
 }
 
 .dash-widget-chart,
-.dash-widget-sparkline {
+.dash-widget-sparkline,
+.dash-widget-network {
   min-height: 0;
+}
+
+.dash-widget-network {
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-network-graph-canvas {
+  flex: 1 1 auto;
+  min-height: 120px;
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--dash-surface, #1a1d24) 92%, #000 8%);
 }
 
 .dash-widget-chart-head {
