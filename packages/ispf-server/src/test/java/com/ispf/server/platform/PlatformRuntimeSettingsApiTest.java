@@ -36,7 +36,9 @@ class PlatformRuntimeSettingsApiTest {
                         .header("Authorization", "Bearer " + adminToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sections.length()").value(greaterThan(0)))
-                .andExpect(jsonPath("$.sections[*].id", hasItem("automation")));
+                .andExpect(jsonPath("$.sections[*].id", hasItem("automation")))
+                .andExpect(jsonPath("$.sections[*].settings[*].id", hasItem("event-journal.store")))
+                .andExpect(jsonPath("$.sections[*].settings[*].id", hasItem("mcp.enabled")));
     }
 
     @Test

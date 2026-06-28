@@ -235,8 +235,8 @@ Track: **UI** (не REQ-PF — не меняет platform API). См. [0013](dec
 | 20.8 | Application Event Catalog viewer | BL-08 | P1 | Done |
 | 20.9 | Binding expression builder (18 platform functions) | BL-09 | P2 | Done |
 | 20.10 | Widgets: network-graph layout, gantt interactive, history-table window | BL-10…12,63 | P2 | Partial (BL-10,12,63 done) |
-| 20.11 | System settings: Redis/NATS/ClickHouse/AI/MCP toggles | BL-13 | P2 | Planned |
-| 20.12 | Automation index + journal export/diff | BL-14…16 | P2 | Planned |
+| 20.11 | System settings: Redis/NATS/ClickHouse/AI/MCP toggles | BL-13 | P2 | Done |
+| 20.12 | Automation index + journal export/diff | BL-14…16 | P2 | Partial (BL-14 done) |
 | 20.13 | Driver write: Modbus, S7, OPC UA (demand-driven) | BL-20…22 | P1 | Planned |
 | 20.14 | Driver write: BACnet, IEC104, DNP3 poll, DLMS | BL-23…25 | P2 | Planned |
 | 20.15 | Driver maturity sync + write UI + tests | BL-27,28,30 | P2 | Planned |

@@ -34,7 +34,7 @@
 | **P1** | Driver write | Modbus, S7, OPC UA — `not implemented` | BL-20…22 |
 | **P2** | Bindings UX | Каталог platform bindings в UI | — |
 | **P2** | History scale | ClickHouse только для events, не variables | BL-40 |
-| **P2** | System ops | Redis/NATS/AI/MCP toggles в UI | BL-13 |
+| **P2** | System ops | Redis/NATS/AI/MCP toggles в UI | BL-13 Done |
 | **P3** | Federation | Dashboard write read-only на proxy; sync conflicts | BL-45,46 |
 | **P3** | Notifications | Нет webhook/email из alert/correlator | BL-44 |
 | **P3** | Semantic (Haystack/Brick) | Нет overlay тегов / export; tree-only semantics | BL-56…62, 20.22 |
@@ -70,7 +70,7 @@
 | Binding rules UX | ~90% | activators UI | BL-18 |
 | Journals | ~90% | export, diff view | BL-15,16 |
 | ClickHouse (variables) | ~0% | только event journal | BL-40 |
-| Optional backends UI | ~30% | Redis, NATS, AI, MCP в System | BL-13,41,42,48 |
+| Optional backends UI | ~70% | Redis, NATS, ClickHouse journal, AI, MCP в System | BL-41,42,48 |
 | Platform change management | ~50% | API без UI | BL-04 |
 | Collaboration (leases) | ~50% | API без UI | BL-05 |
 | Notifications | ~0% | webhook/email | BL-44 |

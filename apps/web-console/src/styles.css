@@ -217,6 +217,47 @@ code,
   opacity: 0.88;
 }
 
+.system-settings-quick-hint {
+  margin: 0 0 0.75rem;
+}
+
+.system-settings-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.system-settings-quick-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.system-settings-quick-item-locked {
+  opacity: 0.88;
+}
+
+.system-settings-quick-label {
+  font-weight: 600;
+}
+
+.system-settings-quick-checkbox {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.system-settings-quick-meta {
+  font-size: 0.82rem;
+}
+
+.automation-index-card {
+  margin-bottom: 0.75rem;
+}
+
 .system-subnav button {
   border: 1px solid var(--border);
   background: var(--surface);

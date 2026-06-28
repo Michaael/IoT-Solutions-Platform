@@ -57,6 +57,13 @@ final class PlatformRuntimeSettingsCatalog {
             def("automation", "event-journal.flush-interval-ms", "ISPF_EVENT_JOURNAL_FLUSH_INTERVAL_MS", "ispf.event-journal.flush-interval-ms", PlatformRuntimeSettingType.INTEGER, "100", false, false),
             def("automation", "event-journal.writer-threads", "ISPF_EVENT_JOURNAL_WRITER_THREADS", "ispf.event-journal.writer-threads", PlatformRuntimeSettingType.INTEGER, "2", false, false),
             def("automation", "event-journal.recent-cache-size", "ISPF_EVENT_JOURNAL_RECENT_CACHE_SIZE", "ispf.event-journal.recent-cache-size", PlatformRuntimeSettingType.INTEGER, "2000", false, false),
+            def("automation", "event-journal.retention-days", "ISPF_EVENT_JOURNAL_RETENTION_DAYS", "ispf.event-journal.retention-days", PlatformRuntimeSettingType.INTEGER, "90", false, false),
+            def("automation", "event-journal.store", "ISPF_EVENT_JOURNAL_STORE", "ispf.event-journal.store", PlatformRuntimeSettingType.STRING, "jdbc", false, false),
+            def("automation", "event-journal.clickhouse.url", "ISPF_EVENT_JOURNAL_CLICKHOUSE_URL", "ispf.event-journal.clickhouse.url", PlatformRuntimeSettingType.STRING, "http://localhost:8123", false, false),
+            def("automation", "event-journal.clickhouse.database", "ISPF_EVENT_JOURNAL_CLICKHOUSE_DATABASE", "ispf.event-journal.clickhouse.database", PlatformRuntimeSettingType.STRING, "ispf", false, false),
+            def("automation", "event-journal.clickhouse.table", "ISPF_EVENT_JOURNAL_CLICKHOUSE_TABLE", "ispf.event-journal.clickhouse.table", PlatformRuntimeSettingType.STRING, "event_history", false, false),
+            def("automation", "event-journal.clickhouse.username", "ISPF_EVENT_JOURNAL_CLICKHOUSE_USERNAME", "ispf.event-journal.clickhouse.username", PlatformRuntimeSettingType.STRING, "default", false, false),
+            def("automation", "event-journal.clickhouse.password", "ISPF_EVENT_JOURNAL_CLICKHOUSE_PASSWORD", "ispf.event-journal.clickhouse.password", PlatformRuntimeSettingType.STRING, "", true, false),
 
             def("automation", "binding-audit.enabled", "ISPF_BINDING_AUDIT_ENABLED", "ispf.binding.audit.enabled", PlatformRuntimeSettingType.BOOLEAN, "true", false, true),
             def("automation", "binding-audit.mode", "ISPF_BINDING_AUDIT_MODE", "ispf.binding.audit.mode", PlatformRuntimeSettingType.STRING, "changes", false, true),
@@ -116,6 +123,8 @@ final class PlatformRuntimeSettingsCatalog {
             def("ai", "ai.temperature", "ISPF_AI_TEMPERATURE", "ispf.ai.temperature", PlatformRuntimeSettingType.STRING, "0.2", false, false),
             def("ai", "ai.agent-max-steps", "ISPF_AI_AGENT_MAX_STEPS", "ispf.ai.agent-max-steps", PlatformRuntimeSettingType.INTEGER, "96", false, false),
             def("ai", "ai.agent-max-history-turns", "ISPF_AI_AGENT_MAX_HISTORY_TURNS", "ispf.ai.agent-max-history-turns", PlatformRuntimeSettingType.INTEGER, "50", false, false),
+            def("ai", "mcp.enabled", "ISPF_MCP_ENABLED", "ispf.mcp.enabled", PlatformRuntimeSettingType.BOOLEAN, "false", false, false),
+            def("ai", "mcp.stdio-enabled", "ISPF_MCP_STDIO_ENABLED", "ispf.mcp.stdio-enabled", PlatformRuntimeSettingType.BOOLEAN, "false", false, false),
 
             def("platform", "update.check-enabled", "ISPF_UPDATE_CHECK_ENABLED", "ispf.platform.update.check-enabled", PlatformRuntimeSettingType.BOOLEAN, "true", false, false),
             def("platform", "update.apply-enabled", "ISPF_UPDATE_APPLY_ENABLED", "ispf.platform.update.apply-enabled", PlatformRuntimeSettingType.BOOLEAN, "false", false, false),

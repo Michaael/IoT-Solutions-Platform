@@ -8,6 +8,108 @@ import {
   type PlatformRuntimeSettingsSection,
 } from "../api/platformRuntimeSettings";
 
+const QUICK_BOOLEAN_IDS = [
+  "redis.enabled",
+  "nats.enabled",
+  "ai.enabled",
+  "mcp.enabled",
+] as const;
+
+const QUICK_SELECT_SETTINGS: Record<string, readonly string[]> = {
+  "event-journal.store": ["jdbc", "clickhouse"],
+  "ai.provider": ["noop", "openai-compatible", "ollama", "custom-url"],
+};
+
+function findSetting(
+  sections: PlatformRuntimeSettingsSection[],
+  id: string,
+): PlatformRuntimeSetting | undefined {
+  for (const section of sections) {
+    const match = section.settings.find((setting) => setting.id === id);
+    if (match) {
+      return match;
+    }
+  }
+  return undefined;
+}
+
+function IntegrationQuickToggles({
+  sections,
+  drafts,
+  onDraftChange,
+}: {
+  sections: PlatformRuntimeSettingsSection[];
+  drafts: Record<string, string>;
+  onDraftChange: (id: string, value: string) => void;
+}) {
+  const { t } = useTranslation(["system", "common"]);
+
+  const quickSettings = useMemo(() => {
+    const ids = [...QUICK_BOOLEAN_IDS, ...Object.keys(QUICK_SELECT_SETTINGS)];
+    return ids
+      .map((id) => findSetting(sections, id))
+      .filter((setting): setting is PlatformRuntimeSetting => setting != null);
+  }, [sections]);
+
+  if (quickSettings.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="system-metrics-card system-settings-quick">
+      <h3>{t("settings.quickToggles.title")}</h3>
+      <p className="hint system-settings-quick-hint">{t("settings.quickToggles.hint")}</p>
+      <div className="system-settings-quick-grid">
+        {quickSettings.map((setting) => {
+          const draftValue = drafts[setting.id] ?? setting.value;
+          const isBoolean = setting.type === "boolean";
+          const selectOptions = QUICK_SELECT_SETTINGS[setting.id];
+
+          return (
+            <label
+              key={setting.id}
+              className={`system-settings-quick-item${setting.editable ? "" : " system-settings-quick-item-locked"}`}
+            >
+              <span className="system-settings-quick-label">
+                {t(`settings.keys.${setting.id}`, setting.id)}
+              </span>
+              {isBoolean ? (
+                <input
+                  type="checkbox"
+                  className="system-settings-quick-checkbox"
+                  checked={draftValue === "true"}
+                  disabled={!setting.editable}
+                  onChange={(event) => onDraftChange(setting.id, event.target.checked ? "true" : "false")}
+                />
+              ) : (
+                <select
+                  className="system-settings-input"
+                  value={draftValue}
+                  disabled={!setting.editable}
+                  onChange={(event) => onDraftChange(setting.id, event.target.value)}
+                >
+                  {(selectOptions ?? [draftValue]).map((option) => (
+                    <option key={option} value={option}>
+                      {t(`settings.options.${setting.id}.${option}`, option)}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <span className="hint system-settings-quick-meta">
+                <code>{setting.envVar}</code>
+                {!setting.editable && setting.source === "environment" && (
+                  <> · {t("settings.envLocked")}</>
+                )}
+                {setting.restartRequired && <> · {t("settings.quickToggles.restartRequired")}</>}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function SettingRow({
   setting,
   draftValue,
@@ -192,6 +294,14 @@ export default function SystemSettingsView() {
         <div className="op-alert op-alert-error">{String(settingsQuery.error)}</div>
       )}
       {settingsQuery.isLoading && <p className="hint">{t("settings.loading")}</p>}
+
+      {settingsQuery.data && (
+        <IntegrationQuickToggles
+          sections={settingsQuery.data.sections}
+          drafts={mergedDrafts}
+          onDraftChange={(id, value) => setDrafts((prev) => ({ ...prev, [id]: value }))}
+        />
+      )}
 
       <div className="system-settings-sections">
         {settingsQuery.data?.sections.map((section) => (
