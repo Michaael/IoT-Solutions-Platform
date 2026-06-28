@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFunctionAuditStatus, fetchFunctionInvocations } from "../../api";
 import type { FunctionInvokeAuditEntry } from "../../types/runtime";
+import { mapFunctionInvokeExportRow } from "../../utils/journalExport";
 import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
 
@@ -85,6 +86,15 @@ export default function FunctionInvokeJournalPanel({
     return rows;
   }, [mode, query.data, searchFilter]);
 
+  const exportRows = useMemo(
+    () => filtered.map(mapFunctionInvokeExportRow),
+    [filtered],
+  );
+
+  const exportFilenameBase = fixedObjectPath
+    ? `function-journal-${fixedObjectPath.replace(/\./g, "-")}`
+    : "function-journal";
+
   const canLoadMore =
     mode === "history"
     && (query.data?.length ?? 0) >= historyLimit
@@ -117,6 +127,8 @@ export default function FunctionInvokeJournalPanel({
       compact={compact}
       scrollMaxHeight={scrollMaxHeight ?? (compact ? 280 : 400)}
       className="event-journal-panel function-invoke-journal"
+      exportFilenameBase={exportFilenameBase}
+      exportRows={exportRows}
       filters={
         (mode === "history" || showFilters) ? (
           <div className="journal-filters form-grid">

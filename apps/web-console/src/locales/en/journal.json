@@ -18,5 +18,8 @@
   "changeHistory.showDiff": "Diff",
   "changeHistory.hideDiff": "Hide",
   "changeHistory.before": "Before",
-  "changeHistory.after": "After"
+  "changeHistory.after": "After",
+  "export.label": "Export journal",
+  "export.csv": "CSV",
+  "export.json": "JSON"
 }

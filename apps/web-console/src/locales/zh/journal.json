@@ -18,5 +18,8 @@
   "changeHistory.showDiff": "差异",
   "changeHistory.hideDiff": "隐藏",
   "changeHistory.before": "变更前",
-  "changeHistory.after": "变更后"
+  "changeHistory.after": "变更后",
+  "export.label": "导出日志",
+  "export.csv": "CSV",
+  "export.json": "JSON"
 }

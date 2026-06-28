@@ -9,6 +9,7 @@ import {
 import type { ObjectEvent } from "../../types/event";
 import type { OperatorUi } from "../../types/operatorUi";
 import { filterOperatorSidebarEvents } from "../../utils/operatorSidebarScope";
+import { mapEventJournalExportRow } from "../../utils/journalExport";
 import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
 
@@ -126,6 +127,17 @@ export default function EventJournalPanel({
     return rows;
   }, [eventNameFilter, levelFilter, mode, rawItems, searchFilter]);
 
+  const exportRows = useMemo(
+    () => filtered.map(mapEventJournalExportRow),
+    [filtered],
+  );
+
+  const exportFilenameBase = operatorScoped && appId
+    ? `event-journal-${appId}`
+    : objectPath
+      ? `event-journal-${objectPath.replace(/\./g, "-")}`
+      : "event-journal";
+
   const canLoadMore =
     mode === "history"
     && !operatorScoped
@@ -155,6 +167,8 @@ export default function EventJournalPanel({
       compact={compact}
       scrollMaxHeight={scrollMaxHeight ?? (compact ? 280 : 400)}
       className="event-journal-panel"
+      exportFilenameBase={exportFilenameBase}
+      exportRows={exportRows}
       filters={
         (mode === "history" || (showFilters && !fixedObjectPath)) ? (
           <div className="journal-filters form-grid">

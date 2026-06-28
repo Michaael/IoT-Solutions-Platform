@@ -1,5 +1,7 @@
 import { createContext, useRef, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
+import JournalExportButtons from "./JournalExportButtons";
+import type { JournalExportRow } from "../../utils/journalExport";
 
 export const JournalScrollContext = createContext<RefObject<HTMLDivElement | null> | null>(null);
 
@@ -22,6 +24,8 @@ export interface JournalViewShellProps {
   compact?: boolean;
   headless?: boolean;
   className?: string;
+  exportFilenameBase?: string;
+  exportRows?: JournalExportRow[];
   children: ReactNode;
 }
 
@@ -42,6 +46,8 @@ export default function JournalViewShell({
   compact = false,
   headless = false,
   className = "",
+  exportFilenameBase,
+  exportRows,
   children,
 }: JournalViewShellProps) {
   const { t } = useTranslation(["journal", "common"]);
@@ -84,6 +90,13 @@ export default function JournalViewShell({
             </nav>
           )}
           {typeof count === "number" && <span className="badge">{count}</span>}
+          {exportFilenameBase && exportRows && (
+            <JournalExportButtons
+              filenameBase={exportFilenameBase}
+              rows={exportRows}
+              disabled={isLoading || Boolean(error)}
+            />
+          )}
         </div>
       </header>
 

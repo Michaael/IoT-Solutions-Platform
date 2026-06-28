@@ -7,6 +7,7 @@ import {
   hasObjectAuditDiff,
   parseObjectAuditSummary,
 } from "../../utils/objectAuditSummary";
+import { mapObjectAuditExportRow } from "../../utils/journalExport";
 import JournalViewShell, { type JournalViewMode } from "./JournalViewShell";
 
 const LIVE_LIMIT = 25;
@@ -68,6 +69,11 @@ export default function ObjectChangeHistoryPanel({
     return rows;
   }, [actorFilter, auditQuery.data, changeType, fieldFilter, mode]);
 
+  const exportRows = useMemo(
+    () => filtered.map(mapObjectAuditExportRow),
+    [filtered],
+  );
+
   const canLoadMore =
     mode === "history"
     && (auditQuery.data?.length ?? 0) >= historyLimit
@@ -86,6 +92,8 @@ export default function ObjectChangeHistoryPanel({
       emptyMessage={t("common:empty.noRecords")}
       compact={compact}
       scrollMaxHeight={scrollMaxHeight ?? (compact ? 280 : 400)}
+      exportFilenameBase={`object-change-history-${objectPath.replace(/\./g, "-")}`}
+      exportRows={exportRows}
       filters={
         <div className="journal-filters form-grid">
           <label>

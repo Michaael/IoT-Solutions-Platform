@@ -18,5 +18,8 @@
   "changeHistory.showDiff": "Diff",
   "changeHistory.hideDiff": "Скрыть",
   "changeHistory.before": "Было",
-  "changeHistory.after": "Стало"
+  "changeHistory.after": "Стало",
+  "export.label": "Экспорт журнала",
+  "export.csv": "CSV",
+  "export.json": "JSON"
 }

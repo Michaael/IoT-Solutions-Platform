@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchBindingAuditStatus, fetchBindingInvocations } from "../../api";
 import type { BindingInvokeAuditEntry } from "../../types/runtime";
+import { mapBindingInvokeExportRow } from "../../utils/journalExport";
 import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
 
@@ -91,6 +92,15 @@ export default function BindingInvokeJournalPanel({
     return rows;
   }, [mode, query.data, searchFilter]);
 
+  const exportRows = useMemo(
+    () => filtered.map(mapBindingInvokeExportRow),
+    [filtered],
+  );
+
+  const exportFilenameBase = fixedObjectPath
+    ? `binding-journal-${fixedObjectPath.replace(/\./g, "-")}`
+    : "binding-journal";
+
   const canLoadMore =
     mode === "history"
     && (query.data?.length ?? 0) >= historyLimit
@@ -123,6 +133,8 @@ export default function BindingInvokeJournalPanel({
       compact={compact}
       scrollMaxHeight={scrollMaxHeight ?? (compact ? 280 : 400)}
       className="event-journal-panel binding-invoke-journal"
+      exportFilenameBase={exportFilenameBase}
+      exportRows={exportRows}
       filters={
         (mode === "history" || showFilters) ? (
           <div className="journal-filters form-grid">

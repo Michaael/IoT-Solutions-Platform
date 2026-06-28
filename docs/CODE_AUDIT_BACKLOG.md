@@ -52,7 +52,7 @@
 | **BL-13** | System settings: toggles Redis / NATS / ClickHouse journal / AI provider / MCP | P2 | Done | System |
 | **BL-14** | Automation index dashboard (`GET /platform/automation-index/stats`) | P2 | Done | System |
 | **BL-15** | Object change history: diff view (before/after по audit entries) | P2 | Done | Journal |
-| **BL-16** | Journal panels: export CSV/JSON | P2 | Planned | Journal |
+| **BL-16** | Journal panels: export CSV/JSON | P2 | Done | Journal |
 | **BL-17** | Alert rules / correlators: опциональный list view (API `fetchAlertRules` / `fetchCorrelators`) | P3 | Planned | Automation UI |
 | **BL-18** | Binding rules: визуальный редактор activators (`onEvent`, `periodicMs`) | P2 | Planned | Bindings |
 

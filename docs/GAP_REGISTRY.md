@@ -68,7 +68,7 @@
 | Dashboard widgets (advanced) | ~90% | chart OHLC/bubble-radar, gantt | BL-64…65,11 |
 | Variable inline editor | ~85% | RECORD → structured editor | BL-03 |
 | Binding rules UX | ~90% | activators UI | BL-18 |
-| Journals | ~95% | export | BL-16 |
+| Journals | ~100% | — | — |
 | ClickHouse (variables) | ~0% | только event journal | BL-40 |
 | Optional backends UI | ~70% | Redis, NATS, ClickHouse journal, AI, MCP в System | BL-41,42,48 |
 | Platform change management | ~50% | API без UI | BL-04 |
