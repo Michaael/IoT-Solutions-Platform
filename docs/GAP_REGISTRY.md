@@ -11,7 +11,7 @@
 1. **Этот файл** — сводка пробелов по подсистемам и приоритетам.
 2. **[PLATFORM_DEVELOPER_BACKLOG.md §3](PLATFORM_DEVELOPER_BACKLOG.md#3-сводная-матрица-req-pf)** — матрица REQ-PF/FW и acceptance-критерии.
 
-Текущая волна — [ROADMAP.md § Phase 18](ROADMAP.md#phase-18--reference-solutions--v080-rollout). Phase 19 i18n — **Done** ([0013](decisions/0013-web-console-i18n.md)). Gate обобщения — [0002](decisions/0002-dogfooding-gate.md): каждый PR в platform проходит три вопроса (object tree, deploy REST only, второй сценарий).
+Текущая волна — [ROADMAP.md § Phase 20](ROADMAP.md#phase-20--code-audit-backlog-ui-drivers-scale) (code audit backlog) + [Phase 18.1](ROADMAP.md#phase-18--frontend-e2e--demand-driven-drivers) (Playwright). Детальный реестр — [CODE_AUDIT_BACKLOG.md](CODE_AUDIT_BACKLOG.md). Phase 19 i18n — **Done** ([0013](decisions/0013-web-console-i18n.md)). Gate обобщения — [0002](decisions/0002-dogfooding-gate.md): каждый PR в platform проходит три вопроса (object tree, deploy REST only, второй сценарий).
 
 ## Правило обновления
 
@@ -21,13 +21,24 @@
 
 ## Сводка по приоритету
 
-| Приоритет | Область | Суть |
-|-----------|---------|------|
-| **P1** | Mini-TEC reference | CI smoke + SLD acceptance — [Phase 18](ROADMAP.md#phase-18--reference-solutions--v080-rollout), [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md) |
-| **P1** | v0.8.0 prod | DB recreate + deploy — [DEPLOYMENT.md § v0.8.0](DEPLOYMENT.md#обновление-до-v080) |
-| **P2** | Playwright e2e | Admin smoke (Phase 18.5) — хвост Phase 3.4 |
-| **Низкий** | Driver stubs | STUB/BETA → PRODUCTION по запросу app-команды ([DRIVERS.md § Stub promotion](DRIVERS.md#stub-promotion-demand-driven)) |
-| **Низкий** | CWMP write | `SetParameterValues` — read-only сейчас ([DRIVERS.md](DRIVERS.md)) |
+| Приоритет | Область | Суть | BL / Phase |
+|-----------|---------|------|------------|
+| **P0** | Automation UI | Correlator `SET_VARIABLE` / `OPEN_OPERATOR_REPORT` — backend есть, UI нет | BL-01, 20.1 |
+| **P0** | Workflow UI | Actions `log`, `publishNats` не в ISPF справочнике | BL-02, 20.2 |
+| **P1** | UI ↔ API | Change sets, edit leases, event catalog viewer | BL-04,05,08 |
+| **P1** | Inspector | RECORD inline — JSON textarea вместо `DataRecordValueEditor` | BL-03, 20.3 |
+| **P1** | Dashboard | Chart types в редакторе ≠ рендерер; network-graph stub | BL-06,10, 20.6 |
+| **P1** | i18n tails | `WIDGET_TYPES` и binding hints на русском в TS | BL-07, 20.7 |
+| **P1** | Playwright e2e | Admin smoke (Phase 18.1 = BL-50) | BL-50, 18.1 |
+| **P1** | Driver write | Modbus, S7, OPC UA — `not implemented` | BL-20…22 |
+| **P2** | Bindings UX | Нет каталога 18 platform bindings в UI | BL-09 |
+| **P2** | History scale | ClickHouse только для events, не variables | BL-40 |
+| **P2** | System ops | Redis/NATS/AI/MCP toggles в UI | BL-13 |
+| **P3** | Federation | Dashboard write read-only на proxy; sync conflicts | BL-45,46 |
+| **P3** | Notifications | Нет webhook/email из alert/correlator | BL-44 |
+| **P3** | Semantic (Haystack/Brick) | Нет overlay тегов / export; tree-only semantics | BL-56…62, 20.22 |
+| **Низкий** | Driver stubs | STUB/BETA → PRODUCTION по запросу ([DRIVERS.md § Stub promotion](DRIVERS.md#stub-promotion-demand-driven)) | BL-26, 18.2 |
+| **Низкий** | CWMP write | `SetParameterValues` — read-only | BL-29 |
 
 ## Таблица подсистем
 
@@ -48,16 +59,35 @@
 | MCP adapter (0006) | ~100% | — | ContextPack `resources/list` + `resources/read` |
 | Tree-first agent (FW-44) | ~100% | — | [0005](decisions/0005-tree-first-ai-agent.md), **FW-45** briefing |
 | Licensed driver packs | ~100% | — | FW-50, [LICENSED_DRIVER_PACKS.md](LICENSED_DRIVER_PACKS.md) |
-| Driver stub catalog | ~95% | 6 STUB/BETA drivers по demand | [DRIVERS.md § Stub promotion](DRIVERS.md#stub-promotion-demand-driven) |
-| Mini-TEC reference (Phase 18) | ~40% | CI smoke, SLD acceptance, prod deploy | [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md) |
-| Frontend e2e (Playwright) | ~0% | Admin critical paths | Phase 18.5 |
-| Web Console i18n | ~100% | — | Phase 19, [0013](decisions/0013-web-console-i18n.md) |
+| Driver stub catalog | ~95% | write path + 6 STUB/BETA promotion | BL-20…30, [DRIVERS.md](DRIVERS.md) |
+| Driver maturity labels | ~70% | PRODUCTION в каталоге при read-only v0.1 | BL-27 |
+| Frontend e2e (Playwright) | ~0% | Admin critical paths | BL-50, Phase 18.1 |
+| Web Console i18n | ~95% | widget labels + binding hints в TS, не в locale | BL-07, Phase 19 |
+| UI ↔ API parity | ~75% | change sets, leases, correlator actions, event catalog | BL-01…08, Phase 20 |
+| Dashboard widgets (advanced) | ~80% | chart types, network-graph, gantt | BL-06,10…12 |
+| Variable inline editor | ~85% | RECORD → structured editor | BL-03 |
+| Binding rules UX | ~80% | expression catalog, activators UI | BL-09,18 |
+| Journals | ~90% | export, diff view | BL-15,16 |
+| ClickHouse (variables) | ~0% | только event journal | BL-40 |
+| Optional backends UI | ~30% | Redis, NATS, AI, MCP в System | BL-13,41,42,48 |
+| Platform change management | ~50% | API без UI | BL-04 |
+| Collaboration (leases) | ~50% | API без UI | BL-05 |
+| Notifications | ~0% | webhook/email | BL-44 |
+| Federation UX | ~85% | dashboard write, sync conflicts | BL-45,46 |
+| Platform backup | ~0% | export/import tree | BL-47 |
+| Operator manifest | ~85% | chart/map screen types | BL-51 |
+| Spreadsheet widget | ~90% | Excel functions tail, history bind | BL-53,54 |
+| Frontend component tests | ~15% | vitest utils/sheet only | BL-55 |
+| Semantic interoperability | ~0% | Haystack tags, Brick export — deferred | BL-56…62, Phase 20.22 |
 | Scale (load test) | ~100% | — | `ListDevicesLoadTest`, `ISPF_LOAD_P99_CEILING_MS` |
 
 ## История
 
 | Дата | Изменение |
 |------|-----------|
+| 2026-06-28 | Wave G: Haystack/Brick → BL-56…62 (P3 deferred), ROADMAP 20.22 |
+| 2026-06-28 | Code audit → [CODE_AUDIT_BACKLOG.md](CODE_AUDIT_BACKLOG.md) (BL-01…55), ROADMAP Phase 20, gap-registry расширен |
+| 2026-06-28 | Phase 18 сужена: mini-TEC acceptance и v0.8.0 prod rollout сняты; остались Playwright e2e + demand-driven drivers |
 | 2026-06-23 | Phase 19 Done: i18n en/ru/de/zh, LocaleSwitcher, 0013 |
 | 2026-06-23 | Phase 19 draft: Web Console i18n (locale dropdown, ru/en, waves 19.1–19.6) |
 | 2026-06-23 | Phase 18 kickoff: mini-TEC walkthrough, ROADMAP 18.1–18.6 |

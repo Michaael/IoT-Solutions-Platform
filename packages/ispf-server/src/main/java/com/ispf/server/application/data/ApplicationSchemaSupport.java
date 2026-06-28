@@ -18,6 +18,7 @@ public final class ApplicationSchemaSupport {
             "platform_schedules",
             "model_definitions",
             "function_invoke_audit",
+            "binding_invoke_audit",
             "workflow_cancel_journal",
             "flyway_schema_history",
             "objects",

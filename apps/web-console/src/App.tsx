@@ -18,7 +18,7 @@ import {
   shouldOpenOperatorShell,
 } from "./auth/routing";
 import type { EditorTab, ObjectType } from "./types";
-import { resolveEditorObjectType } from "./utils/editorObject";
+import { resolveEditorObjectType, isSpecializedEditorObject } from "./utils/editorObject";
 import { buildObjectTree } from "./utils/tree";
 import { objectTreeKey, type TreeRowSelection } from "./utils/treeRowKey";
 import { readSelectedPath, writeSelectedPath } from "./utils/treeExpanded";
@@ -372,6 +372,15 @@ export default function App() {
   };
 
   const openEditor = (path: string, options?: OpenDashboardOptions) => {
+    const ctx = objectList.find((c) => c.path === path);
+    if (!isSpecializedEditorObject(path, ctx?.type, ctx?.templateId)) {
+      setSelectedPath(path);
+      setWorkspaceTab("explorer");
+      if (isMobileLayout) {
+        setMobileExplorerPane("detail");
+      }
+      return;
+    }
     const existing = editorTabs.find((t) => t.path === path);
     if (existing) {
       if (existing.objectType === "DASHBOARD") {
@@ -380,7 +389,6 @@ export default function App() {
       setWorkspaceTab(existing.id);
       return;
     }
-    const ctx = objectList.find((c) => c.path === path);
     const objectType = resolveEditorObjectType(path, ctx?.type, ctx?.templateId);
     const tab: EditorTab = {
       id: `editor-${tabCounter++}`,
@@ -415,18 +423,35 @@ export default function App() {
   };
 
   const activeEditor = editorTabs.find((t) => t.id === workspaceTab);
-  const isSpecializedEditor =
-    activeEditor?.objectType === "DASHBOARD"
-    || activeEditor?.objectType === "REPORT"
-    || activeEditor?.objectType === "WORKFLOW"
-    || activeEditor?.objectType === "MODEL"
-    || activeEditor?.objectType === "DATA_SOURCE"
-    || activeEditor?.objectType === "MIGRATION"
-    || activeEditor?.objectType === "BINDING"
-    || (activeEditor != null && isModelsPath(activeEditor.path));
+  const isSpecializedEditor = activeEditor != null && (
+    activeEditor.objectType === "DASHBOARD"
+    || activeEditor.objectType === "REPORT"
+    || activeEditor.objectType === "WORKFLOW"
+    || activeEditor.objectType === "MODEL"
+    || activeEditor.objectType === "DATA_SOURCE"
+    || activeEditor.objectType === "MIGRATION"
+    || activeEditor.objectType === "BINDING"
+    || activeEditor.objectType === "SCHEDULE"
+    || isModelsPath(activeEditor.path)
+  );
   const showPropertiesEditor =
-    activeEditor &&
-    (propertiesTabPath === activeEditor.path || !isSpecializedEditor);
+    activeEditor != null
+    && isSpecializedEditor
+    && propertiesTabPath === activeEditor.path;
+
+  useEffect(() => {
+    if (!activeEditor || workspaceTab !== activeEditor.id) {
+      return;
+    }
+    const ctx = objectList.find((c) => c.path === activeEditor.path);
+    if (!isSpecializedEditorObject(activeEditor.path, ctx?.type, ctx?.templateId)) {
+      setSelectedPath(activeEditor.path);
+      setPropertiesTabPath(null);
+      setWorkspaceTab("explorer");
+      setEditorTabs((tabs) => tabs.filter((t) => t.id !== activeEditor.id));
+    }
+  }, [activeEditor, objectList, workspaceTab]);
+
   const parentForCreate = createParentPath ?? selectedPath ?? "root";
   const selectedObject = useMemo(
     () => objectList.find((obj) => obj.path === selectedPath) ?? null,
@@ -764,18 +789,7 @@ export default function App() {
                   onClose={() => closeEditor(activeEditor.id)}
                   onOpenProperties={() => setPropertiesTabPath(activeEditor.path)}
                 />
-              ) : (
-                <ObjectPropertiesEditor
-                  key={activeEditor.path}
-                  path={activeEditor.path}
-                  canManage={isAdmin}
-                  onClose={() => closeEditor(activeEditor.id)}
-                  onDeleted={() => {
-                    setSelectedPath("root");
-                    closeEditor(activeEditor.id);
-                  }}
-                />
-              )}
+              ) : null}
             </Suspense>
           </main>
         )}
@@ -788,9 +802,6 @@ export default function App() {
               canManage={isAdmin}
               onClose={() => {
                 setPropertiesTabPath(null);
-                if (!isSpecializedEditor) {
-                  closeEditor(activeEditor.id);
-                }
               }}
               onDeleted={() => {
                 setSelectedPath("root");

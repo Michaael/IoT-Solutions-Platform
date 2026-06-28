@@ -1,14 +1,18 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { fetchEvents } from "../../../api";
 import type { EventFeedWidget } from "../../../types/dashboard";
 import { matchesPayloadFilter } from "../../../utils/payloadFilter";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 import { parseDemoPreview } from "../widgetDemoPreview";
+import JournalViewShell, { type JournalViewMode } from "../../journal/JournalViewShell";
+import JournalVirtualList from "../../journal/JournalVirtualList";
 
+const LIVE_LIMIT = 25;
+const HISTORY_PAGE = 50;
+const HISTORY_MAX = 200;
 const EVENT_ITEM_ESTIMATE_PX = 88;
 
 interface DemoFeedEvent {
@@ -31,9 +35,13 @@ export default function EventFeedWidgetView({
   refreshIntervalMs,
   editable,
 }: EventFeedWidgetViewProps) {
-  const { t } = useTranslation(["widgets", "common"]);
+  const { t } = useTranslation(["widgets", "journal", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
-  const listRef = useRef<HTMLUListElement>(null);
+  const [mode, setMode] = useState<JournalViewMode>("live");
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
+  const [levelFilter, setLevelFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
+
   const eventNames = useMemo(() => {
     try {
       return widget.eventNamesJson ? (JSON.parse(widget.eventNamesJson) as string[]) : [];
@@ -42,25 +50,55 @@ export default function EventFeedWidgetView({
     }
   }, [widget.eventNamesJson]);
 
+  const liveMax = widget.maxItems ?? LIVE_LIMIT;
+  const fetchLimit = mode === "live" ? liveMax : historyLimit;
+
   const events = useQuery({
-    queryKey: ["events", "feed", widget.objectPathPrefix, widget.maxItems],
-    queryFn: () => fetchEvents(undefined, widget.maxItems ?? 30),
-    refetchInterval: refreshIntervalMs,
+    queryKey: ["events", "feed", widget.objectPathPrefix, fetchLimit, mode],
+    queryFn: () => fetchEvents(undefined, fetchLimit),
+    refetchInterval: mode === "live" ? refreshIntervalMs : false,
+    staleTime: mode === "live" ? 0 : 30_000,
   });
 
-  const filtered = (events.data ?? []).filter((event) => {
-    if (widget.objectPathPrefix && !event.objectPath.startsWith(widget.objectPathPrefix)) {
-      return false;
+  const filtered = useMemo(() => {
+    let rows = (events.data ?? []).filter((event) => {
+      if (widget.objectPathPrefix && !event.objectPath.startsWith(widget.objectPathPrefix)) {
+        return false;
+      }
+      if (eventNames.length > 0 && !eventNames.includes(event.eventName)) {
+        return false;
+      }
+      const payloadRow = event.payload?.rows?.[0];
+      if (!matchesPayloadFilter(payloadRow, widget.payloadFilterExpr)) {
+        return false;
+      }
+      return true;
+    });
+
+    if (mode === "history") {
+      if (levelFilter) {
+        rows = rows.filter((event) => event.level === levelFilter);
+      }
+      const query = searchFilter.trim().toLowerCase();
+      if (query) {
+        rows = rows.filter(
+          (event) =>
+            event.objectPath.toLowerCase().includes(query)
+            || event.eventName.toLowerCase().includes(query),
+        );
+      }
     }
-    if (eventNames.length > 0 && !eventNames.includes(event.eventName)) {
-      return false;
+
+    return rows;
+  }, [eventNames, events.data, levelFilter, mode, searchFilter, widget.objectPathPrefix, widget.payloadFilterExpr]);
+
+  const levels = useMemo(() => {
+    const set = new Set<string>();
+    for (const event of events.data ?? []) {
+      set.add(event.level);
     }
-    const payloadRow = event.payload?.rows?.[0];
-    if (!matchesPayloadFilter(payloadRow, widget.payloadFilterExpr)) {
-      return false;
-    }
-    return true;
-  });
+    return Array.from(set).sort();
+  }, [events.data]);
 
   const demoEvents =
     editable && filtered.length === 0 && !events.isLoading
@@ -69,15 +107,11 @@ export default function EventFeedWidgetView({
   const isDemo = demoEvents.length > 0;
   const displayEvents = isDemo ? demoEvents : filtered;
 
-  const virtualizer = useVirtualizer({
-    count: displayEvents.length,
-    getScrollElement: () => listRef.current,
-    estimateSize: () => EVENT_ITEM_ESTIMATE_PX,
-    overscan: 5,
-    enabled: displayEvents.length > 0,
-  });
-
-  const virtualItems = virtualizer.getVirtualItems();
+  const canLoadMore =
+    !isDemo
+    && mode === "history"
+    && (events.data?.length ?? 0) >= historyLimit
+    && historyLimit < HISTORY_MAX;
 
   return (
     <DashWidgetShell
@@ -87,48 +121,89 @@ export default function EventFeedWidgetView({
       editable={editable}
       demo={isDemo}
     >
-      {events.isLoading && !isDemo && <p className="hint">{t("common:action.loading")}</p>}
-      {displayEvents.length === 0 && !events.isLoading && (
-        <p className="hint">{t("view.noEvents")}</p>
-      )}
-      <ul
-        ref={listRef}
-        className="dash-event-feed-list dash-virtual-list"
-        style={styles.body}
+      <JournalViewShell
+        title=""
+        mode={mode}
+        onModeChange={setMode}
+        count={displayEvents.length}
+        isLoading={events.isLoading && !isDemo}
+        error={isDemo ? undefined : events.error}
+        empty={displayEvents.length === 0}
+        emptyMessage={t("view.noEvents")}
+        headless
+        compact
+        scrollMaxHeight="100%"
+        className="dash-widget-event-feed-journal"
+        filters={
+          mode === "history" && !isDemo ? (
+            <div className="journal-filters form-grid">
+              <label>
+                {t("journal:filter.level")}
+                <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+                  <option value="">{t("journal:filter.all")}</option>
+                  {levels.map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t("common:action.search")}
+                <input
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  placeholder={t("journal:filter.searchPlaceholder")}
+                />
+              </label>
+            </div>
+          ) : undefined
+        }
+        footer={
+          canLoadMore ? (
+            <div className="journal-footer">
+              <button
+                type="button"
+                className="btn small"
+                disabled={events.isFetching}
+                onClick={() => setHistoryLimit((n) => Math.min(n + HISTORY_PAGE, HISTORY_MAX))}
+              >
+                {t("journal:loadMore")}
+              </button>
+            </div>
+          ) : undefined
+        }
       >
-        {displayEvents.length > 0 && (
-          <li
-            aria-hidden="true"
-            className="dash-virtual-list-spacer"
-            style={{ height: virtualizer.getTotalSize() }}
-          />
-        )}
-        {virtualItems.map((virtualItem) => {
-          const event = displayEvents[virtualItem.index];
-          const payload = event.payload?.rows?.[0];
-          const detail = payload
-            ? Object.entries(payload)
-                .map(([k, v]) => `${k}=${v}`)
-                .join(", ")
-            : "";
-          return (
-            <li
-              key={event.id}
-              className={`dash-event-item level-${event.level.toLowerCase()} dash-virtual-list-item`}
-              style={{ transform: `translateY(${virtualItem.start}px)` }}
-            >
-              <div className="dash-event-row-top">
-                <strong>{event.eventName}</strong>
-                <time className="hint">
-                  {new Date(event.timestamp).toLocaleTimeString()}
-                </time>
-              </div>
-              <p className="hint">{event.objectPath}</p>
-              {detail && <p className="dash-event-detail">{detail}</p>}
-            </li>
-          );
-        })}
-      </ul>
+        <JournalVirtualList
+          items={displayEvents}
+          estimateSizePx={EVENT_ITEM_ESTIMATE_PX}
+          className="dash-event-feed-list dash-virtual-list"
+          getKey={(event) => event.id}
+          renderItem={(event, style) => {
+            const payload = event.payload?.rows?.[0];
+            const detail = payload
+              ? Object.entries(payload)
+                  .map(([k, v]) => `${k}=${v}`)
+                  .join(", ")
+              : "";
+            return (
+              <li
+                className={`dash-event-item level-${event.level.toLowerCase()} dash-virtual-list-item`}
+                style={{ ...styles.body, ...style }}
+              >
+                <div className="dash-event-row-top">
+                  <strong>{event.eventName}</strong>
+                  <time className="hint">
+                    {new Date(event.timestamp).toLocaleTimeString()}
+                  </time>
+                </div>
+                <p className="hint">{event.objectPath}</p>
+                {detail && <p className="dash-event-detail">{detail}</p>}
+              </li>
+            );
+          }}
+        />
+      </JournalViewShell>
     </DashWidgetShell>
   );
 }

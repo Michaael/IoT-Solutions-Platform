@@ -345,7 +345,7 @@
 
 ### mini-tec-sld — Однолинейная схема mini-TEC
 
-**Назначение:** live SCADA mimic для эталонного проекта mini-TEC (Phase 18). Без доп. полей — данные с объекта по `objectPath` / `selectionKey`.
+**Назначение:** live SCADA mimic для demo mini-TEC (optional bootstrap). Без доп. полей — данные с объекта по `objectPath` / `selectionKey`.
 
 **См.:** [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md).
 

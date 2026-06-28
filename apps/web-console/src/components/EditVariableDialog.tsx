@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
-import { setVariable, updateVariableHistory } from "../api";
+import {
+  setVariable,
+  updateVariableDefinition,
+  updateVariableHistory,
+} from "../api";
 import type { DataRecord, VariableDto } from "../types";
+import DataRecordValueEditor from "./schema/DataRecordValueEditor";
 import VariableHistoryFields, {
   type VariableHistoryState,
 } from "./VariableHistoryFields";
+import { cloneRecord, recordsEqual } from "../utils/record";
 
 interface EditVariableDialogProps {
   objectPath: string;
@@ -39,44 +45,73 @@ export default function EditVariableDialog({
   onSaved,
 }: EditVariableDialogProps) {
   const { t } = useTranslation(["inspector", "common"]);
+  const [record, setRecord] = useState<DataRecord>(() =>
+    variable.value
+      ? cloneRecord(variable.value)
+      : { schema: { name: variable.name, fields: [] }, rows: [] }
+  );
+  const [readable, setReadable] = useState(variable.readable);
+  const [writable, setWritable] = useState(variable.writable);
+  const [history, setHistory] = useState<VariableHistoryState>(() => historyFromVariable(variable));
+  const [showJson, setShowJson] = useState(false);
   const [jsonText, setJsonText] = useState("{}");
   const [parseError, setParseError] = useState<string | null>(null);
-  const [history, setHistory] = useState<VariableHistoryState>(() => historyFromVariable(variable));
+
   const initialHistory = useMemo(() => historyFromVariable(variable), [variable]);
+  const initialRecord = useMemo(
+    () =>
+      variable.value
+        ? cloneRecord(variable.value)
+        : { schema: { name: variable.name, fields: [] }, rows: [] },
+    [variable]
+  );
 
   const canEditValue = variable.writable;
-  const historyDirty = !historyEqual(history, initialHistory);
+  const definitionDirty = canEditDefinition && (readable !== variable.readable || writable !== variable.writable);
+  const historyDirty = canManageHistory && !historyEqual(history, initialHistory);
+  const valueDirty = canEditValue && !recordsEqual(record, initialRecord);
 
   useEffect(() => {
-    if (variable.value) {
-      setJsonText(JSON.stringify(variable.value, null, 2));
-    } else if (variable.value === null) {
-      setJsonText('{"schema":{"name":"value","fields":[]},"rows":[]}');
-    }
+    const next = variable.value
+      ? cloneRecord(variable.value)
+      : { schema: { name: variable.name, fields: [] }, rows: [] };
+    setRecord(next);
+    setJsonText(JSON.stringify(next, null, 2));
+    setReadable(variable.readable);
+    setWritable(variable.writable);
     setHistory(historyFromVariable(variable));
   }, [variable]);
 
+  useEffect(() => {
+    if (!showJson) {
+      setJsonText(JSON.stringify(record, null, 2));
+    }
+  }, [record, showJson]);
+
   const mutation = useMutation({
     mutationFn: async () => {
+      if (canEditDefinition && definitionDirty) {
+        await updateVariableDefinition(objectPath, variable.name, { readable, writable });
+      }
       if (canManageHistory && historyDirty) {
         await updateVariableHistory(objectPath, variable.name, history);
       }
-      if (canEditValue) {
-        const parsed = JSON.parse(jsonText) as DataRecord;
-        await setVariable(objectPath, variable.name, parsed);
+      if (canEditValue && valueDirty) {
+        const payload = showJson ? (JSON.parse(jsonText) as DataRecord) : record;
+        await setVariable(objectPath, variable.name, payload);
       }
     },
     onSuccess: onSaved,
   });
 
   function handleSave() {
-    const hasChanges = canEditValue || (canManageHistory && historyDirty);
+    const hasChanges = definitionDirty || historyDirty || valueDirty;
     if (!hasChanges) {
       onClose();
       return;
     }
     try {
-      if (canEditValue) {
+      if (canEditValue && valueDirty && showJson) {
         JSON.parse(jsonText) as DataRecord;
       }
       setParseError(null);
@@ -90,16 +125,49 @@ export default function EditVariableDialog({
     ? t("variables.editTitle", { name: variable.name })
     : t("variables.settingsTitle", { name: variable.name });
 
+  const hasListShape =
+    record.schema.fields.some((f) => f.type === "RECORD_LIST") || record.rows.length > 1;
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal wide variable-editor-modal" onClick={(e) => e.stopPropagation()}>
         <header>
           <h3>{title}</h3>
           <button type="button" className="icon-btn" onClick={onClose}>✕</button>
         </header>
 
-        {!variable.writable && (
-          <p className="hint">{t("variables.computedSettingsHint")}</p>
+        <section className="modal-section variable-meta-badges">
+          <span className="property-badges">
+            {variable.readable && <span className="badge">R</span>}
+            {variable.writable && <span className="badge w">W</span>}
+            {variable.historyEnabled && <span className="badge hist">H</span>}
+          </span>
+          {!variable.writable && (
+            <p className="hint">{t("variables.computedSettingsHint")}</p>
+          )}
+        </section>
+
+        {canEditDefinition && (
+          <section className="modal-section form-grid">
+            <h4 className="full">{t("variables.definitionSection")}</h4>
+            <label className="checkbox-label inline">
+              <input
+                type="checkbox"
+                checked={readable}
+                onChange={(e) => setReadable(e.target.checked)}
+              />
+              {t("variables.readable")}
+            </label>
+            <label className="checkbox-label inline">
+              <input
+                type="checkbox"
+                checked={writable}
+                onChange={(e) => setWritable(e.target.checked)}
+              />
+              {t("variables.writable")}
+            </label>
+            <p className="hint full">{t("variables.schemaReadOnlyHint")}</p>
+          </section>
         )}
 
         {canManageHistory && (
@@ -115,13 +183,31 @@ export default function EditVariableDialog({
 
         {canEditValue && (
           <section className="modal-section">
-            <p className="hint">{t("variables.dataRecordHint")}</p>
-            <textarea
-              className="json-editor"
-              rows={14}
-              value={jsonText}
-              onChange={(e) => setJsonText(e.target.value)}
-            />
+            <div className="section-inline-tools">
+              <h4>{t("variables.valuesSection")}</h4>
+              <button
+                type="button"
+                className="btn tiny"
+                onClick={() => setShowJson((v) => !v)}
+              >
+                JSON
+              </button>
+            </div>
+            {showJson ? (
+              <textarea
+                className="json-editor"
+                rows={14}
+                value={jsonText}
+                onChange={(e) => setJsonText(e.target.value)}
+                spellCheck={false}
+              />
+            ) : (
+              <DataRecordValueEditor
+                record={record}
+                onChange={setRecord}
+                allowMultipleRows={hasListShape}
+              />
+            )}
           </section>
         )}
 
@@ -137,7 +223,10 @@ export default function EditVariableDialog({
             type="button"
             className="btn primary"
             onClick={handleSave}
-            disabled={mutation.isPending || (!canEditValue && !historyDirty)}
+            disabled={
+              mutation.isPending ||
+              (!definitionDirty && !historyDirty && !valueDirty)
+            }
           >
             {t("common:action.save")}
           </button>

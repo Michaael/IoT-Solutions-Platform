@@ -1,0 +1,17 @@
+{
+  "mode.live": "Онлайн",
+  "mode.history": "История",
+  "modeLabel": "Режим журнала",
+  "liveHint": "Автообновление последних записей",
+  "loadMore": "Загрузить ещё",
+  "loadError": "Не удалось загрузить журнал",
+  "empty": "Записей пока нет",
+  "filter.all": "Все",
+  "filter.searchPlaceholder": "Поиск по пути или имени…",
+  "filter.eventName": "Событие",
+  "filter.level": "Уровень",
+  "filter.fieldPlaceholder": "Имя поля…",
+  "filter.actorPlaceholder": "Актор…",
+  "changeHistory.title": "История изменений",
+  "changeHistory.subtitle": "Аудит конфигурации объекта"
+}

@@ -611,6 +611,51 @@ export function fetchFunctionInvocations(options: {
   return request(`/api/v1/platform/function-invocations?${params}`);
 }
 
+export function fetchBindingInvocations(options: {
+  objectPath?: string;
+  bindingKind?: string;
+  ruleId?: string;
+  success?: boolean;
+  changed?: boolean;
+  limit?: number;
+} = {}): Promise<import("./types/runtime").BindingInvokeAuditEntry[]> {
+  const params = new URLSearchParams({ limit: String(options.limit ?? 50) });
+  if (options.objectPath) {
+    params.set("objectPath", options.objectPath);
+  }
+  if (options.bindingKind) {
+    params.set("bindingKind", options.bindingKind);
+  }
+  if (options.ruleId) {
+    params.set("ruleId", options.ruleId);
+  }
+  if (typeof options.success === "boolean") {
+    params.set("success", String(options.success));
+  }
+  if (typeof options.changed === "boolean") {
+    params.set("changed", String(options.changed));
+  }
+  return request(`/api/v1/platform/binding-invocations?${params}`);
+}
+
+export function fetchFunctionAuditStatus(objectPath?: string): Promise<{
+  masterEnabled: boolean;
+  objectEnabled: boolean;
+  enabled: boolean;
+}> {
+  const params = objectPath ? `?objectPath=${encodeURIComponent(objectPath)}` : "";
+  return request(`/api/v1/platform/function-audit-status${params}`);
+}
+
+export function fetchBindingAuditStatus(objectPath?: string): Promise<{
+  masterEnabled: boolean;
+  objectEnabled: boolean;
+  enabled: boolean;
+}> {
+  const params = objectPath ? `?objectPath=${encodeURIComponent(objectPath)}` : "";
+  return request(`/api/v1/platform/binding-audit-status${params}`);
+}
+
 export function fetchAlertRules(): Promise<import("./types/event").AlertRule[]> {
   return request("/api/v1/alert-rules");
 }

@@ -10,6 +10,7 @@ import com.ispf.expression.BindingEvaluationContext;
 import com.ispf.expression.BindingExpressionEvaluator;
 import com.ispf.expression.ExpressionEngine;
 import com.ispf.expression.ExpressionException;
+import com.ispf.server.binding.BindingInvokeAuditService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +35,7 @@ public class BindingRuleEngine {
     private final BindingEvaluationContext evaluationContext;
     private final ApplicationEventPublisher eventPublisher;
     private final BindingRuleAsyncExecutor asyncExecutor;
+    private final BindingInvokeAuditService bindingAuditService;
 
     public BindingRuleEngine(
             ObjectManager objectManager,
@@ -42,7 +44,8 @@ public class BindingRuleEngine {
             ExpressionEngine expressionEngine,
             BindingEvaluationContext evaluationContext,
             ApplicationEventPublisher eventPublisher,
-            BindingRuleAsyncExecutor asyncExecutor
+            BindingRuleAsyncExecutor asyncExecutor,
+            BindingInvokeAuditService bindingAuditService
     ) {
         this.objectManager = objectManager;
         this.bindingRulesService = bindingRulesService;
@@ -51,6 +54,7 @@ public class BindingRuleEngine {
         this.evaluationContext = evaluationContext;
         this.eventPublisher = eventPublisher;
         this.asyncExecutor = asyncExecutor;
+        this.bindingAuditService = bindingAuditService;
     }
 
     public void onStartup(String objectPath) {
@@ -113,7 +117,7 @@ public class BindingRuleEngine {
                 scheduleAsyncRule(objectPath, rule, trigger);
                 continue;
             }
-            if (evaluateRule(object, rule, changedVariables)) {
+            if (evaluateRule(object, rule, changedVariables, trigger)) {
                 changed = true;
             }
         }
@@ -130,7 +134,7 @@ public class BindingRuleEngine {
         }
         PlatformObject object = objectManager.require(objectPath);
         Set<String> changedVariables = new LinkedHashSet<>();
-        if (evaluateRule(object, rule, changedVariables)) {
+        if (evaluateRule(object, rule, changedVariables, trigger)) {
             for (String variableName : changedVariables) {
                 if (!BindingRulesConstants.isReservedVariable(variableName)) {
                     eventPublisher.publishEvent(ObjectChangeEvent.variableUpdated(objectPath, variableName));
@@ -151,33 +155,63 @@ public class BindingRuleEngine {
         };
     }
 
-    private boolean evaluateRule(PlatformObject object, BindingRule rule, Set<String> changedVariables) {
-        if (!conditionPasses(object, rule.condition())) {
+    private boolean evaluateRule(
+            PlatformObject object,
+            BindingRule rule,
+            Set<String> changedVariables,
+            Trigger trigger
+    ) {
+        long start = System.nanoTime();
+        boolean success = true;
+        boolean changed = false;
+        String error = null;
+        try {
+            if (!conditionPasses(object, rule.condition())) {
+                return false;
+            }
+            Variable target = object.getVariable(rule.target().variableName()).orElse(null);
+            if (target == null) {
+                success = false;
+                error = "Unknown target variable: " + rule.target().variableName();
+                return false;
+            }
+            Optional<DataRecord> computed = expressionEvaluator.evaluate(
+                    object,
+                    rule.target().variableName(),
+                    rule.expression(),
+                    target.schema(),
+                    evaluationContext
+            );
+            if (computed.isEmpty()) {
+                success = false;
+                error = "Expression returned empty";
+                return false;
+            }
+            DataRecord next = computed.get();
+            DataRecord previous = target.value().orElse(null);
+            if (!BindingExpressionEvaluator.recordsEqual(previous, next)) {
+                target.setComputedValue(next);
+                objectManager.persistBindingRuleTarget(object.path(), target);
+                changedVariables.add(rule.target().variableName());
+                changed = true;
+                return true;
+            }
             return false;
+        } catch (RuntimeException ex) {
+            success = false;
+            error = ex.getMessage();
+            throw ex;
+        } finally {
+            bindingAuditService.recordCel(
+                    object.path(),
+                    rule,
+                    trigger.kind().name(),
+                    success,
+                    changed,
+                    error,
+                    System.nanoTime() - start
+            );
         }
-        Variable target = object.getVariable(rule.target().variableName()).orElse(null);
-        if (target == null) {
-            return false;
-        }
-        Optional<DataRecord> computed = expressionEvaluator.evaluate(
-                object,
-                rule.target().variableName(),
-                rule.expression(),
-                target.schema(),
-                evaluationContext
-        );
-        if (computed.isEmpty()) {
-            return false;
-        }
-        DataRecord next = computed.get();
-        DataRecord previous = target.value().orElse(null);
-        if (!BindingExpressionEvaluator.recordsEqual(previous, next)) {
-            target.setComputedValue(next);
-            objectManager.persistBindingRuleTarget(object.path(), target);
-            changedVariables.add(rule.target().variableName());
-            return true;
-        }
-        return false;
     }
 
     private boolean conditionPasses(PlatformObject object, String condition) {

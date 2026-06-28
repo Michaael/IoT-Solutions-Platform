@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import ObjectInspector from "./ObjectInspector";
+import ObjectPropertiesEditor from "./ObjectPropertiesEditor";
 import OperatorAppsPanel from "./OperatorAppsPanel";
 import SecurityUsersPanel from "./SecurityUsersPanel";
 import SecurityUserInspector from "./SecurityUserInspector";
@@ -101,7 +101,7 @@ export default function ExplorerView({
           </button>
         </div>
       )}
-      {!hideToolbar && (
+      {!hideToolbar && opensInEditor && (
         <div className="explorer-toolbar">
           <button type="button" className="btn" onClick={() => onOpenEditor(selectedPath)}>
             {t("common:action.openInEditor")}
@@ -109,10 +109,13 @@ export default function ExplorerView({
           <span className="hint">
             {isModelsPath(selectedPath)
               ? t("common:hint.modelFullDefinition")
-              : opensInEditor
-                ? t("common:hint.openEditorButton")
-                : t("common:hint.doubleClickEditor")}
+              : t("common:hint.openEditorButton")}
           </span>
+        </div>
+      )}
+      {!hideToolbar && !opensInEditor && (
+        <div className="explorer-toolbar explorer-toolbar-hint-only">
+          <span className="hint">{t("common:hint.objectPropertiesTabs")}</span>
         </div>
       )}
 
@@ -156,7 +159,13 @@ export default function ExplorerView({
           onOpenEditor={onOpenEditor}
         />
       ) : (
-        <ObjectInspector path={selectedPath} onDeleted={onDeleted} canManage={isAdmin} />
+        <ObjectPropertiesEditor
+          key={selectedPath}
+          path={selectedPath}
+          embedded
+          canManage={isAdmin}
+          onDeleted={onDeleted}
+        />
       )}
     </div>
   );

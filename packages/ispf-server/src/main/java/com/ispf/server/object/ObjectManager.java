@@ -265,6 +265,8 @@ public class ObjectManager {
                 entity.getLastChangedAt()
         );
         node.setAppliedModelIds(mapper.readAppliedModelIds(entity.getAppliedModelIdsJson()));
+        node.setBindingAuditEnabled(entity.isBindingAuditEnabled());
+        node.setFunctionAuditEnabled(entity.isFunctionAuditEnabled());
         for (EventDescriptor event : mapper.readEvents(entity.getEventsJson())) {
             node.addEvent(event);
         }
@@ -295,6 +297,36 @@ public class ObjectManager {
         persistNodeConfig(node, "UPDATE_INFO", "metadata", null);
         publishConfigChange(ObjectChangeType.UPDATED, path, revisionBefore);
         return node;
+    }
+
+    @Transactional
+    public PlatformObject updateBindingAuditEnabled(String path, boolean enabled) {
+        assertExpectedRevision(path);
+        PlatformObject node = objectTree.require(path);
+        long revisionBefore = node.revision();
+        node.setBindingAuditEnabled(enabled);
+        persistNodeConfig(node, "UPDATE_BINDING_AUDIT", "bindingAuditEnabled", String.valueOf(enabled));
+        publishConfigChange(ObjectChangeType.UPDATED, path, revisionBefore);
+        return node;
+    }
+
+    public boolean isBindingAuditEnabled(String path) {
+        return objectTree.findByPath(path).map(PlatformObject::bindingAuditEnabled).orElse(false);
+    }
+
+    @Transactional
+    public PlatformObject updateFunctionAuditEnabled(String path, boolean enabled) {
+        assertExpectedRevision(path);
+        PlatformObject node = objectTree.require(path);
+        long revisionBefore = node.revision();
+        node.setFunctionAuditEnabled(enabled);
+        persistNodeConfig(node, "UPDATE_FUNCTION_AUDIT", "functionAuditEnabled", String.valueOf(enabled));
+        publishConfigChange(ObjectChangeType.UPDATED, path, revisionBefore);
+        return node;
+    }
+
+    public boolean isFunctionAuditEnabled(String path) {
+        return objectTree.findByPath(path).map(PlatformObject::functionAuditEnabled).orElse(false);
     }
 
     @Transactional

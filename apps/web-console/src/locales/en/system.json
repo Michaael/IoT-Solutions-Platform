@@ -1,10 +1,11 @@
 {
   "title": "System",
-  "subtitle": "Platform metrics, runtime settings, event journal, and function invoke audit.",
+  "subtitle": "Platform metrics, runtime settings, and automation journals.",
   "tab.metrics": "Metrics",
   "tab.settings": "Runtime settings",
   "tab.events": "Event journal",
   "tab.functions": "Function journal",
+  "tab.bindings": "Binding journal",
   "settings.intro": "Effective server configuration mapped to ISPF_* environment variables. Values set in the process environment take precedence and are read-only here; other values can be saved to the override file (restart required unless marked live).",
   "settings.overrideFile": "Override file",
   "settings.refresh": "Refresh",

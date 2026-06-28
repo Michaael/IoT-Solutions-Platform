@@ -173,7 +173,7 @@ bash deploy/start-snmp-driver.sh
 
 ## Обновление до v0.8.0+
 
-Breaking change [0010](decisions/0010-binding-rules-only.md): колонка `binding_expr` удалена (`V41`), checksum `V1` изменён. **Проще пересоздать БД**, чем мигрировать legacy-привязки.
+> **Runbook для апгрейда с pre-0.8.0.** Разовый breaking change [0010](decisions/0010-binding-rules-only.md): колонка `binding_expr` удалена (`V41`), checksum `V1` изменён — **проще пересоздать БД**, чем мигрировать legacy-привязки. На prod 0.9.x обычный deploy через [vps-deploy-direct.ps1](../deploy/vps-deploy-direct.ps1) — без пересоздания БД.
 
 ### Prod VPS (`ispf.iot-solutions.ru`) — PostgreSQL в Docker
 
@@ -209,5 +209,3 @@ docker compose exec postgres psql -U ispf -d postgres \
 ### H2 (local dev only)
 
 Удалите `./data/ispf-local.mv.db` или смените `spring.datasource.url`. См. [BINDINGS.md](BINDINGS.md#обновление-с-v07x-legacy-bindingexpression).
-
-Phase 18.4 — [ROADMAP.md § Phase 18](ROADMAP.md#phase-18--reference-solutions--v080-rollout).

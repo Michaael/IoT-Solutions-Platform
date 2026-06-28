@@ -25,11 +25,30 @@ $webRoot = Join-Path $RepoRoot "apps\web-console"
 $distDir = Join-Path $webRoot "dist"
 $zipPath = Join-Path $webRoot "web-console.zip"
 $serviceName = "ispf-server"
-$progressPollMs = 1500
+$progressPollMs = 500
 
 function Invoke-Remote([string]$Command) {
-    ssh -o BatchMode=yes $RemoteHost $Command
+    # Remote command must be one ssh argument (Windows OpenSSH splits unquoted args on spaces).
+    & ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o LogLevel=ERROR $RemoteHost "$Command"
     if ($LASTEXITCODE -ne 0) { throw "Remote command failed: $Command" }
+}
+
+function Invoke-SshQuiet {
+    param(
+        [string]$RemoteHost,
+        [string]$RemoteCommand
+    )
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+    try {
+        $out = & ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o LogLevel=ERROR $RemoteHost $RemoteCommand 2>$null
+        return @{
+            ExitCode = $LASTEXITCODE
+            Output   = $out
+        }
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
 }
 
 function Format-DeployByteSize {
@@ -46,12 +65,38 @@ function Get-RemoteFileSize {
         [string]$RemotePath
     )
     $escaped = $RemotePath.Replace("'", "'\\''")
-    $cmd = "test -f '$escaped' && stat -c%s '$escaped' 2>/dev/null || echo 0"
-    $out = ssh -o BatchMode=yes $RemoteHost $cmd 2>$null
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($out)) {
+    $remoteCmd = "if [ -f '$escaped' ]; then stat -c%s '$escaped'; else echo 0; fi"
+    $result = Invoke-SshQuiet -RemoteHost $RemoteHost -RemoteCommand $remoteCmd
+    if ($result.ExitCode -ne 0) {
         return [long]0
     }
-    return [long]$out.Trim()
+    $lastNumeric = [long]0
+    foreach ($line in @($result.Output)) {
+        if ($null -eq $line) { continue }
+        $trimmed = "$line".Trim()
+        if ($trimmed -match '^\d+$') {
+            $lastNumeric = [long]$trimmed
+        }
+    }
+    return $lastNumeric
+}
+
+function Wait-RemoteFileSize {
+    param(
+        [string]$RemoteHost,
+        [string]$RemotePath,
+        [long]$ExpectedBytes,
+        [int]$MaxAttempts = 15,
+        [int]$DelayMs = 1000
+    )
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $size = Get-RemoteFileSize -RemoteHost $RemoteHost -RemotePath $RemotePath
+        if ($size -ge $ExpectedBytes) {
+            return $size
+        }
+        Start-Sleep -Milliseconds $DelayMs
+    }
+    return (Get-RemoteFileSize -RemoteHost $RemoteHost -RemotePath $RemotePath)
 }
 
 function Format-DeployDuration {
@@ -91,70 +136,65 @@ function Send-FileWithProgress {
     $fileBytes = [long]$fileInfo.Length
     $activity = "Uploading to VPS"
 
+    $existingBytes = Get-RemoteFileSize -RemoteHost $RemoteHost -RemotePath $RemotePath
+    if ($existingBytes -ge $fileBytes -and $fileBytes -gt 0) {
+        Write-Host "    OK $fileName ($(Format-DeployByteSize $fileBytes), already on VPS)"
+        return
+    }
+
     $escapedRemote = $RemotePath.Replace("'", "'\\''")
     Invoke-Remote "rm -f '$escapedRemote'"
 
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = "scp"
-    $psi.Arguments = "-o BatchMode=yes `"$LocalPath`" `"${RemoteHost}:${RemotePath}`""
-    $psi.UseShellExecute = $false
-    $psi.CreateNoWindow = $true
-    $proc = [System.Diagnostics.Process]::Start($psi)
+    $overallStartPct = if ($TotalBytes -gt 0) {
+        [int][math]::Floor($CompletedBytes * 100 / $TotalBytes)
+    } else {
+        0
+    }
+
+    Write-Host "    -> $fileName ($(Format-DeployByteSize $fileBytes))"
+
+    $proc = Start-Process -FilePath "scp" `
+        -ArgumentList @("-o", "BatchMode=yes", $LocalPath, "${RemoteHost}:${RemotePath}") `
+        -PassThru -NoNewWindow
     if (-not $proc) {
         throw "Failed to start scp for $fileName"
     }
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $lastBytes = [long]0
-    $lastTick = 0.0
-    $speedBps = 0.0
 
-    while (-not $proc.HasExited) {
-        $remoteBytes = Get-RemoteFileSize -RemoteHost $RemoteHost -RemotePath $RemotePath
-        if ($remoteBytes -gt $fileBytes) {
-            $remoteBytes = $fileBytes
+    while ($true) {
+        $proc.Refresh()
+        if ($proc.HasExited) {
+            break
         }
 
-        $elapsed = $sw.Elapsed.TotalSeconds
-        $deltaT = $elapsed - $lastTick
-        if ($deltaT -ge 0.5) {
-            $speedBps = if ($deltaT -gt 0) { ($remoteBytes - $lastBytes) / $deltaT } else { 0 }
-            $lastBytes = $remoteBytes
-            $lastTick = $elapsed
-        }
-
-        $filePct = if ($fileBytes -gt 0) {
-            [int][math]::Min(100, [math]::Floor($remoteBytes * 100 / $fileBytes))
-        } else {
-            100
-        }
-        $overallBytes = $CompletedBytes + $remoteBytes
-        $overallPct = if ($TotalBytes -gt 0) {
-            [int][math]::Min(100, [math]::Floor($overallBytes * 100 / $TotalBytes))
-        } else {
-            100
-        }
-        $remainingBytes = [math]::Max(0, $TotalBytes - $overallBytes)
-        $etaSec = if ($speedBps -gt 1) { $remainingBytes / $speedBps } else { [double]::PositiveInfinity }
-        $speedLabel = "$(Format-DeployByteSize ([long]$speedBps))/s"
+        $elapsedLabel = Format-DeployDuration $sw.Elapsed.TotalSeconds
         $status = (
-            "[$FileIndex/$FileTotal] $fileName  " +
-            "$(Format-DeployByteSize $remoteBytes) / $(Format-DeployByteSize $fileBytes)  " +
-            "($filePct%)  |  total $(Format-DeployByteSize $overallBytes) / $(Format-DeployByteSize $TotalBytes)  " +
-            "($overallPct%)  $speedLabel  ETA $(Format-DeployDuration $etaSec)"
+            "[$FileIndex/$FileTotal] $fileName  uploading... $elapsedLabel  |  " +
+            "total $(Format-DeployByteSize $CompletedBytes) / $(Format-DeployByteSize $TotalBytes)"
         )
 
-        Write-Progress -Activity $activity -Status $status -PercentComplete $overallPct
-        Write-Host "`r$status" -NoNewline
+        Write-Progress -Activity $activity -Status $status -PercentComplete $overallStartPct
+        Write-Host ("`r{0,-120}" -f $status) -NoNewline
         Start-Sleep -Milliseconds $progressPollMs
     }
 
-    $proc.WaitForExit()
     Write-Host ""
     Write-Progress -Activity $activity -Completed
 
-    if ($proc.ExitCode -ne 0) {
-        throw "scp failed for $fileName (exit code $($proc.ExitCode))"
+    if (-not $proc.WaitForExit(7200000)) {
+        try { $proc.Kill() } catch {}
+        throw "scp timed out for $fileName"
+    }
+    $proc.Refresh()
+
+    $finalRemote = Wait-RemoteFileSize -RemoteHost $RemoteHost -RemotePath $RemotePath -ExpectedBytes $fileBytes
+    if ($finalRemote -lt $fileBytes) {
+        $exitLabel = if ($null -eq $proc.ExitCode) { "unknown" } else { "$($proc.ExitCode)" }
+        throw (
+            "Upload incomplete for ${fileName} (scp exit $exitLabel): remote $(Format-DeployByteSize $finalRemote) " +
+            "vs local $(Format-DeployByteSize $fileBytes)"
+        )
     }
 
     Write-Host "    OK $fileName ($(Format-DeployByteSize $fileBytes))"

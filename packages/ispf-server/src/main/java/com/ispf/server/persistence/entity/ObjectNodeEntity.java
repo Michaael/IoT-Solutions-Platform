@@ -57,6 +57,10 @@ public class ObjectNodeEntity {
     @Column(name = "last_changed_at")
     private Instant lastChangedAt;
 
+    @Column(name = "binding_audit_enabled", nullable = false)
+    private boolean bindingAuditEnabled;
+    private boolean functionAuditEnabled;
+
     public String getId() {
         return id;
     }
@@ -167,5 +171,21 @@ public class ObjectNodeEntity {
 
     public void setLastChangedAt(Instant lastChangedAt) {
         this.lastChangedAt = lastChangedAt;
+    }
+
+    public boolean isBindingAuditEnabled() {
+        return bindingAuditEnabled;
+    }
+
+    public void setBindingAuditEnabled(boolean bindingAuditEnabled) {
+        this.bindingAuditEnabled = bindingAuditEnabled;
+    }
+
+    public boolean isFunctionAuditEnabled() {
+        return functionAuditEnabled;
+    }
+
+    public void setFunctionAuditEnabled(boolean functionAuditEnabled) {
+        this.functionAuditEnabled = functionAuditEnabled;
     }
 }

@@ -22,6 +22,7 @@ import ObjectTreeIcon from "./icons/ObjectTreeIcon";
 import TreeBulkContextMenu, { type TreeContextMenuState } from "./TreeBulkContextMenu";
 import type { TreeBulkActionsConfig } from "../hooks/useTreeBulkActions";
 import { isTreeContainerType } from "../utils/objectTreeTypes";
+import { isSpecializedEditorObject } from "../utils/editorObject";
 import { deviceDriverTreeClass } from "../utils/deviceDriverTreeTone";
 
 interface ObjectTreeProps {
@@ -188,7 +189,11 @@ const TreeRow = memo(function TreeRow({
           shiftKey: event.shiftKey,
         })
       }
-      onDoubleClick={() => onOpenEditor?.(path)}
+      onDoubleClick={() => {
+        if (isSpecializedEditorObject(path, node.object.type, node.object.templateId)) {
+          onOpenEditor?.(path);
+        }
+      }}
       onContextMenu={(event) => {
         event.preventDefault();
         event.stopPropagation();

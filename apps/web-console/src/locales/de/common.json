@@ -70,6 +70,8 @@
   "field.time": "Zeit",
   "hint.adminOnly": "Nur für Administratoren verfügbar.",
   "hint.doubleClickEditor": "Doppelklicken Sie auf einen Baumknoten, um den Editor zu öffnen",
+  "hint.objectPropertiesPanel": "Variablen, Funktionen, Bindings und Metadaten bearbeiten Sie im Eigenschaftenbereich unten.",
+  "hint.objectPropertiesTabs": "Wechseln Sie über die Registerkarten unten zwischen Variablen, Funktionen, Bindings und weiteren Einstellungen.",
   "hint.modelFullDefinition": "Die vollständige Modelldefinition befindet sich im Editor (Schaltfläche oben oder Doppelklick).",
   "hint.openEditorButton": "Editor – Doppelklick in der Baumstruktur oder „Im Editor öffnen“",
   "section.changeHistory": "Änderungsverlauf",

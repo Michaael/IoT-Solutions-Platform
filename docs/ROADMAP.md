@@ -186,20 +186,16 @@ Sprint E–G в [PLATFORM_DEVELOPER_BACKLOG.md §8](PLATFORM_DEVELOPER_BACKLOG.m
 | 17.4 | Stub driver promotion process documented (demand-driven) | Done |
 | 17.5 | 0011 typed model catalogs + 0012 visual groups acceptance | Done |
 
-## Phase 18 — Reference solutions & v0.8.0 rollout
+## Phase 18 — Frontend e2e & demand-driven drivers
 
-Волна после Phase 17: **эталон mini-TEC**, production rollout v0.8.0, frontend e2e, demand-driven drivers. Dogfooding gate — [0002](decisions/0002-dogfooding-gate.md).
+Волна после Phase 17/19: **Playwright smoke** (хвост Phase 3.4) и **promotion драйверов по запросу** app-команды. Dogfooding gate — [0002](decisions/0002-dogfooding-gate.md).
 
 | # | Тема | Статус |
 |---|------|--------|
-| 18.1 | Mini-TEC reference walkthrough | Done (doc) |
-| 18.2 | `MiniTecPlatformApiTest` CI smoke | Planned |
-| 18.3 | Operator SLD widget + HMI acceptance (`mini-tec-sld`) | Planned |
-| 18.4 | v0.8.0 prod rollout (DB recreate, [DEPLOYMENT.md § v0.8.0](DEPLOYMENT.md#обновление-до-v080)) | Planned |
-| 18.5 | Playwright admin e2e smoke (Explorer, operator deep link) | Planned |
-| 18.6 | Driver stub promotion — первый кандидат по запросу app-команды | Planned |
+| 18.1 | Playwright admin e2e smoke (Explorer, operator deep link) | Planned |
+| 18.2 | Driver stub promotion — первый кандидат по запросу app-команды | Planned |
 
-См. [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md), [examples/mini-tec/](../examples/mini-tec/).
+**Снято с roadmap (не актуально):** acceptance mini-TEC (`MiniTecPlatformApiTest`, SLD), разовый v0.8.0 prod rollout с пересозданием БД. Mini-TEC остаётся optional demo — [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md), [examples/mini-tec/](../examples/mini-tec/). Runbook миграции pre-0.8.0 — [DEPLOYMENT.md § v0.8.0+](DEPLOYMENT.md#обновление-до-v080).
 
 ## Phase 19 — Web Console i18n (UI localization)
 
@@ -220,6 +216,37 @@ Sprint E–G в [PLATFORM_DEVELOPER_BACKLOG.md §8](PLATFORM_DEVELOPER_BACKLOG.m
 
 Track: **UI** (не REQ-PF — не меняет platform API). См. [0013](decisions/0013-web-console-i18n.md).
 
+## Phase 20 — Code audit backlog (UI, drivers, scale)
+
+Волна после code audit (2026-06-28): закрытие пробелов **backend ↔ frontend**, polish HMI, driver write, scale integrations. Полный реестр — [CODE_AUDIT_BACKLOG.md](CODE_AUDIT_BACKLOG.md).
+
+| # | Тема | BL | P | Статус |
+|---|------|----|---|--------|
+| 20.1 | Correlator actions `SET_VARIABLE`, `OPEN_OPERATOR_REPORT` в UI | BL-01 | P0 | Planned |
+| 20.2 | Workflow actions `log`, `publishNats` в ISPF справочнике | BL-02 | P0 | Planned |
+| 20.3 | `DataRecordValueEditor` в inline variable editor | BL-03 | P1 | Planned |
+| 20.4 | Platform Change Sets UI | BL-04 | P1 | Planned |
+| 20.5 | Edit lease indicator + acquire/release | BL-05 | P1 | Planned |
+| 20.6 | Chart types: render или убрать из редактора | BL-06 | P1 | Planned |
+| 20.7 | i18n: widget type labels + binding hints | BL-07 | P1 | Planned |
+| 20.8 | Application Event Catalog viewer | BL-08 | P1 | Planned |
+| 20.9 | Binding expression builder (18 platform functions) | BL-09 | P2 | Planned |
+| 20.10 | Widgets: network-graph layout, gantt interactive, history-table window | BL-10…12 | P2 | Planned |
+| 20.11 | System settings: Redis/NATS/ClickHouse/AI/MCP toggles | BL-13 | P2 | Planned |
+| 20.12 | Automation index + journal export/diff | BL-14…16 | P2 | Planned |
+| 20.13 | Driver write: Modbus, S7, OPC UA (demand-driven) | BL-20…22 | P1 | Planned |
+| 20.14 | Driver write: BACnet, IEC104, DNP3 poll, DLMS | BL-23…25 | P2 | Planned |
+| 20.15 | Driver maturity sync + write UI + tests | BL-27,28,30 | P2 | Planned |
+| 20.16 | ClickHouse variable history | BL-40 | P2 | Planned |
+| 20.17 | Scale ops: Redis/NATS health, YARG PDF hint | BL-41…43 | P2 | Planned |
+| 20.18 | Notifications, federation polish, backup/restore, MCP admin | BL-44…48 | P3 | Planned |
+| 20.19 | Playwright e2e (см. также Phase 18.1) | BL-50 | P1 | Planned |
+| 20.20 | Operator manifest screens + spreadsheet history binding | BL-51…54 | P3 | Planned |
+| 20.21 | Frontend component tests (widgets, inspector) | BL-55 | P2 | Planned |
+| 20.22 | Haystack/Brick semantic layer (ADR, tags mixin, export) | BL-56…62 | P3 | Deferred |
+
+**Спринты:** см. [CODE_AUDIT_BACKLOG.md § Sprint planning](CODE_AUDIT_BACKLOG.md#sprint-planning-рекомендация).
+
 ## Platform baseline
 
 | # | Тема | Статус |
@@ -231,6 +258,7 @@ Track: **UI** (не REQ-PF — не меняет platform API). См. [0013](dec
 ## Связанные документы
 
 - [PLATFORM_DEVELOPER_BACKLOG.md](PLATFORM_DEVELOPER_BACKLOG.md) — REQ-PF + REQ-FW (§12)
+- [CODE_AUDIT_BACKLOG.md](CODE_AUDIT_BACKLOG.md) — BL-01…55, code audit 2026-06-28
 - [GAP_REGISTRY.md](GAP_REGISTRY.md) — sprint planning, живой срез пробелов
 - [APPLICATIONS.md](APPLICATIONS.md) — deploy API
 - [DEPLOYMENT.md](DEPLOYMENT.md) — prod topology

@@ -62,13 +62,44 @@ export default function VariableFieldEditor({
     case "DATETIME":
       return (
         <label className="field-block" htmlFor={id}>
-          <span className="field-label">{field.description || field.name}</span>
+          <span className="field-label">
+            {field.description || field.name}
+            <span className="field-type-tag">{field.type}</span>
+          </span>
           <input
             id={id}
-            type="text"
+            type={field.type === "DATETIME" ? "datetime-local" : "text"}
             value={value === null || value === undefined ? "" : String(value)}
             disabled={disabled}
             onChange={(e) => onChange(e.target.value)}
+          />
+        </label>
+      );
+    case "RECORD":
+    case "RECORD_LIST":
+      return (
+        <label className="field-block full" htmlFor={id}>
+          <span className="field-label">
+            {field.description || field.name} ({field.type})
+          </span>
+          <textarea
+            id={id}
+            rows={4}
+            className="json-editor compact"
+            value={value === null || value === undefined ? "" : JSON.stringify(value, null, 2)}
+            disabled={disabled}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              if (!raw) {
+                onChange(null);
+                return;
+              }
+              try {
+                onChange(JSON.parse(raw));
+              } catch {
+                onChange(raw);
+              }
+            }}
           />
         </label>
       );

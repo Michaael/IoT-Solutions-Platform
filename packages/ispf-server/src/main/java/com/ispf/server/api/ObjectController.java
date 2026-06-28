@@ -352,7 +352,20 @@ public class ObjectController {
             if (request.iconId() != null) {
                 objectUiIconService.setIconId(path, request.iconId());
             }
-            PlatformObject node = objectManager.updateInfo(path, request.displayName(), request.description());
+            PlatformObject node = objectManager.require(path);
+            if (request.displayName() != null || request.description() != null) {
+                node = objectManager.updateInfo(
+                        path,
+                        request.displayName() != null ? request.displayName() : node.displayName(),
+                        request.description() != null ? request.description() : node.description()
+                );
+            }
+            if (request.bindingAuditEnabled() != null) {
+                node = objectManager.updateBindingAuditEnabled(path, request.bindingAuditEnabled());
+            }
+            if (request.functionAuditEnabled() != null) {
+                node = objectManager.updateFunctionAuditEnabled(path, request.functionAuditEnabled());
+            }
             return toDto(node);
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -749,7 +762,9 @@ public class ObjectController {
     public record UpdateObjectRequest(
             String displayName,
             String description,
-            String iconId
+            String iconId,
+            Boolean bindingAuditEnabled,
+            Boolean functionAuditEnabled
     ) {
     }
 
@@ -785,7 +800,9 @@ public class ObjectController {
                 null,
                 false,
                 remote.driverStatus(),
-                remote.driverConnected()
+                remote.driverConnected(),
+                remote.bindingAuditEnabled(),
+                remote.functionAuditEnabled()
         );
     }
 

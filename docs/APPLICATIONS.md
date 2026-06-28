@@ -398,13 +398,9 @@ Web Console: API first, fallback `public/operator-apps/<appId>.manifest.json` (�
 
 ## Следующие шаги (backlog)
 
-Phase 17 закрыта. Текущая волна — **[ROADMAP.md § Phase 18](ROADMAP.md#phase-18--reference-solutions--v080-rollout)** (mini-TEC reference, v0.8.0 rollout):
+Phase 17 и Phase 19 закрыты. Текущая волна — **[ROADMAP.md § Phase 18](ROADMAP.md#phase-18--frontend-e2e--demand-driven-drivers)**:
 
-- **18.1** Mini-TEC walkthrough — [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md)
-- **18.2** `MiniTecPlatformApiTest` CI smoke
-- **18.3** Operator SLD widget acceptance
-- **18.4** v0.8.0 prod (DB recreate + deploy)
-- **18.5** Playwright admin e2e
-- **18.6** Driver stub promotion (demand-driven)
+- **18.1** Playwright admin e2e (Explorer, operator deep link) — хвост Phase 3.4
+- **18.2** Driver stub promotion (demand-driven)
 
 Sprint planning: [GAP_REGISTRY.md](GAP_REGISTRY.md) + [PLATFORM_DEVELOPER_BACKLOG.md §3](PLATFORM_DEVELOPER_BACKLOG.md#3-сводная-матрица-req-pf).

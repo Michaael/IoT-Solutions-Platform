@@ -1,0 +1,17 @@
+{
+  "mode.live": "Live",
+  "mode.history": "History",
+  "modeLabel": "Journal view mode",
+  "liveHint": "Auto-refreshing recent entries",
+  "loadMore": "Load more",
+  "loadError": "Failed to load journal",
+  "empty": "No entries yet",
+  "filter.all": "All",
+  "filter.searchPlaceholder": "Search path or name…",
+  "filter.eventName": "Event",
+  "filter.level": "Level",
+  "filter.fieldPlaceholder": "Field name…",
+  "filter.actorPlaceholder": "Actor…",
+  "changeHistory.title": "Change history",
+  "changeHistory.subtitle": "Configuration audit trail for this object"
+}

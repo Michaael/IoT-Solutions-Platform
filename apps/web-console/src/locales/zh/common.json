@@ -70,6 +70,8 @@
   "field.time": "时间",
   "hint.adminOnly": "仅供管理员使用。",
   "hint.doubleClickEditor": "双击树节点打开编辑器",
+  "hint.objectPropertiesPanel": "在下方属性面板中编辑变量、函数、绑定和元数据。",
+  "hint.objectPropertiesTabs": "使用下方标签页编辑变量、函数、绑定及其他对象设置。",
   "hint.modelFullDefinition": "完整的模型定义位于编辑器中（上面的按钮或双击）",
   "hint.openEditorButton": "编辑器 - 在树中双击或“在编辑器中打开”",
   "section.changeHistory": "变更历史",

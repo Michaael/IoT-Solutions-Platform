@@ -52,6 +52,8 @@
   "field.templateId": "templateId",
   "hint.adminOnly": "Available to admin only.",
   "hint.doubleClickEditor": "Double-click a tree node to open the editor",
+  "hint.objectPropertiesPanel": "Edit variables, functions, bindings, and metadata in the properties panel below.",
+  "hint.objectPropertiesTabs": "Use the tabs below to edit variables, functions, bindings, and other object settings.",
   "hint.openEditorButton": "Editor — double-click in tree or \"Open in editor\"",
   "hint.modelFullDefinition": "Full model definition is in the editor (button above or double-click)",
   "error.loadFailed": "Failed to load",

@@ -61,6 +61,7 @@
   "subtitle": "Plattformmetriken, veröffentlichtes Ereignisjournal und Funktionsaufruf-Audit.",
   "tab.events": "Ereignisjournal",
   "tab.functions": "Funktionsjournal",
+  "tab.bindings": "Bindungsjournal",
   "tab.metrics": "Metriken",
   "tab.settings": "Laufzeit-Einstellungen",
   "settings.intro": "Server-Konfiguration mit ISPF_* Umgebungsvariablen.",

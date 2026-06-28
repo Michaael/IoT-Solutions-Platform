@@ -2,15 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  deleteEvent,
+  deleteFunction,
   deleteObject,
-  fetchObjectAudit,
   fetchObjectEditor,
   setVariable,
   updateObject,
   updateVariableHistory,
 } from "../api";
 import { inspectorQueryLoading, resolveInspectorEditor, useInspectorObjectEditor } from "../hooks/useInspectorQueries";
-import type { ObjectEditorDto, DataRecord, VariableDto } from "../types";
+import type {
+  EventDescriptor,
+  FunctionDescriptor,
+  ObjectEditorDto,
+  DataRecord,
+  VariableDto,
+} from "../types";
 import { fetchAuthMe } from "../api";
 import { OBJECT_WS_EVENT, sendPresence, type ObjectWsMessage } from "../hooks/useObjectWebSocket";
 import {
@@ -29,16 +36,44 @@ import VariableHistoryFields, {
 import { canDeleteObjectPath } from "../utils/platformSystemPaths";
 import { localizedSystemObjectDescription } from "../utils/systemFolderI18n";
 import CreateVariableDialog from "./CreateVariableDialog";
+import EditDescriptorDialog from "./EditDescriptorDialog";
+import EditVariableDialog from "./EditVariableDialog";
+import InvokeFunctionDialog from "./runtime/InvokeFunctionDialog";
+import FireEventDialog from "./runtime/FireEventDialog";
 import ObjectFederationBindSection from "./ObjectFederationBindSection";
+import DeviceDriverPanel from "./DeviceDriverPanel";
+import ApplicationDeployPanel from "./ApplicationDeployPanel";
+import PackageImportPanel from "./PackageImportPanel";
+import ObjectAclPanel from "./ObjectAclPanel";
+import BindingRulesPanel from "./BindingRulesPanel";
+import EventJournalPanel from "./operator/EventJournalPanel";
+import FunctionInvokeJournalPanel from "./runtime/FunctionInvokeJournalPanel";
+import BindingInvokeJournalPanel from "./runtime/BindingInvokeJournalPanel";
+import ObjectChangeHistoryPanel from "./journal/ObjectChangeHistoryPanel";
+import VariableHistoryPanel from "./VariableHistoryPanel";
+import { historizableFieldsFromVariable } from "../utils/variableHistoryFields";
+import { resolveApplicationAppId } from "../utils/applicationPath";
 
 interface ObjectPropertiesEditorProps {
   path: string;
-  onClose: () => void;
+  onClose?: () => void;
   onDeleted: () => void;
   canManage?: boolean;
+  /** Render inside Explorer detail pane (no breadcrumb). */
+  embedded?: boolean;
 }
 
-type SectionKey = "info" | "federation" | "variables" | "events" | "functions" | "history";
+type Tab =
+  | "general"
+  | "federation"
+  | "driver"
+  | "deploy"
+  | "access"
+  | "variables"
+  | "bindings"
+  | "events"
+  | "functions"
+  | "history";
 
 interface EditorState {
   displayName: string;
@@ -89,6 +124,7 @@ function VariableEditorRow({
   historyBaseline,
   onChange,
   onHistoryChange,
+  onOpenSettings,
 }: {
   variable: VariableDto;
   record: DataRecord;
@@ -97,6 +133,8 @@ function VariableEditorRow({
   historyBaseline: VariableHistoryState;
   onChange: (next: DataRecord) => void;
   onHistoryChange: (next: VariableHistoryState) => void;
+  onOpenSettings?: () => void;
+  canManage?: boolean;
 }) {
   const { t } = useTranslation(["inspector", "common"]);
   const [showHistory, setShowHistory] = useState(false);
@@ -122,6 +160,11 @@ function VariableEditorRow({
           </span>
         </div>
         <div className="property-card-tools">
+          {onOpenSettings && (
+            <button type="button" className="btn tiny" onClick={onOpenSettings}>
+              {t("variables.settings")}
+            </button>
+          )}
           <button type="button" className="btn tiny" onClick={() => setShowHistory((v) => !v)}>
             {t("objectEditor.historyBtn")}
           </button>
@@ -180,17 +223,11 @@ export default function ObjectPropertiesEditor({
   onClose,
   onDeleted,
   canManage = false,
+  embedded = false,
 }: ObjectPropertiesEditorProps) {
   const { t } = useTranslation(["inspector", "common", "objectTree"]);
   const queryClient = useQueryClient();
-  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
-    info: true,
-    federation: true,
-    variables: true,
-    events: true,
-    functions: true,
-    history: false,
-  });
+  const [tab, setTab] = useState<Tab>("general");
   const [revision, setRevision] = useState<number>(0);
   const [remoteRevision, setRemoteRevision] = useState<number | null>(null);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
@@ -201,21 +238,24 @@ export default function ObjectPropertiesEditor({
     queryFn: fetchAuthMe,
   });
 
-  const auditQuery = useQuery({
-    queryKey: ["object-audit", path],
-    queryFn: () => fetchObjectAudit(path),
-    enabled: openSections.history,
-  });
-
   const editorQuery = useInspectorObjectEditor(path);
 
   const [state, setState] = useState<EditorState | null>(null);
   const [baseline, setBaseline] = useState<EditorState | null>(null);
   const [showCreateVariable, setShowCreateVariable] = useState(false);
+  const [settingsVariable, setSettingsVariable] = useState<VariableDto | null>(null);
+  const [descriptorDialog, setDescriptorDialog] = useState<
+    { kind: "function" | "event"; initial?: FunctionDescriptor | EventDescriptor } | null
+  >(null);
+  const [fireEventTarget, setFireEventTarget] = useState<EventDescriptor | null>(null);
+  const [invokeFunctionTarget, setInvokeFunctionTarget] = useState<FunctionDescriptor | null>(null);
+  const [historyVariable, setHistoryVariable] = useState<string | null>(null);
   const syncedEditorPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     syncedEditorPathRef.current = null;
+    setHistoryVariable(null);
+    setTab("general");
   }, [path]);
 
   useEffect(() => {
@@ -319,7 +359,15 @@ export default function ObjectPropertiesEditor({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["objects"] });
       onDeleted();
-      onClose();
+      onClose?.();
+    },
+  });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: (name: string) => deleteEvent(path, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
+      editorQuery.refetch();
     },
   });
 
@@ -339,11 +387,38 @@ export default function ObjectPropertiesEditor({
     }
   }, [baseline]);
 
-  const toggleSection = (key: SectionKey) => {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const editorData = resolveInspectorEditor(path, editorQuery.data);
+  const ctxPreview = editorData?.object;
+  const isRootPath = path === "root";
+  const isDevicePreview = ctxPreview?.type === "DEVICE";
+  const isApplicationPreview = ctxPreview?.type === "APPLICATION";
+  const showFederationTab = canManage && path !== "root" && !isRootPath;
+  const showAccessTab = canManage && !isDevicePreview && !isApplicationPreview;
+
+  const tabs = useMemo((): Tab[] => {
+    const list: Tab[] = ["general"];
+    if (showFederationTab) {
+      list.push("federation");
+    }
+    if (isDevicePreview) {
+      list.push("driver");
+    }
+    if (isApplicationPreview) {
+      list.push("deploy");
+    }
+    if (showAccessTab) {
+      list.push("access");
+    }
+    list.push("variables", "bindings", "events", "functions", "history");
+    return list;
+  }, [isApplicationPreview, isDevicePreview, showAccessTab, showFederationTab]);
+
+  useEffect(() => {
+    if (!tabs.includes(tab)) {
+      setTab("general");
+    }
+  }, [tab, tabs]);
+
   if (editorQuery.error && !editorData) {
     return <div className="editor-loading error">{t("objectEditor.loadError")}</div>;
   }
@@ -358,27 +433,58 @@ export default function ObjectPropertiesEditor({
 
   const ctx = editorData.object;
   const isRoot = path === "root";
+  const isPlatformRoot = path === "root.platform";
+  const isDevice = ctx.type === "DEVICE";
+  const isApplication = ctx.type === "APPLICATION";
+  const applicationAppId = isApplication ? resolveApplicationAppId(path, ctx.description) : null;
   const canDelete = canDeleteObjectPath(path, ctx.type);
   const crumbs = path.split(".");
   const headerDescription =
     localizedSystemObjectDescription(t, path, ctx.description)
     || t("objectEditor.defaultDescription");
 
+  const tabLabel = (tabId: Tab) => {
+    switch (tabId) {
+      case "general":
+        return t("tab.general");
+      case "federation":
+        return t("tab.federation");
+      case "driver":
+        return t("tab.driver");
+      case "deploy":
+        return t("tab.deploy");
+      case "access":
+        return t("tab.access");
+      case "variables":
+        return t("tab.variables");
+      case "bindings":
+        return t("tab.bindings");
+      case "events":
+        return t("tab.events");
+      case "functions":
+        return t("tab.functions");
+      case "history":
+        return t("common:section.changeHistory");
+    }
+  };
+
   return (
-    <div className="properties-editor">
+    <div className={`properties-editor inspector${embedded ? " properties-editor-embedded" : ""}`}>
       <div className="properties-editor-toolbar">
-        <div className="breadcrumb">
-          {crumbs.map((part, index) => {
-            const crumbPath = crumbs.slice(0, index + 1).join(".");
-            return (
-              <span key={crumbPath} className="crumb">
-                {index > 0 && <span className="crumb-sep">/</span>}
-                <span>{part}</span>
-              </span>
-            );
-          })}
-        </div>
-        <div className="toolbar-actions">
+        {!embedded && (
+          <div className="breadcrumb">
+            {crumbs.map((part, index) => {
+              const crumbPath = crumbs.slice(0, index + 1).join(".");
+              return (
+                <span key={crumbPath} className="crumb">
+                  {index > 0 && <span className="crumb-sep">/</span>}
+                  <span>{part}</span>
+                </span>
+              );
+            })}
+          </div>
+        )}
+        <div className={`toolbar-actions${embedded ? " toolbar-actions-full" : ""}`}>
           <button type="button" className="btn" onClick={() => editorQuery.refetch()}>
             {t("common:action.refresh")}
           </button>
@@ -409,27 +515,30 @@ export default function ObjectPropertiesEditor({
         </div>
       </div>
 
-      <div className="properties-editor-header">
-        <span className="ctx-icon">
+      <header className="inspector-header">
+        <div className="inspector-title-row">
           <ObjectTreeIcon
             path={ctx.path}
             type={ctx.type}
             iconId={state.iconId}
             federated={ctx.federated}
-            size={24}
+            size={22}
           />
-        </span>
-        <div>
-          <h2>
-            {ctx.displayName}
-            {ctx.federated && (
-              <span className="inline-badge federated-inline-badge">federated</span>
+          <div>
+            <h2>
+              {ctx.displayName}
+              {ctx.federated && (
+                <span className="inline-badge federated-inline-badge">{t("common:badge.federated")}</span>
+              )}
+            </h2>
+            <code className="path-code">{ctx.path}</code>
+            {!embedded && headerDescription && (
+              <p className="hint">{headerDescription}</p>
             )}
-          </h2>
-          <p className="hint">{headerDescription}</p>
+          </div>
         </div>
         {isDirty && <span className="dirty-pill">{t("common:dirty.changed")}</span>}
-      </div>
+      </header>
 
       {saveMutation.isSuccess && <div className="banner success">{t("common:changes.saved")}</div>}
       {staleRemote && (
@@ -457,12 +566,27 @@ export default function ObjectPropertiesEditor({
         <div className="banner error">{(saveMutation.error as Error).message}</div>
       )}
 
-      <section className="editor-section">
-        <button type="button" className="section-toggle" onClick={() => toggleSection("info")}>
-          <span>{openSections.info ? "▾" : "▸"}</span> {t("common:section.info")}
-        </button>
-        {openSections.info && (
-          <div className="section-body form-grid">
+      <nav className="tabs">
+        {tabs.map((tabId) => (
+          <button
+            key={tabId}
+            type="button"
+            className={tab === tabId ? "active" : ""}
+            onClick={() => setTab(tabId)}
+          >
+            {tabLabel(tabId)}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "general" && (
+        <section className="panel">
+          <div className="form-grid">
+            {isPlatformRoot && canManage && (
+              <div className="full">
+                <PackageImportPanel />
+              </div>
+            )}
             <label>
               {t("common:field.displayName")}
               <input
@@ -508,7 +632,7 @@ export default function ObjectPropertiesEditor({
             <label className="full">
               {t("common:field.description")}
               <textarea
-                rows={2}
+                rows={3}
                 value={state.description}
                 onChange={(e) => setState((s) => s && { ...s, description: e.target.value })}
               />
@@ -524,184 +648,290 @@ export default function ObjectPropertiesEditor({
               />
             </label>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      {path !== "root" && (
-        <section className="editor-section">
-          <button type="button" className="section-toggle" onClick={() => toggleSection("federation")}>
-            <span>{openSections.federation ? "▾" : "▸"}</span> Federation
-            {ctx.federated && <span className="inline-badge federated-inline-badge">active</span>}
-          </button>
-          {openSections.federation && (
-            <div className="section-body">
-              <ObjectFederationBindSection path={path} canManage={canManage} object={ctx} />
-            </div>
+      {tab === "federation" && (
+        <section className="panel">
+          <ObjectFederationBindSection path={path} canManage={canManage} object={ctx} />
+        </section>
+      )}
+
+      {tab === "driver" && isDevice && (
+        <section className="panel">
+          <DeviceDriverPanel devicePath={path} canManage={canManage} />
+        </section>
+      )}
+
+      {tab === "deploy" && isApplication && (
+        <section className="panel">
+          {applicationAppId ? (
+            <ApplicationDeployPanel appId={applicationAppId} canManage={canManage} />
+          ) : (
+            <p className="hint">{t("deploy.appIdMissing")}</p>
           )}
         </section>
       )}
 
-      <section className="editor-section">
-        <button type="button" className="section-toggle" onClick={() => toggleSection("variables")}>
-          <span>{openSections.variables ? "▾" : "▸"}</span> {t("tab.variables")} ({editorData.variables.length})
-        </button>
-        {openSections.variables && (
-          <div className="section-body property-list">
-            {ctx.federated && (
-              <p className="hint">
-                {t("variables.federatedHint")}
-              </p>
-            )}
-            {canManage && !ctx.federated && (
-              <div className="panel-toolbar">
-                <button
-                  type="button"
-                  className="btn primary small"
-                  onClick={() => setShowCreateVariable(true)}
-                >
-                  {t("variables.add")}
-                </button>
-              </div>
-            )}
-            {editorData.variables.length === 0 && (
-              <p className="hint">{t("variables.empty")}</p>
-            )}
-            {editorData.variables
-              .filter((variable) => variable.name !== "uiIcon")
-              .map((variable) => (
-              <VariableEditorRow
-                key={variable.name}
-                variable={variable}
-                record={state.variables[variable.name]}
-                baseline={baseline!.variables[variable.name]}
-                history={state.variableHistory[variable.name]}
-                historyBaseline={baseline!.variableHistory[variable.name]}
-                onChange={(next) =>
-                  setState((s) =>
-                    s ? { ...s, variables: { ...s.variables, [variable.name]: next } } : s
-                  )
-                }
-                onHistoryChange={(next) =>
-                  setState((s) =>
-                    s
-                      ? {
-                          ...s,
-                          variableHistory: { ...s.variableHistory, [variable.name]: next },
-                        }
-                      : s
-                  )
-                }
+      {tab === "access" && (
+        <section className="panel">
+          <ObjectAclPanel objectPath={path} canManage={canManage} />
+        </section>
+      )}
+
+      {tab === "bindings" && (
+        <section className="panel">
+          <BindingRulesPanel path={path} canManage={canManage} />
+          {canManage && !ctx.federated && (
+            <label className="binding-audit-toggle panel-toolbar">
+              <input
+                type="checkbox"
+                checked={editorData.object.bindingAuditEnabled ?? false}
+                onChange={async (e) => {
+                  const enabled = e.target.checked;
+                  await updateObject(path, { bindingAuditEnabled: enabled }, { revision });
+                  const fresh = await fetchObjectEditor(path);
+                  setRevision(fresh.object.revision ?? revision);
+                  await editorQuery.refetch();
+                  await queryClient.invalidateQueries({ queryKey: ["binding-audit-status", path] });
+                }}
               />
+              {t("bindings.auditEnabled")}
+            </label>
+          )}
+          <BindingInvokeJournalPanel objectPath={path} compact scrollMaxHeight={360} />
+        </section>
+      )}
+
+      {tab === "variables" && (
+        <section className="panel property-list">
+          {ctx.federated && (
+            <p className="hint">{t("variables.federatedHint")}</p>
+          )}
+          {canManage && !ctx.federated && (
+            <div className="panel-toolbar">
+              <button
+                type="button"
+                className="btn primary small"
+                onClick={() => setShowCreateVariable(true)}
+              >
+                {t("variables.add")}
+              </button>
+            </div>
+          )}
+          {editorData.variables.length === 0 && (
+            <p className="hint">{t("variables.empty")}</p>
+          )}
+          {editorData.variables
+            .filter((variable) => variable.name !== "uiIcon")
+            .map((variable) => (
+              <div key={variable.name}>
+                <VariableEditorRow
+                  variable={variable}
+                  record={state.variables[variable.name]}
+                  baseline={baseline!.variables[variable.name]}
+                  history={state.variableHistory[variable.name]}
+                  historyBaseline={baseline!.variableHistory[variable.name]}
+                  canManage={canManage && !ctx.federated}
+                  onOpenSettings={
+                    canManage && !ctx.federated
+                      ? () => setSettingsVariable(variable)
+                      : undefined
+                  }
+                  onChange={(next) =>
+                    setState((s) =>
+                      s ? { ...s, variables: { ...s.variables, [variable.name]: next } } : s
+                    )
+                  }
+                  onHistoryChange={(next) =>
+                    setState((s) =>
+                      s
+                        ? {
+                            ...s,
+                            variableHistory: { ...s.variableHistory, [variable.name]: next },
+                          }
+                        : s
+                    )
+                  }
+                />
+                {variable.historyEnabled && (
+                  <div className="property-card-tools property-history-chart-row">
+                    <button
+                      type="button"
+                      className={`btn tiny${historyVariable === variable.name ? " primary" : ""}`}
+                      onClick={() =>
+                        setHistoryVariable((current) =>
+                          current === variable.name ? null : variable.name
+                        )
+                      }
+                    >
+                      {t("variables.chart")}
+                    </button>
+                  </div>
+                )}
+                {historyVariable === variable.name && variable.historyEnabled && (
+                  <div className="binding-panel">
+                    <VariableHistoryPanel
+                      objectPath={path}
+                      variableName={variable.name}
+                      fields={historizableFieldsFromVariable(variable)}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      <section className="editor-section">
-        <button type="button" className="section-toggle" onClick={() => toggleSection("events")}>
-          <span>{openSections.events ? "▾" : "▸"}</span> {t("tab.events")} ({editorData.events.length})
-        </button>
-        {openSections.events && (
-          <div className="section-body">
-            {editorData.events.length === 0 ? (
-              <p className="hint">{t("events.empty")}</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>{t("common:table.name")}</th>
-                    <th>{t("common:field.level")}</th>
-                    <th>{t("common:table.description")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {editorData.events.map((ev) => (
-                    <tr key={ev.name}>
-                      <td><code>{ev.name}</code></td>
-                      <td>{ev.level}</td>
-                      <td>{ev.description || t("common:empty.dash")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-      </section>
+      {tab === "events" && (
+        <section className="panel">
+          {canManage && !ctx.federated && (
+            <div className="panel-toolbar">
+              <button
+                type="button"
+                className="btn primary small"
+                onClick={() => setDescriptorDialog({ kind: "event" })}
+              >
+                {t("events.add")}
+              </button>
+            </div>
+          )}
+          {editorData.events.length === 0 ? (
+            <p className="hint">{t("events.empty")}</p>
+          ) : (
+            <ul className="event-list editable-list">
+              {editorData.events.map((ev) => (
+                <li key={ev.name}>
+                  <code>{ev.name}</code>
+                  <span className="model-var-desc">{ev.description || ev.level}</span>
+                  <span className="list-actions">
+                    <button
+                      type="button"
+                      className="btn small primary"
+                      onClick={() => setFireEventTarget(ev)}
+                    >
+                      {t("events.publish")}
+                    </button>
+                    {canManage && !ctx.federated && (
+                      <>
+                        <button
+                          type="button"
+                          className="btn small"
+                          onClick={() => setDescriptorDialog({ kind: "event", initial: ev })}
+                        >
+                          {t("common:action.edit")}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn small danger"
+                          disabled={deleteEventMutation.isPending}
+                          onClick={() => {
+                            if (confirm(t("common:action.confirmDeleteEvent", { name: ev.name }))) {
+                              deleteEventMutation.mutate(ev.name);
+                            }
+                          }}
+                        >
+                          {t("common:action.delete")}
+                        </button>
+                      </>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <EventJournalPanel
+            objectPath={path}
+            knownEventNames={editorData.events.map((event) => event.name)}
+            compact
+            scrollMaxHeight={360}
+          />
+        </section>
+      )}
 
-      <section className="editor-section">
-        <button type="button" className="section-toggle" onClick={() => toggleSection("functions")}>
-          <span>{openSections.functions ? "▾" : "▸"}</span> {t("tab.functions")} ({editorData.functions.length})
-        </button>
-        {openSections.functions && (
-          <div className="section-body">
-            {editorData.functions.length === 0 ? (
-              <p className="hint">{t("functions.empty")}</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>{t("common:table.name")}</th>
-                    <th>{t("common:table.description")}</th>
-                    <th>{t("common:field.input")}</th>
-                    <th>{t("common:field.output")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {editorData.functions.map((fn) => (
-                    <tr key={fn.name}>
-                      <td><code>{fn.name}</code></td>
-                      <td>{fn.description || t("common:empty.dash")}</td>
-                      <td className="mono small">{fn.inputSchema.name}</td>
-                      <td className="mono small">{fn.outputSchema.name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-      </section>
+      {tab === "functions" && (
+        <section className="panel">
+          {canManage && !ctx.federated && (
+            <div className="panel-toolbar">
+              <button
+                type="button"
+                className="btn primary small"
+                onClick={() => setDescriptorDialog({ kind: "function" })}
+              >
+                {t("functions.add")}
+              </button>
+            </div>
+          )}
+          {editorData.functions.length === 0 ? (
+            <p className="hint">{t("functions.empty")}</p>
+          ) : (
+            <ul className="event-list editable-list">
+              {editorData.functions.map((fn) => (
+                <li key={fn.name}>
+                  <code>{fn.name}</code>
+                  {fn.description && <span className="model-var-desc">{fn.description}</span>}
+                  {fn.sourceBody && (
+                    <span className="inline-badge">{t("descriptor.sourceTypeScript")}</span>
+                  )}
+                  <span className="list-actions">
+                    <button
+                      type="button"
+                      className="btn small primary"
+                      onClick={() => setInvokeFunctionTarget(fn)}
+                    >
+                      {t("functions.invoke")}
+                    </button>
+                    {canManage && !ctx.federated && (
+                      <>
+                        <button
+                          type="button"
+                          className="btn small"
+                          onClick={() => setDescriptorDialog({ kind: "function", initial: fn })}
+                        >
+                          {t("common:action.edit")}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn small danger"
+                          onClick={() => {
+                            if (confirm(t("common:action.confirmDeleteFunction", { name: fn.name }))) {
+                              deleteFunction(path, fn.name).then(() => editorQuery.refetch());
+                            }
+                          }}
+                        >
+                          {t("common:action.delete")}
+                        </button>
+                      </>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {canManage && !ctx.federated && (
+            <label className="binding-audit-toggle panel-toolbar">
+              <input
+                type="checkbox"
+                checked={editorData.object.functionAuditEnabled ?? false}
+                onChange={async (e) => {
+                  const enabled = e.target.checked;
+                  await updateObject(path, { functionAuditEnabled: enabled }, { revision });
+                  const fresh = await fetchObjectEditor(path);
+                  setRevision(fresh.object.revision ?? revision);
+                  await editorQuery.refetch();
+                  await queryClient.invalidateQueries({ queryKey: ["function-audit-status", path] });
+                }}
+              />
+              {t("functions.auditEnabled")}
+            </label>
+          )}
+          <FunctionInvokeJournalPanel objectPath={path} compact scrollMaxHeight={360} />
+        </section>
+      )}
 
-      <section className="editor-section">
-        <button type="button" className="section-toggle" onClick={() => toggleSection("history")}>
-          <span>{openSections.history ? "▾" : "▸"}</span> {t("common:section.changeHistory")}
-        </button>
-        {openSections.history && (
-          <div className="section-body">
-            {auditQuery.isLoading && <p className="hint">{t("common:action.loading")}</p>}
-            {auditQuery.data && auditQuery.data.length === 0 && (
-              <p className="hint">{t("common:empty.noRecords")}</p>
-            )}
-            {auditQuery.data && auditQuery.data.length > 0 && (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>{t("common:field.time")}</th>
-                    <th>{t("common:table.type")}</th>
-                    <th>{t("common:field.field")}</th>
-                    <th>{t("common:field.actor")}</th>
-                    <th>Rev</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditQuery.data.map((entry) => (
-                    <tr key={entry.id}>
-                      <td className="mono small">{entry.occurredAt}</td>
-                      <td>{entry.changeType}</td>
-                      <td>{entry.field || t("common:empty.dash")}</td>
-                      <td>{entry.actor || t("common:empty.dash")}</td>
-                      <td className="mono small">
-                        {entry.revisionBefore}→{entry.revisionAfter}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-      </section>
+      {tab === "history" && (
+        <ObjectChangeHistoryPanel objectPath={path} compact scrollMaxHeight={420} />
+      )}
 
       {showCreateVariable && (
         <CreateVariableDialog
@@ -715,6 +945,58 @@ export default function ObjectPropertiesEditor({
             setBaseline(next);
             setShowCreateVariable(false);
           }}
+        />
+      )}
+
+      {settingsVariable && (
+        <EditVariableDialog
+          objectPath={path}
+          variable={settingsVariable}
+          canManageHistory={canManage}
+          canEditDefinition={canManage && !ctx.federated}
+          onClose={() => setSettingsVariable(null)}
+          onSaved={async () => {
+            await queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
+            const fresh = await fetchObjectEditor(path);
+            const next = buildState(fresh);
+            setState(next);
+            setBaseline(next);
+            setSettingsVariable(null);
+          }}
+        />
+      )}
+
+      {descriptorDialog && (
+        <EditDescriptorDialog
+          objectPath={path}
+          kind={descriptorDialog.kind}
+          initial={descriptorDialog.initial}
+          onClose={() => setDescriptorDialog(null)}
+          onSaved={async () => {
+            await queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
+            await editorQuery.refetch();
+            setDescriptorDialog(null);
+          }}
+        />
+      )}
+
+      {fireEventTarget && (
+        <FireEventDialog
+          objectPath={path}
+          event={fireEventTarget}
+          onClose={() => setFireEventTarget(null)}
+          onFired={() => {
+            queryClient.invalidateQueries({ queryKey: ["events"] });
+          }}
+        />
+      )}
+
+      {invokeFunctionTarget && (
+        <InvokeFunctionDialog
+          objectPath={path}
+          fn={invokeFunctionTarget}
+          onClose={() => setInvokeFunctionTarget(null)}
+          onInvoked={() => editorQuery.refetch()}
         />
       )}
     </div>

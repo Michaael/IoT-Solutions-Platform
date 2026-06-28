@@ -38,7 +38,11 @@ public record ObjectDto(
         /** DEVICE only: driverStatus variable (STOPPED, RUNNING, ERROR). */
         String driverStatus,
         /** DEVICE only: live connected flag when status is RUNNING. */
-        Boolean driverConnected
+        Boolean driverConnected,
+        /** When true, CEL/SQL binding invocations for this object are written to binding_invoke_audit. */
+        boolean bindingAuditEnabled,
+        /** When true, function invocations for this object are written to function_invoke_audit. */
+        boolean functionAuditEnabled
 ) {
     public static ObjectDto from(PlatformObject node) {
         return from(node, null, List.of());
@@ -92,7 +96,9 @@ public record ObjectDto(
                 null,
                 false,
                 null,
-                null
+                null,
+                node.bindingAuditEnabled(),
+                node.functionAuditEnabled()
         );
     }
 
@@ -120,7 +126,9 @@ public record ObjectDto(
                 groupContextPath,
                 groupMemberMissing,
                 driverStatus,
-                driverConnected
+                driverConnected,
+                bindingAuditEnabled,
+                functionAuditEnabled
         );
     }
 
@@ -164,7 +172,9 @@ public record ObjectDto(
                 groupContextPath,
                 missing,
                 null,
-                null
+                null,
+                member.bindingAuditEnabled(),
+                member.functionAuditEnabled()
         );
     }
 
@@ -192,7 +202,9 @@ public record ObjectDto(
                 groupContextPath,
                 true,
                 null,
-                null
+                null,
+                false,
+                false
         );
     }
 }

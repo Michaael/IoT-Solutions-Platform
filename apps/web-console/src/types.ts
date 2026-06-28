@@ -78,6 +78,9 @@ export interface ObjectSummary {
   driverStatus?: string | null;
   /** DEVICE lite list: live connected flag when status is RUNNING. */
   driverConnected?: boolean | null;
+  /** CEL/SQL binding invoke audit for this object only. */
+  bindingAuditEnabled?: boolean;
+  functionAuditEnabled?: boolean;
   appliedModels?: AppliedModelSummary[];
 }
 
@@ -95,6 +98,7 @@ export interface DataSchema {
     type: string;
     description?: string;
     nullable?: boolean;
+    nestedSchema?: DataSchema | null;
   }>;
 }
 
@@ -148,6 +152,10 @@ export interface FunctionDescriptor {
   description: string;
   inputSchema: DataSchema;
   outputSchema: DataSchema;
+  sourceType?: string | null;
+  sourceBody?: string | null;
+  dataSourcePath?: string | null;
+  version?: string | null;
 }
 
 export interface EventDescriptor {
@@ -193,4 +201,6 @@ export interface UpdateObjectPayload {
   displayName?: string;
   description?: string;
   iconId?: string | null;
+  bindingAuditEnabled?: boolean;
+  functionAuditEnabled?: boolean;
 }

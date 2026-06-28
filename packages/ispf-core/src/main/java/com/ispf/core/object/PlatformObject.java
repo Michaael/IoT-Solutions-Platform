@@ -24,6 +24,8 @@ public class PlatformObject {
     private final String templateId;
     private final List<String> appliedModelIds = new CopyOnWriteArrayList<>();
     private volatile int sortOrder;
+    private volatile boolean bindingAuditEnabled;
+    private volatile boolean functionAuditEnabled;
     private final Instant createdAt;
     private volatile long revision;
     private volatile String lastChangedBy;
@@ -184,6 +186,22 @@ public class PlatformObject {
 
     public void setSortOrder(int sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public boolean bindingAuditEnabled() {
+        return bindingAuditEnabled;
+    }
+
+    public void setBindingAuditEnabled(boolean bindingAuditEnabled) {
+        this.bindingAuditEnabled = bindingAuditEnabled;
+    }
+
+    public boolean functionAuditEnabled() {
+        return functionAuditEnabled;
+    }
+
+    public void setFunctionAuditEnabled(boolean functionAuditEnabled) {
+        this.functionAuditEnabled = functionAuditEnabled;
     }
 
     public Map<String, Variable> variables() {

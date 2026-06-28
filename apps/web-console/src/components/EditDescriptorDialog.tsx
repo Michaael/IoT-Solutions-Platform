@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { upsertEvent, upsertFunction } from "../api";
 import type { DataSchema, EventDescriptor, FunctionDescriptor } from "../types";
+import DataSchemaEditor from "./schema/DataSchemaEditor";
+import { cloneSchema, emptySchema, normalizeFunctionDescriptor } from "../utils/dataSchema";
 
 type DescriptorKind = "function" | "event";
 
@@ -14,27 +16,31 @@ interface EditDescriptorDialogProps {
   onSaved: () => void;
 }
 
-const EMPTY_SCHEMA: DataSchema = { name: "empty", fields: [] };
-
 function defaultFunction(name = ""): FunctionDescriptor {
+  const base = name || "fn";
   return {
-    name,
+    name: base,
     description: "",
-    inputSchema: { ...EMPTY_SCHEMA, name: `${name || "fn"}Input` },
+    inputSchema: { ...emptySchema(`${base}Input`), fields: [] },
     outputSchema: {
-      name: `${name || "fn"}Output`,
-      fields: [{ name: "ok", type: "BOOLEAN" }],
+      name: `${base}Output`,
+      fields: [{ name: "ok", type: "BOOLEAN", description: "Success", nullable: false }],
     },
+    sourceType: null,
+    sourceBody: null,
+    dataSourcePath: null,
+    version: null,
   };
 }
 
 function defaultEvent(name = ""): EventDescriptor {
+  const base = name || "event";
   return {
-    name,
+    name: base,
     description: "",
     payloadSchema: {
-      name: `${name || "event"}Payload`,
-      fields: [{ name: "message", type: "STRING" }],
+      name: `${base}Payload`,
+      fields: [{ name: "message", type: "STRING", description: "Message", nullable: true }],
     },
     level: "INFO",
   };
@@ -54,17 +60,35 @@ export default function EditDescriptorDialog({
   const [level, setLevel] = useState(
     !isFunction && initial ? (initial as EventDescriptor).level : "INFO"
   );
+  const [inputSchema, setInputSchema] = useState<DataSchema>(emptySchema("input"));
+  const [outputSchema, setOutputSchema] = useState<DataSchema>(emptySchema("output"));
+  const [payloadSchema, setPayloadSchema] = useState<DataSchema>(emptySchema("payload"));
+  const [sourceType, setSourceType] = useState("");
+  const [sourceBody, setSourceBody] = useState("");
+  const [dataSourcePath, setDataSourcePath] = useState("");
+  const [version, setVersion] = useState("");
+  const [showAdvancedJson, setShowAdvancedJson] = useState(false);
   const [schemaJson, setSchemaJson] = useState("{}");
   const [parseError, setParseError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isFunction) {
       const fn = (initial as FunctionDescriptor | undefined) ?? defaultFunction(name);
+      setInputSchema(cloneSchema(fn.inputSchema));
+      setOutputSchema(cloneSchema(fn.outputSchema));
+      setSourceType(fn.sourceType ?? "");
+      setSourceBody(fn.sourceBody ?? "");
+      setDataSourcePath(fn.dataSourcePath ?? "");
+      setVersion(fn.version ?? "");
       setSchemaJson(
         JSON.stringify(
           {
             inputSchema: fn.inputSchema,
             outputSchema: fn.outputSchema,
+            sourceType: fn.sourceType,
+            sourceBody: fn.sourceBody,
+            dataSourcePath: fn.dataSourcePath,
+            version: fn.version,
           },
           null,
           2
@@ -72,6 +96,7 @@ export default function EditDescriptorDialog({
       );
     } else {
       const ev = (initial as EventDescriptor | undefined) ?? defaultEvent(name);
+      setPayloadSchema(cloneSchema(ev.payloadSchema));
       setSchemaJson(JSON.stringify(ev.payloadSchema, null, 2));
     }
   }, [initial, isFunction, name]);
@@ -79,23 +104,40 @@ export default function EditDescriptorDialog({
   const mutation = useMutation({
     mutationFn: async () => {
       if (isFunction) {
-        const parsed = JSON.parse(schemaJson) as {
-          inputSchema: DataSchema;
-          outputSchema: DataSchema;
-        };
-        const fn: FunctionDescriptor = {
-          name: name.trim(),
-          description: description.trim(),
-          inputSchema: parsed.inputSchema,
-          outputSchema: parsed.outputSchema,
-        };
+        let fn: FunctionDescriptor;
+        if (showAdvancedJson) {
+          const parsed = JSON.parse(schemaJson) as FunctionDescriptor;
+          fn = normalizeFunctionDescriptor({
+            name: name.trim(),
+            description: description.trim(),
+            inputSchema: parsed.inputSchema,
+            outputSchema: parsed.outputSchema,
+            sourceType: parsed.sourceType,
+            sourceBody: parsed.sourceBody,
+            dataSourcePath: parsed.dataSourcePath,
+            version: parsed.version,
+          });
+        } else {
+          fn = normalizeFunctionDescriptor({
+            name: name.trim(),
+            description: description.trim(),
+            inputSchema,
+            outputSchema,
+            sourceType: sourceType || null,
+            sourceBody: sourceBody || null,
+            dataSourcePath: dataSourcePath || null,
+            version: version || null,
+          });
+        }
         return upsertFunction(objectPath, fn);
       }
-      const payloadSchema = JSON.parse(schemaJson) as DataSchema;
+      const schema = showAdvancedJson
+        ? (JSON.parse(schemaJson) as DataSchema)
+        : payloadSchema;
       const ev: EventDescriptor = {
         name: name.trim(),
         description: description.trim(),
-        payloadSchema,
+        payloadSchema: schema,
         level,
       };
       return upsertEvent(objectPath, ev);
@@ -105,9 +147,7 @@ export default function EditDescriptorDialog({
 
   function handleSave() {
     try {
-      if (isFunction) {
-        JSON.parse(schemaJson);
-      } else {
+      if (showAdvancedJson) {
         JSON.parse(schemaJson);
       }
       setParseError(null);
@@ -127,7 +167,7 @@ export default function EditDescriptorDialog({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal wide" onClick={(e) => e.stopPropagation()}>
+      <div className="modal wide descriptor-editor-modal" onClick={(e) => e.stopPropagation()}>
         <header>
           <h3>{title}</h3>
           <button type="button" className="icon-btn" onClick={onClose}>✕</button>
@@ -160,15 +200,98 @@ export default function EditDescriptorDialog({
             {t("common:field.description")}
             <input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
-          <label className="full">
-            {isFunction ? "inputSchema / outputSchema (JSON)" : "payloadSchema (JSON)"}
+        </section>
+
+        {isFunction && !showAdvancedJson && (
+          <>
+            <section className="modal-section">
+              <h4>{t("descriptor.inputSchema")}</h4>
+              <DataSchemaEditor
+                value={inputSchema}
+                onChange={setInputSchema}
+                idPrefix="fn-input"
+              />
+            </section>
+            <section className="modal-section">
+              <h4>{t("descriptor.outputSchema")}</h4>
+              <DataSchemaEditor
+                value={outputSchema}
+                onChange={setOutputSchema}
+                idPrefix="fn-output"
+              />
+            </section>
+            <section className="modal-section form-grid">
+              <h4 className="full">{t("descriptor.scriptSection")}</h4>
+              <label>
+                {t("descriptor.sourceType")}
+                <select value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
+                  <option value="">{t("descriptor.sourceTypeHandler")}</option>
+                  <option value="script">{t("descriptor.sourceTypeScript")}</option>
+                </select>
+              </label>
+              <label>
+                {t("descriptor.version")}
+                <input
+                  value={version}
+                  onChange={(e) => setVersion(e.target.value)}
+                  placeholder="1.0.0"
+                />
+              </label>
+              <label className="full">
+                {t("descriptor.dataSourcePath")}
+                <input
+                  value={dataSourcePath}
+                  onChange={(e) => setDataSourcePath(e.target.value)}
+                  placeholder="root.platform.data-sources.app_myapp"
+                />
+              </label>
+              {(sourceType === "script" || sourceBody.trim()) && (
+                <label className="full">
+                  {t("descriptor.sourceBody")}
+                  <textarea
+                    className="json-editor"
+                    rows={10}
+                    value={sourceBody}
+                    onChange={(e) => setSourceBody(e.target.value)}
+                    placeholder='{"steps":[{"type":"return","value":{}}]}'
+                    spellCheck={false}
+                  />
+                </label>
+              )}
+              <p className="hint full">{t("descriptor.scriptHint")}</p>
+            </section>
+          </>
+        )}
+
+        {!isFunction && !showAdvancedJson && (
+          <section className="modal-section">
+            <h4>{t("descriptor.payloadSchema")}</h4>
+            <DataSchemaEditor
+              value={payloadSchema}
+              onChange={setPayloadSchema}
+              idPrefix="ev-payload"
+            />
+          </section>
+        )}
+
+        <section className="modal-section">
+          <label className="checkbox-label inline">
+            <input
+              type="checkbox"
+              checked={showAdvancedJson}
+              onChange={(e) => setShowAdvancedJson(e.target.checked)}
+            />
+            {t("descriptor.advancedJson")}
+          </label>
+          {showAdvancedJson && (
             <textarea
               className="json-editor"
-              rows={12}
+              rows={14}
               value={schemaJson}
               onChange={(e) => setSchemaJson(e.target.value)}
+              spellCheck={false}
             />
-          </label>
+          )}
         </section>
 
         {parseError && <p className="hint error">{parseError}</p>}

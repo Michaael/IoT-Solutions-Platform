@@ -35,7 +35,7 @@
 | [Spreadsheet widget](SPREADSHEET_WIDGET.md) | Формулы, функции `SUM`/`ISPREF`, binding-ячейки, сохранение таблиц |
 | [Lab Training (18 заданий)](LAB_TRAINING.md) | Virtual lab device, bundle import, упражнения Phase 15 |
 | [MES reference walkthrough](REFERENCE_MES_WALKTHROUGH.md) | Сквозной MES demo (`examples/mes-reference/`) |
-| [Mini-TEC reference walkthrough](REFERENCE_MINI_TEC_WALKTHROUGH.md) | Эталон АСУ ТП мини-ТЭЦ (`examples/mini-tec/`, Phase 18) |
+| [Mini-TEC reference walkthrough](REFERENCE_MINI_TEC_WALKTHROUGH.md) | Optional demo АСУ ТП мини-ТЭЦ (`examples/mini-tec/`, bootstrap при fixtures) |
 | [Messaging contract](MESSAGING.md) | NATS, WebSocket, sync RPC |
 | [AI Development Layer](AI_DEVELOPMENT.md) | LlmProvider, ContextPack, ToolRegistry, Studio (FW-40…43) |
 | [Commercial bundle licensing](COMMERCIAL_LICENSING.md) | RSA license при deploy commercial bundle |

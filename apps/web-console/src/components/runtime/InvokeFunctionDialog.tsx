@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { invokeFunction } from "../../api";
-import type { DataRecord, DataSchema, FunctionDescriptor } from "../../types";
+import type { DataRecord, FunctionDescriptor } from "../../types";
+import DataRecordValueEditor from "../schema/DataRecordValueEditor";
+import { emptyRecord } from "../../utils/record";
+import { cloneSchema } from "../../utils/dataSchema";
 
 interface InvokeFunctionDialogProps {
   objectPath: string;
@@ -11,8 +14,8 @@ interface InvokeFunctionDialogProps {
   onInvoked: () => void;
 }
 
-function defaultInputJson(schema: DataSchema): string {
-  return JSON.stringify({ schema, rows: [] }, null, 2);
+function defaultInputRecord(fn: FunctionDescriptor): DataRecord {
+  return emptyRecord(cloneSchema(fn.inputSchema));
 }
 
 function isEmptyInput(input: DataRecord): boolean {
@@ -28,22 +31,25 @@ export default function InvokeFunctionDialog({
   onClose,
   onInvoked,
 }: InvokeFunctionDialogProps) {
-  const { t } = useTranslation(["runtime", "common"]);
-  const [inputJson, setInputJson] = useState(() => defaultInputJson(fn.inputSchema));
+  const { t } = useTranslation(["runtime", "common", "inspector"]);
+  const [record, setRecord] = useState<DataRecord>(() => defaultInputRecord(fn));
+  const [showJson, setShowJson] = useState(false);
+  const [inputJson, setInputJson] = useState(() => JSON.stringify(defaultInputRecord(fn), null, 2));
   const [resultJson, setResultJson] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const hasInputFields = useMemo(() => fn.inputSchema.fields.length > 0, [fn.inputSchema.fields.length]);
 
   const mutation = useMutation({
     mutationFn: () => {
       let input: DataRecord | undefined;
-      const trimmed = inputJson.trim();
-      if (trimmed) {
+      if (hasInputFields) {
         try {
-          input = JSON.parse(trimmed) as DataRecord;
+          input = showJson ? (JSON.parse(inputJson) as DataRecord) : record;
         } catch {
           throw new Error(t("common:error.invalidJsonInput"));
         }
-        if (isEmptyInput(input)) {
+        if (input && isEmptyInput(input)) {
           input = undefined;
         }
       }
@@ -72,21 +78,35 @@ export default function InvokeFunctionDialog({
             <code>{objectPath}</code> → <code>{fn.name}</code>
           </p>
           {fn.description && <p className="hint">{fn.description}</p>}
-          <label className="full">
-            {t("runtime:invokeFunction.input")}
-            <textarea
-              rows={6}
-              value={inputJson}
-              onChange={(e) => setInputJson(e.target.value)}
-              spellCheck={false}
-            />
-          </label>
-          <p className="hint">{t("runtime:invokeFunction.inputHint")}</p>
+          {hasInputFields ? (
+            <>
+              <div className="section-inline-tools">
+                <span className="field-label">{t("runtime:invokeFunction.input")}</span>
+                <button type="button" className="btn tiny" onClick={() => setShowJson((v) => !v)}>
+                  JSON
+                </button>
+              </div>
+              {showJson ? (
+                <textarea
+                  rows={8}
+                  className="json-editor"
+                  value={inputJson}
+                  onChange={(e) => setInputJson(e.target.value)}
+                  spellCheck={false}
+                />
+              ) : (
+                <DataRecordValueEditor record={record} onChange={setRecord} />
+              )}
+              <p className="hint">{t("runtime:invokeFunction.inputHint")}</p>
+            </>
+          ) : (
+            <p className="hint">{t("descriptor.emptyInputSchema")}</p>
+          )}
           {error && <p className="hint error">{error}</p>}
           {resultJson && (
             <label className="full">
               {t("runtime:invokeFunction.result")}
-              <textarea rows={8} readOnly value={resultJson} spellCheck={false} />
+              <textarea rows={8} readOnly value={resultJson} spellCheck={false} className="json-editor" />
             </label>
           )}
         </div>

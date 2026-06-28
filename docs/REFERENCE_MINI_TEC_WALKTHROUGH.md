@@ -1,6 +1,6 @@
 # Mini-TEC reference walkthrough
 
-Сквозной reference-сценарий ISPF для **АСУ ТП мини-ТЭЦ**: 3×ГПУ, ГРПБ, РУМБ, ДГУ, нагрузочный модуль, станционный hub, защиты, operator HMI с однолинейной схемой. Без custom Java в `ispf-server` (bootstrap + bundle).
+Сквозной **optional demo** ISPF для **АСУ ТП мини-ТЭЦ**: 3×ГПУ, ГРПБ, РУМБ, ДГУ, нагрузочный модуль, станционный hub, защиты, operator HMI с однолинейной схемой. Без custom Java в `ispf-server` (bootstrap + bundle). **Не входит в platform roadmap** — см. [ROADMAP.md § Phase 18](ROADMAP.md#phase-18--frontend-e2e--demand-driven-drivers).
 
 Артефакты: [examples/mini-tec/](../examples/mini-tec/), `appId` = `mini-tec`.
 
@@ -57,14 +57,3 @@
 | **Automation** | Alert rules + correlators на защитах |
 | **PF-02** | App SQL: `tec_daily_journal`, `tec_consumer_load` |
 | **Operator UI** | `root.platform.operator-apps` → mini-tec menus |
-
-## Acceptance (Phase 18)
-
-- [ ] `MiniTecPlatformApiTest` — smoke: objects, hub aggregates, operator UI path
-- [ ] Operator: SLD widget отражает состояние ГПУ/шин без reload
-- [ ] Agent playbook `mini-tec` проходит list_objects → dashboards → invoke без ERROR
-- [ ] Bundle redeploy идемпотентен (`POST .../mini-tec/deploy`)
-
-## Phase 18 roadmap
-
-Детали в [ROADMAP.md § Phase 18](ROADMAP.md#phase-18--reference-solutions--v080-rollout).

@@ -125,6 +125,25 @@ ispf:
     coalesce-scheduler-threads: ${ISPF_RUNTIME_TELEMETRY_COALESCE_SCHEDULER_THREADS:4}
   binding:
     async-threads: ${ISPF_BINDING_ASYNC_THREADS:16}
+    audit:
+      enabled: ${ISPF_BINDING_AUDIT_ENABLED:true}
+      mode: ${ISPF_BINDING_AUDIT_MODE:changes}
+      sample-rate: ${ISPF_BINDING_AUDIT_SAMPLE_RATE:1.0}
+      async-enabled: ${ISPF_BINDING_AUDIT_ASYNC_ENABLED:true}
+      queue-capacity: ${ISPF_BINDING_AUDIT_QUEUE_CAPACITY:10000}
+      batch-size: ${ISPF_BINDING_AUDIT_BATCH_SIZE:100}
+      flush-interval-ms: ${ISPF_BINDING_AUDIT_FLUSH_INTERVAL_MS:200}
+      retention-days: ${ISPF_BINDING_AUDIT_RETENTION_DAYS:7}
+  function:
+    audit:
+      enabled: ${ISPF_FUNCTION_AUDIT_ENABLED:true}
+      mode: ${ISPF_FUNCTION_AUDIT_MODE:errors}
+      sample-rate: ${ISPF_FUNCTION_AUDIT_SAMPLE_RATE:1.0}
+      async-enabled: ${ISPF_FUNCTION_AUDIT_ASYNC_ENABLED:true}
+      queue-capacity: ${ISPF_FUNCTION_AUDIT_QUEUE_CAPACITY:10000}
+      batch-size: ${ISPF_FUNCTION_AUDIT_BATCH_SIZE:100}
+      flush-interval-ms: ${ISPF_FUNCTION_AUDIT_FLUSH_INTERVAL_MS:200}
+      retention-days: ${ISPF_FUNCTION_AUDIT_RETENTION_DAYS:30}
   mqtt-gateway:
     ingress-dispatch-threads: ${ISPF_MQTT_GATEWAY_INGRESS_DISPATCH_THREADS:8}
   object-change:

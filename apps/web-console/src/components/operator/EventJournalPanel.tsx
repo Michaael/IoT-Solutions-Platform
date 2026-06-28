@@ -1,7 +1,6 @@
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { fetchEvents } from "../../api";
 import {
   OPERATOR_SIDEBAR_EVENTS_QUERY_KEY,
@@ -10,7 +9,12 @@ import {
 import type { ObjectEvent } from "../../types/event";
 import type { OperatorUi } from "../../types/operatorUi";
 import { filterOperatorSidebarEvents } from "../../utils/operatorSidebarScope";
+import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
+import JournalVirtualList from "../journal/JournalVirtualList";
 
+const LIVE_LIMIT = 25;
+const HISTORY_PAGE = 50;
+const HISTORY_MAX = 200;
 const EVENT_ITEM_ESTIMATE_PX = 120;
 
 interface EventJournalPanelProps {
@@ -21,6 +25,11 @@ interface EventJournalPanelProps {
   limit?: number;
   showFilters?: boolean;
   objectPathFilter?: string;
+  knownEventNames?: string[];
+  compact?: boolean;
+  scrollMaxHeight?: number | string;
+  defaultMode?: JournalViewMode;
+  showModeToggle?: boolean;
 }
 
 export default function EventJournalPanel({
@@ -28,26 +37,48 @@ export default function EventJournalPanel({
   ui,
   operatorApps = [],
   objectPath: fixedObjectPath,
-  limit = 40,
+  limit,
   showFilters = false,
   objectPathFilter: initialFilter = "",
+  knownEventNames,
+  compact = false,
+  scrollMaxHeight,
+  defaultMode = "live",
+  showModeToggle = true,
 }: EventJournalPanelProps) {
-  const { t } = useTranslation(["operator", "common"]);
+  const { t } = useTranslation(["operator", "journal", "common"]);
   const operatorScoped = Boolean(appId && ui);
+  const [mode, setMode] = useState<JournalViewMode>(defaultMode);
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
   const [filterPath, setFilterPath] = useState(initialFilter);
+  const [eventNameFilter, setEventNameFilter] = useState("");
+  const [levelFilter, setLevelFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
+
   const objectPath = fixedObjectPath ?? (filterPath.trim() || undefined);
-  const listRef = useRef<HTMLUListElement>(null);
+  const liveLimit = limit ?? LIVE_LIMIT;
+  const fetchLimit = mode === "live" ? liveLimit : historyLimit;
+
   useOperatorSidebarRefresh(appId, operatorScoped ? ui : undefined);
 
   const events = useQuery({
-    queryKey: ["events", operatorScoped ? OPERATOR_SIDEBAR_EVENTS_QUERY_KEY : objectPath ?? "all", limit],
-    queryFn: () =>
-      operatorScoped ? fetchEvents(undefined, Math.max(limit, 80)) : fetchEvents(objectPath, limit),
-    refetchInterval: operatorScoped ? 5000 : 8000,
-    staleTime: 0,
+    queryKey: [
+      "events",
+      operatorScoped ? OPERATOR_SIDEBAR_EVENTS_QUERY_KEY : objectPath ?? "all",
+      fetchLimit,
+      mode,
+    ],
+    queryFn: () => {
+      if (operatorScoped) {
+        return fetchEvents(undefined, Math.max(fetchLimit, mode === "live" ? 80 : fetchLimit));
+      }
+      return fetchEvents(objectPath, fetchLimit);
+    },
+    refetchInterval: mode === "live" ? (operatorScoped ? 5000 : 8000) : false,
+    staleTime: mode === "live" ? 0 : 30_000,
   });
 
-  const items = useMemo(() => {
+  const rawItems = useMemo(() => {
     if (!operatorScoped || !ui || !appId) {
       return events.data ?? [];
     }
@@ -58,70 +89,144 @@ export default function EventJournalPanel({
     });
   }, [appId, events.data, operatorApps, operatorScoped, ui]);
 
-  const virtualizer = useVirtualizer({
-    count: items.length,
-    getScrollElement: () => listRef.current,
-    estimateSize: () => EVENT_ITEM_ESTIMATE_PX,
-    overscan: 5,
-    enabled: items.length > 0,
-  });
+  const eventNames = useMemo(() => {
+    const set = new Set<string>(knownEventNames ?? []);
+    for (const event of rawItems) {
+      set.add(event.eventName);
+    }
+    return Array.from(set).sort();
+  }, [knownEventNames, rawItems]);
 
-  const virtualItems = virtualizer.getVirtualItems();
+  const levels = useMemo(() => {
+    const set = new Set<string>();
+    for (const event of rawItems) {
+      set.add(event.level);
+    }
+    return Array.from(set).sort();
+  }, [rawItems]);
+
+  const filtered = useMemo(() => {
+    let rows = rawItems;
+    if (mode === "history") {
+      if (eventNameFilter) {
+        rows = rows.filter((event) => event.eventName === eventNameFilter);
+      }
+      if (levelFilter) {
+        rows = rows.filter((event) => event.level === levelFilter);
+      }
+      const query = searchFilter.trim().toLowerCase();
+      if (query) {
+        rows = rows.filter(
+          (event) =>
+            event.objectPath.toLowerCase().includes(query)
+            || event.eventName.toLowerCase().includes(query),
+        );
+      }
+    }
+    return rows;
+  }, [eventNameFilter, levelFilter, mode, rawItems, searchFilter]);
+
+  const canLoadMore =
+    mode === "history"
+    && !operatorScoped
+    && (events.data?.length ?? 0) >= historyLimit
+    && historyLimit < HISTORY_MAX;
+
+  const subtitle = operatorScoped && appId
+    ? t("eventJournal.operatorApp", { appId })
+    : !operatorScoped && objectPath
+      ? t("eventJournal.filter", { path: objectPath })
+      : undefined;
+
+  const emptyMessage = operatorScoped ? t("eventJournal.emptyScoped") : t("eventJournal.empty");
 
   return (
-    <section className="event-journal-panel">
-      <header className="event-journal-head">
-        <div>
-          <h3>{t("eventJournal.title")}</h3>
-          {operatorScoped && appId && (
-            <p className="hint">{t("eventJournal.operatorApp", { appId })}</p>
-          )}
-          {!operatorScoped && objectPath && (
-            <p className="hint">
-              {t("eventJournal.filter", { path: objectPath })}
-            </p>
-          )}
-        </div>
-        <span className="badge">{items.length}</span>
-      </header>
-
-      {showFilters && !fixedObjectPath && (
-        <div className="runtime-journal-filters">
-          <label>
-            objectPath
-            <input
-              value={filterPath}
-              onChange={(e) => setFilterPath(e.target.value)}
-              placeholder={t("eventJournal.filterPlaceholder")}
-            />
-          </label>
-        </div>
-      )}
-
-      {events.isLoading && <p className="hint">{t("common:action.loading")}</p>}
-      {events.error && <p className="hint error">{t("eventJournal.loadError")}</p>}
-      {items.length === 0 && !events.isLoading && (
-        <p className="hint">
-          {operatorScoped ? t("eventJournal.emptyScoped") : t("eventJournal.empty")}
-        </p>
-      )}
-      <ul ref={listRef} className="event-journal-list dash-virtual-list">
-        {items.length > 0 && (
-          <li
-            aria-hidden="true"
-            className="dash-virtual-list-spacer"
-            style={{ height: virtualizer.getTotalSize() }}
-          />
-        )}
-        {virtualItems.map((virtualItem) => (
-          <EventRow
-            key={items[virtualItem.index].id}
-            event={items[virtualItem.index]}
-            style={{ transform: `translateY(${virtualItem.start}px)` }}
-          />
-        ))}
-      </ul>
-    </section>
+    <JournalViewShell
+      title={t("eventJournal.title")}
+      subtitle={subtitle}
+      mode={mode}
+      onModeChange={setMode}
+      showModeToggle={showModeToggle}
+      count={filtered.length}
+      isLoading={events.isLoading}
+      error={events.error}
+      empty={filtered.length === 0}
+      emptyMessage={emptyMessage}
+      compact={compact}
+      scrollMaxHeight={scrollMaxHeight ?? (compact ? 280 : 400)}
+      className="event-journal-panel"
+      filters={
+        (mode === "history" || (showFilters && !fixedObjectPath)) ? (
+          <div className="journal-filters form-grid">
+            {showFilters && !fixedObjectPath && (
+              <label>
+                objectPath
+                <input
+                  value={filterPath}
+                  onChange={(e) => setFilterPath(e.target.value)}
+                  placeholder={t("eventJournal.filterPlaceholder")}
+                />
+              </label>
+            )}
+            {mode === "history" && (
+              <>
+                <label>
+                  {t("journal:filter.eventName")}
+                  <select value={eventNameFilter} onChange={(e) => setEventNameFilter(e.target.value)}>
+                    <option value="">{t("journal:filter.all")}</option>
+                    {eventNames.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t("journal:filter.level")}
+                  <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+                    <option value="">{t("journal:filter.all")}</option>
+                    {levels.map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t("common:action.search")}
+                  <input
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder={t("journal:filter.searchPlaceholder")}
+                  />
+                </label>
+              </>
+            )}
+          </div>
+        ) : undefined
+      }
+      footer={
+        canLoadMore ? (
+          <div className="journal-footer">
+            <button
+              type="button"
+              className="btn small"
+              disabled={events.isFetching}
+              onClick={() => setHistoryLimit((n) => Math.min(n + HISTORY_PAGE, HISTORY_MAX))}
+            >
+              {t("journal:loadMore")}
+            </button>
+          </div>
+        ) : undefined
+      }
+    >
+      <JournalVirtualList
+        items={filtered}
+        estimateSizePx={EVENT_ITEM_ESTIMATE_PX}
+        getKey={(event) => event.id}
+        renderItem={(event, style) => <EventRow event={event} style={style} />}
+      />
+    </JournalViewShell>
   );
 }
 

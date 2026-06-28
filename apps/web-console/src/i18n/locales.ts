@@ -29,6 +29,7 @@ export const LOCALE_NAMESPACES = [
   "automation",
   "platform",
   "runtime",
+  "journal",
 ] as const;
 
 export type LocaleNamespace = (typeof LOCALE_NAMESPACES)[number];

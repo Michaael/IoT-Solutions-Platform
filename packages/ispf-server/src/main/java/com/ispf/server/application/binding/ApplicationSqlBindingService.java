@@ -9,6 +9,7 @@ import com.ispf.server.alert.AlertRuleService;
 import com.ispf.server.application.data.ApplicationDataStore;
 import com.ispf.server.application.data.ApplicationSchemaSession;
 import com.ispf.server.application.data.ApplicationSchemaSupport;
+import com.ispf.server.binding.BindingInvokeAuditService;
 import com.ispf.server.object.ObjectManager;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -32,19 +33,22 @@ public class ApplicationSqlBindingService {
     private final ApplicationDataStore dataStore;
     private final ObjectManager objectManager;
     private final AlertRuleService alertRuleService;
+    private final BindingInvokeAuditService bindingAuditService;
 
     public ApplicationSqlBindingService(
             ApplicationSqlBindingStore store,
             ApplicationSchemaSession schemaSession,
             ApplicationDataStore dataStore,
             ObjectManager objectManager,
-            @Lazy AlertRuleService alertRuleService
+            @Lazy AlertRuleService alertRuleService,
+            BindingInvokeAuditService bindingAuditService
     ) {
         this.store = store;
         this.schemaSession = schemaSession;
         this.dataStore = dataStore;
         this.objectManager = objectManager;
         this.alertRuleService = alertRuleService;
+        this.bindingAuditService = bindingAuditService;
     }
 
     public void deploy(String appId, DeploySqlBindingRequest request) {
@@ -71,7 +75,11 @@ public class ApplicationSqlBindingService {
                 null
         ));
         ensureVariable(request.objectPath(), request.variable());
-        refreshBinding(appId, request.objectPath(), request.variable());
+        store.listByApp(appId).stream()
+                .filter(binding -> binding.objectPath().equals(request.objectPath())
+                        && binding.variableName().equals(request.variable()))
+                .findFirst()
+                .ifPresent(binding -> executeRefresh(binding, "MANUAL"));
     }
 
     public List<Map<String, Object>> list(String appId) {
@@ -79,7 +87,11 @@ public class ApplicationSqlBindingService {
     }
 
     public Map<String, Object> refresh(String appId, String objectPath, String variableName) {
-        refreshBinding(appId, objectPath, variableName);
+        store.listByApp(appId).stream()
+                .filter(binding -> binding.objectPath().equals(objectPath)
+                        && binding.variableName().equals(variableName))
+                .findFirst()
+                .ifPresent(binding -> executeRefresh(binding, "MANUAL"));
         return Map.of(
                 "appId", appId,
                 "objectPath", objectPath,
@@ -89,12 +101,12 @@ public class ApplicationSqlBindingService {
     }
 
     public void refreshBinding(ApplicationSqlBindingStore.SqlBinding binding) {
-        executeRefresh(binding);
+        executeRefresh(binding, triggerForRefreshMode(binding.refreshMode()));
     }
 
     public void refreshAfterFunction(String appId, String objectPath, String functionName) {
         for (ApplicationSqlBindingStore.SqlBinding binding : store.listForFunctionSuccess(appId, objectPath, functionName)) {
-            executeRefresh(binding);
+            executeRefresh(binding, "FUNCTION_SUCCESS");
         }
     }
 
@@ -106,7 +118,7 @@ public class ApplicationSqlBindingService {
                     && binding.lastRefreshedAt().plusMillis(intervalMs).isAfter(java.time.Instant.now())) {
                 continue;
             }
-            executeRefresh(binding);
+            executeRefresh(binding, "SCHEDULE");
         }
     }
 
@@ -115,37 +127,67 @@ public class ApplicationSqlBindingService {
                 .filter(binding -> binding.objectPath().equals(objectPath)
                         && binding.variableName().equals(variableName))
                 .findFirst()
-                .ifPresent(this::executeRefresh);
+                .ifPresent(binding -> executeRefresh(binding, "MANUAL"));
     }
 
-    private void executeRefresh(ApplicationSqlBindingStore.SqlBinding binding) {
-        String schemaName = resolveSchemaName(binding.appId());
-        Object[] extractedHolder = new Object[1];
-        schemaSession.runInSchema(schemaName, () -> {
-            List<Map<String, Object>> rows = dataStore.queryForList(binding.querySql());
-            if (rows.isEmpty()) {
-                extractedHolder[0] = 0;
-                return;
-            }
-            Map<String, Object> row = normalizeRow(rows.getFirst());
-            String field = binding.valueField() != null ? binding.valueField() : "value";
-            Object value = row.get(field.toLowerCase());
-            if (value == null) {
-                value = row.get(field);
-            }
-            if (value == null && row.size() == 1) {
-                value = row.values().iterator().next();
-            }
-            extractedHolder[0] = value;
-        });
-        DataRecord record = toValueRecord(extractedHolder[0], binding);
-        schemaSession.runWithPlatformCatalog(() ->
-                objectManager.setSystemVariableValue(binding.objectPath(), binding.variableName(), record)
-        );
-        store.markRefreshed(binding.id());
-        schemaSession.runWithPlatformCatalog(() ->
-                alertRuleService.processVariableChange(binding.objectPath(), binding.variableName())
-        );
+    private void executeRefresh(ApplicationSqlBindingStore.SqlBinding binding, String triggerKind) {
+        long start = System.nanoTime();
+        boolean success = true;
+        boolean changed = true;
+        String error = null;
+        try {
+            String schemaName = resolveSchemaName(binding.appId());
+            Object[] extractedHolder = new Object[1];
+            schemaSession.runInSchema(schemaName, () -> {
+                List<Map<String, Object>> rows = dataStore.queryForList(binding.querySql());
+                if (rows.isEmpty()) {
+                    extractedHolder[0] = 0;
+                    return;
+                }
+                Map<String, Object> row = normalizeRow(rows.getFirst());
+                String field = binding.valueField() != null ? binding.valueField() : "value";
+                Object value = row.get(field.toLowerCase());
+                if (value == null) {
+                    value = row.get(field);
+                }
+                if (value == null && row.size() == 1) {
+                    value = row.values().iterator().next();
+                }
+                extractedHolder[0] = value;
+            });
+            DataRecord record = toValueRecord(extractedHolder[0], binding);
+            schemaSession.runWithPlatformCatalog(() ->
+                    objectManager.setSystemVariableValue(binding.objectPath(), binding.variableName(), record)
+            );
+            store.markRefreshed(binding.id());
+            schemaSession.runWithPlatformCatalog(() ->
+                    alertRuleService.processVariableChange(binding.objectPath(), binding.variableName())
+            );
+        } catch (RuntimeException ex) {
+            success = false;
+            changed = false;
+            error = ex.getMessage();
+            throw ex;
+        } finally {
+            bindingAuditService.recordSql(
+                    binding.objectPath(),
+                    binding.id().toString(),
+                    binding.variableName(),
+                    triggerKind,
+                    success,
+                    changed,
+                    error,
+                    System.nanoTime() - start
+            );
+        }
+    }
+
+    private static String triggerForRefreshMode(String refreshMode) {
+        return switch (normalizeRefreshMode(refreshMode)) {
+            case "on_function_success" -> "FUNCTION_SUCCESS";
+            case "on_event" -> "EVENT";
+            default -> "SCHEDULE";
+        };
     }
 
     private void ensureVariable(String objectPath, String variableName) {

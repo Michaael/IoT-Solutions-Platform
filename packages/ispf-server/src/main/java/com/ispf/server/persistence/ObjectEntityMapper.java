@@ -39,6 +39,8 @@ public class ObjectEntityMapper {
         entity.setRevision(node.revision());
         entity.setLastChangedBy(node.lastChangedBy());
         entity.setLastChangedAt(node.lastChangedAt());
+        entity.setBindingAuditEnabled(node.bindingAuditEnabled());
+        entity.setFunctionAuditEnabled(node.functionAuditEnabled());
         return entity;
     }
 

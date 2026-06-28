@@ -61,6 +61,7 @@
   "subtitle": "平台指标、已发布事件日志和函数调用审计。",
   "tab.events": "事件日志",
   "tab.functions": "函数日志",
+  "tab.bindings": "绑定日志",
   "tab.metrics": "指标",
   "tab.settings": "运行时设置",
   "settings.intro": "与 ISPF_* 环境变量对应的服务器有效配置。",

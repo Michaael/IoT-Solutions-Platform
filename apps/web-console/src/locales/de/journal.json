@@ -1,0 +1,17 @@
+{
+  "mode.live": "Live",
+  "mode.history": "Verlauf",
+  "modeLabel": "Journalmodus",
+  "liveHint": "Aktuelle Einträge werden automatisch aktualisiert",
+  "loadMore": "Mehr laden",
+  "loadError": "Journal konnte nicht geladen werden",
+  "empty": "Noch keine Einträge",
+  "filter.all": "Alle",
+  "filter.searchPlaceholder": "Pfad oder Name suchen…",
+  "filter.eventName": "Ereignis",
+  "filter.level": "Stufe",
+  "filter.fieldPlaceholder": "Feldname…",
+  "filter.actorPlaceholder": "Akteur…",
+  "changeHistory.title": "Änderungsverlauf",
+  "changeHistory.subtitle": "Konfigurations-Audit für dieses Objekt"
+}
