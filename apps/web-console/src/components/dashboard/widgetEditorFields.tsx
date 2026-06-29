@@ -28,6 +28,7 @@ import {
   IdLabelListEditor,
   TabPanelMetaEditor,
 } from "./widgetEditorStructured";
+import ScadaMimicWidgetEditorFields from "./ScadaMimicWidgetEditorFields";
 
 type ObjectOption = { path: string; displayName: string; variableNames: string[] };
 type DashboardOption = { path: string; displayName: string };
@@ -2210,6 +2211,9 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext, t: TFunction): ReactNod
           hint={t("editor.structured.miniTecHint")}
         />
       );
+
+    case "scada-mimic":
+      return <ScadaMimicWidgetEditorFields widget={widget} update={update} />;
 
     default:
       return null;

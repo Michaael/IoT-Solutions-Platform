@@ -20,6 +20,7 @@ public final class MiniTecPaths {
 
     public static final String DASHBOARD_OVERVIEW = "root.platform.dashboards.mini-tec-overview";
     public static final String DASHBOARD_SINGLE_LINE = "root.platform.dashboards.mini-tec-single-line";
+    public static final String MIMIC_SINGLE_LINE = "root.platform.mimics.mini-tec-single-line";
     public static final String DASHBOARD_GPU_DETAIL = "root.platform.dashboards.mini-tec-gpu-detail";
     public static final String DASHBOARD_GRPB = "root.platform.dashboards.mini-tec-grpb";
     public static final String DASHBOARD_RUMB = "root.platform.dashboards.mini-tec-rumb";

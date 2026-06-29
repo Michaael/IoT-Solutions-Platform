@@ -516,6 +516,24 @@ export async function saveDashboardRefreshInterval(
   return fetchDashboard(path);
 }
 
+export function fetchMimic(path: string): Promise<import("./types/dashboard").MimicView> {
+  return request(`/api/v1/mimics/by-path?path=${encodeURIComponent(path)}`);
+}
+
+export function saveMimicDiagram(path: string, diagramJson: string): Promise<import("./types/dashboard").MimicView> {
+  return request(`/api/v1/mimics/by-path/diagram?path=${encodeURIComponent(path)}`, {
+    method: "PUT",
+    body: JSON.stringify({ diagramJson }),
+  });
+}
+
+export function saveMimicTitle(path: string, title: string): Promise<import("./types/dashboard").MimicView> {
+  return request(`/api/v1/mimics/by-path/title?path=${encodeURIComponent(path)}`, {
+    method: "PUT",
+    body: JSON.stringify({ title }),
+  });
+}
+
 export function fetchWorkflow(path: string): Promise<WorkflowView> {
   return request(`/api/v1/workflows/by-path?path=${encodeURIComponent(path)}`);
 }

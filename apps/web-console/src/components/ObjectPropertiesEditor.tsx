@@ -11,6 +11,7 @@ import {
   updateVariableHistory,
 } from "../api";
 import { inspectorQueryLoading, resolveInspectorEditor, useInspectorObjectEditor } from "../hooks/useInspectorQueries";
+import { useVariablesQuery } from "../hooks/useVariablesQuery";
 import type {
   EventDescriptor,
   FunctionDescriptor,
@@ -114,6 +115,50 @@ function buildState(data: ObjectEditorDto): EditorState {
     iconId: data.object.iconId ?? null,
     variables,
     variableHistory,
+  };
+}
+
+/** Merge telemetry into editor state; skip variables the user is editing. */
+function applyRemoteVariables(
+  remote: VariableDto[],
+  state: EditorState,
+  baseline: EditorState,
+): { state: EditorState; baseline: EditorState } | null {
+  let stateChanged = false;
+  let baselineChanged = false;
+  const nextStateVars = { ...state.variables };
+  const nextBaselineVars = { ...baseline.variables };
+
+  for (const variable of remote) {
+    if (variable.name === "uiIcon") {
+      continue;
+    }
+    const name = variable.name;
+    if (!(name in baseline.variables)) {
+      continue;
+    }
+    const current = state.variables[name];
+    const baseRec = baseline.variables[name];
+    if (current && baseRec && !recordsEqual(current, baseRec)) {
+      continue;
+    }
+    const next = ensureRecord(variable);
+    if (!recordsEqual(next, nextStateVars[name])) {
+      nextStateVars[name] = next;
+      stateChanged = true;
+    }
+    if (!recordsEqual(next, nextBaselineVars[name])) {
+      nextBaselineVars[name] = next;
+      baselineChanged = true;
+    }
+  }
+
+  if (!stateChanged && !baselineChanged) {
+    return null;
+  }
+  return {
+    state: stateChanged ? { ...state, variables: nextStateVars } : state,
+    baseline: baselineChanged ? { ...baseline, variables: nextBaselineVars } : baseline,
   };
 }
 
@@ -240,6 +285,7 @@ export default function ObjectPropertiesEditor({
   });
 
   const editorQuery = useInspectorObjectEditor(path);
+  const variablesQuery = useVariablesQuery(path, 5000, Boolean(path));
 
   const [state, setState] = useState<EditorState | null>(null);
   const [baseline, setBaseline] = useState<EditorState | null>(null);
@@ -252,6 +298,10 @@ export default function ObjectPropertiesEditor({
   const [invokeFunctionTarget, setInvokeFunctionTarget] = useState<FunctionDescriptor | null>(null);
   const [historyVariable, setHistoryVariable] = useState<string | null>(null);
   const syncedEditorPathRef = useRef<string | null>(null);
+  const stateRef = useRef(state);
+  const baselineRef = useRef(baseline);
+  stateRef.current = state;
+  baselineRef.current = baseline;
 
   useEffect(() => {
     syncedEditorPathRef.current = null;
@@ -272,6 +322,40 @@ export default function ObjectPropertiesEditor({
     setConflictMessage(null);
     syncedEditorPathRef.current = path;
   }, [editorQuery.data, path]);
+
+  useEffect(() => {
+    const remote = variablesQuery.data;
+    if (!remote || syncedEditorPathRef.current !== path) {
+      return;
+    }
+    const current = stateRef.current;
+    const base = baselineRef.current;
+    if (!current || !base) {
+      return;
+    }
+    const merged = applyRemoteVariables(remote, current, base);
+    if (!merged) {
+      return;
+    }
+    setState(merged.state);
+    setBaseline(merged.baseline);
+  }, [variablesQuery.data, path]);
+
+  const reloadFromEditor = useCallback(async () => {
+    syncedEditorPathRef.current = null;
+    const { data } = await editorQuery.refetch();
+    const resolved = resolveInspectorEditor(path, data);
+    if (!resolved) {
+      return;
+    }
+    const next = buildState(resolved);
+    setState(next);
+    setBaseline(next);
+    setRevision(resolved.object.revision ?? 0);
+    setRemoteRevision(null);
+    setConflictMessage(null);
+    syncedEditorPathRef.current = path;
+  }, [editorQuery, path]);
 
   const isDirty = useMemo(() => {
     if (!state || !baseline) return false;
@@ -368,7 +452,7 @@ export default function ObjectPropertiesEditor({
     mutationFn: (name: string) => deleteEvent(path, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
-      editorQuery.refetch();
+      void reloadFromEditor();
     },
   });
 
@@ -486,7 +570,7 @@ export default function ObjectPropertiesEditor({
           </div>
         )}
         <div className={`toolbar-actions${embedded ? " toolbar-actions-full" : ""}`}>
-          <button type="button" className="btn" onClick={() => editorQuery.refetch()}>
+          <button type="button" className="btn" onClick={() => void reloadFromEditor()}>
             {t("common:action.refresh")}
           </button>
           <button type="button" className="btn" disabled={!isDirty} onClick={revert}>
@@ -552,7 +636,7 @@ export default function ObjectPropertiesEditor({
       {staleRemote && (
         <div className="banner warning">
           {t("objectEditor.staleRemote", { revision: remoteRevision })}
-          <button type="button" className="btn btn-sm" onClick={() => editorQuery.refetch()}>
+          <button type="button" className="btn btn-sm" onClick={() => void reloadFromEditor()}>
             {t("common:action.reload")}
           </button>
           {canManage && (
@@ -706,7 +790,7 @@ export default function ObjectPropertiesEditor({
                   await updateObject(path, { bindingAuditEnabled: enabled }, { revision });
                   const fresh = await fetchObjectEditor(path);
                   setRevision(fresh.object.revision ?? revision);
-                  await editorQuery.refetch();
+                  await reloadFromEditor();
                   await queryClient.invalidateQueries({ queryKey: ["binding-audit-status", path] });
                 }}
               />
@@ -915,7 +999,7 @@ export default function ObjectPropertiesEditor({
                           className="btn small danger"
                           onClick={() => {
                             if (confirm(t("common:action.confirmDeleteFunction", { name: fn.name }))) {
-                              deleteFunction(path, fn.name).then(() => editorQuery.refetch());
+                              deleteFunction(path, fn.name).then(() => reloadFromEditor());
                             }
                           }}
                         >
@@ -938,7 +1022,7 @@ export default function ObjectPropertiesEditor({
                   await updateObject(path, { functionAuditEnabled: enabled }, { revision });
                   const fresh = await fetchObjectEditor(path);
                   setRevision(fresh.object.revision ?? revision);
-                  await editorQuery.refetch();
+                  await reloadFromEditor();
                   await queryClient.invalidateQueries({ queryKey: ["function-audit-status", path] });
                 }}
               />
@@ -959,10 +1043,8 @@ export default function ObjectPropertiesEditor({
           onClose={() => setShowCreateVariable(false)}
           onSaved={async () => {
             await queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
-            const fresh = await fetchObjectEditor(path);
-            const next = buildState(fresh);
-            setState(next);
-            setBaseline(next);
+            await queryClient.invalidateQueries({ queryKey: ["variables", path] });
+            await reloadFromEditor();
             setShowCreateVariable(false);
           }}
         />
@@ -977,10 +1059,8 @@ export default function ObjectPropertiesEditor({
           onClose={() => setSettingsVariable(null)}
           onSaved={async () => {
             await queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
-            const fresh = await fetchObjectEditor(path);
-            const next = buildState(fresh);
-            setState(next);
-            setBaseline(next);
+            await queryClient.invalidateQueries({ queryKey: ["variables", path] });
+            await reloadFromEditor();
             setSettingsVariable(null);
           }}
         />
@@ -994,7 +1074,7 @@ export default function ObjectPropertiesEditor({
           onClose={() => setDescriptorDialog(null)}
           onSaved={async () => {
             await queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
-            await editorQuery.refetch();
+            await reloadFromEditor();
             setDescriptorDialog(null);
           }}
         />
@@ -1017,7 +1097,7 @@ export default function ObjectPropertiesEditor({
           fn={invokeFunctionTarget}
           onClose={() => setInvokeFunctionTarget(null)}
           onInvoked={() => {
-            editorQuery.refetch();
+            void reloadFromEditor();
             queryClient.invalidateQueries({ queryKey: ["function-invocations"] });
           }}
         />

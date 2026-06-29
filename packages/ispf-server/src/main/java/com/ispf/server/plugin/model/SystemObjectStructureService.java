@@ -71,6 +71,14 @@ public class SystemObjectStructureService {
     }
 
     @Transactional
+    public void ensureMimicStructure(String path) {
+        if (objectManager.require(path).getVariable("diagram").isPresent()) {
+            return;
+        }
+        applyIntrinsic("mimic-v1", path);
+    }
+
+    @Transactional
     public void ensureReportStructure(String path) {
         PlatformObject node = objectManager.require(path);
         if (node.getVariable("query").isPresent() || node.getVariable("reportType").isPresent()) {

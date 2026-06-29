@@ -16,6 +16,7 @@ import com.ispf.plugin.model.ModelVariableDefinition;
 import com.ispf.plugin.model.SystemIntrinsicModels;
 import com.ispf.server.dashboard.DashboardLayouts;
 import com.ispf.server.dashboard.DashboardContextSupport;
+import com.ispf.server.mimic.MimicLayouts;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -80,6 +81,52 @@ public class ModelBootstrap {
         if (modelRegistry.findByName("correlator-v1").isEmpty()) {
             modelEngine.createModel(buildCorrelatorModel().withSystemIntrinsicFlag());
         }
+        if (modelRegistry.findByName("mimic-v1").isEmpty()) {
+            modelEngine.createModel(buildMimicModel().withSystemIntrinsicFlag());
+        }
+    }
+
+    static ModelDefinition buildMimicModel() {
+        return new ModelDefinition(
+                UUID.randomUUID().toString(),
+                "mimic-v1",
+                "SCADA mimic diagram with symbol library and live bindings",
+                ModelType.RELATIVE,
+                ObjectType.MIMIC,
+                "",
+                List.of(
+                        ModelVariableDefinition.of(
+                                "title",
+                                "Mimic title",
+                                "info",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true, DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", "Mimic"))
+                        ),
+                        ModelVariableDefinition.of(
+                                "refreshIntervalMs",
+                                "Default polling interval in milliseconds",
+                                "config",
+                                INTEGER_VALUE_SCHEMA,
+                                true,
+                                true, DataRecord.single(INTEGER_VALUE_SCHEMA, Map.of("value", 5000))
+                        ),
+                        ModelVariableDefinition.of(
+                                "diagram",
+                                "SCADA mimic diagram JSON (symbols, connections, bindings)",
+                                "config",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                true, DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", MimicLayouts.EMPTY_MIMIC))
+                        )
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                SystemIntrinsicModels.parameters(),
+                Instant.now(),
+                Instant.now()
+        );
     }
 
     static ModelDefinition buildAlertRuleModel() {

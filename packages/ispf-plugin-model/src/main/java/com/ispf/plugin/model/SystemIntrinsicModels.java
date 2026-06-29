@@ -20,6 +20,7 @@ public final class SystemIntrinsicModels {
             "alert-rule-v1",
             "correlator-v1",
             "dashboard-v1",
+            "mimic-v1",
             "report-v1",
             "workflow-v1"
     );
@@ -32,6 +33,7 @@ public final class SystemIntrinsicModels {
             Map.entry(ObjectType.ALERT, "alert-rule-v1"),
             Map.entry(ObjectType.CORRELATOR, "correlator-v1"),
             Map.entry(ObjectType.DASHBOARD, "dashboard-v1"),
+            Map.entry(ObjectType.MIMIC, "mimic-v1"),
             Map.entry(ObjectType.REPORT, "report-v1"),
             Map.entry(ObjectType.WORKFLOW, "workflow-v1")
     );

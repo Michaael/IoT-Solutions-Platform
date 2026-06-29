@@ -277,7 +277,8 @@ sequenceDiagram
 | `spreadsheet` | Таблица с формулами | [WIDGETS.md § spreadsheet](WIDGETS.md#spreadsheet--электронная-таблица) + [SPREADSHEET_WIDGET.md](SPREADSHEET_WIDGET.md) |
 | `panel`, `tab-panel`, `carousel`, … | Композиция экрана | [§ composition](WIDGETS.md#composition--композиция-экрана) |
 | `label`, `image`, `html-snippet` | Оформление | [§ session/static](WIDGETS.md#session--static--оформление) |
-| `mini-tec-sld` | SCADA mimic mini-TEC | [§ mini-tec-sld](WIDGETS.md#mini-tec-sld--однолинейная-схема-mini-tec) |
+| `mini-tec-sld` | SCADA mimic mini-TEC (legacy) | [§ mini-tec-sld](WIDGETS.md#mini-tec-sld--однолинейная-схема-mini-tec) |
+| `scada-mimic` | SCADA мнемосхема | [§ scada-mimic](WIDGETS.md#scada-mimic--scada-мнемосхема) |
 
 ## Контекст дашборда (DashboardSession)
 

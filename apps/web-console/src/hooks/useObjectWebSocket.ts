@@ -113,6 +113,7 @@ export function useObjectWebSocket(enabled = true) {
               break;
             case "VARIABLE_UPDATED":
               queryClient.invalidateQueries({ queryKey: ["variables", message.path] });
+              queryClient.invalidateQueries({ queryKey: ["variables-batch"] });
               queryClient.invalidateQueries({ queryKey: ["events", message.path] });
               queryClient.invalidateQueries({ queryKey: ["events", "all"] });
               queryClient.invalidateQueries({ queryKey: ["events", "operator-sidebar"] });

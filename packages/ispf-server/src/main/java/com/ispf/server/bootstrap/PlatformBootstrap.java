@@ -39,6 +39,7 @@ public class PlatformBootstrap {
         register(tree, "root.platform.alert-rules", ObjectType.ALERT_RULES, null);
         register(tree, "root.platform.operator-apps", ObjectType.OPERATOR_APPS, "app-folder-v1");
         register(tree, "root.platform.dashboards", ObjectType.DASHBOARDS, null);
+        register(tree, "root.platform.mimics", ObjectType.MIMICS, null);
 
         registerCatalogFolder(tree, "root.platform.relative-models");
         registerCatalogFolder(tree, "root.platform.absolute-models");

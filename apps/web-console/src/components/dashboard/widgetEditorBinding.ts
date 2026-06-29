@@ -54,6 +54,7 @@ const BINDING_BY_TYPE: Record<WidgetType, WidgetDataBinding> = {
   "composite-widget": "composition",
   "nav-menu": "composition",
   "mini-tec-sld": "composition",
+  "scada-mimic": "static",
 };
 
 export function widgetDataBinding(type: WidgetType): WidgetDataBinding {

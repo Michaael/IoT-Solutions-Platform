@@ -60,6 +60,7 @@ const DataSourceEditor = lazy(() => import("./components/platform/DataSourceEdit
 const MigrationEditor = lazy(() => import("./components/platform/MigrationEditor"));
 const SqlBindingEditor = lazy(() => import("./components/platform/SqlBindingEditor"));
 const ScheduleEditor = lazy(() => import("./components/platform/ScheduleEditor"));
+const MimicEditorPanel = lazy(() => import("./components/scada/MimicEditorPanel"));
 const ModelEditorPanel = lazy(() => import("./components/ModelEditorPanel"));
 
 function LazyFallback() {
@@ -442,6 +443,7 @@ function AppShell() {
     || activeEditor.objectType === "MIGRATION"
     || activeEditor.objectType === "BINDING"
     || activeEditor.objectType === "SCHEDULE"
+    || activeEditor.objectType === "MIMIC"
     || isModelsPath(activeEditor.path)
   );
   const showPropertiesEditor =
@@ -801,6 +803,12 @@ function AppShell() {
                   path={activeEditor.path}
                   onClose={() => closeEditor(activeEditor.id)}
                   onOpenProperties={() => setPropertiesTabPath(activeEditor.path)}
+                />
+              ) : activeEditor.objectType === "MIMIC" ? (
+                <MimicEditorPanel
+                  path={activeEditor.path}
+                  title={activeEditor.title}
+                  onClose={() => closeEditor(activeEditor.id)}
                 />
               ) : null}
             </Suspense>

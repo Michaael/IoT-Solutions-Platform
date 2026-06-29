@@ -63,6 +63,11 @@ const PALETTE_GROUPS: PaletteGroup[] = [
     types: ["function", "function-form", "input-form", "variable-editor", "timer", "context-list"],
   },
   {
+    id: "scada",
+    titleKey: "palette.scada",
+    types: ["scada-mimic", "mini-tec-sld"],
+  },
+  {
     id: "content",
     titleKey: "palette.content",
     types: ["label", "image", "html-snippet", "svg-widget"],
@@ -330,6 +335,13 @@ const WIDGET_ICONS: Record<WidgetType, ReactNode> = {
     <>
       <rect x="2" y="3" width="12" height="10" rx="1" />
       <path d="M4 7h8M4 9h5" />
+    </>
+  ),
+  "scada-mimic": (
+    <>
+      <rect x="2" y="2" width="12" height="12" rx="1" />
+      <circle cx="6" cy="7" r="2" />
+      <path d="M10 5v6M8 8h4" />
     </>
   ),
 };

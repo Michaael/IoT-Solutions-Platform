@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * Simulated device driver for demos and integration tests.
- * Profiles: demo, meter, weighbridge, rack-signals, lab, unified, tec-gpu, tec-grpb, tec-rumb, tec-dgu, tec-load, ogp-print-line.
+ * Profiles: demo, meter, weighbridge, rack-signals, lab, unified, tec-gpu, tec-grpb, tec-rumb, tec-dgu, tec-load, ogp-print-line, transneft-tank, transneft-rdp.
  */
 public class VirtualDeviceDriver implements DeviceDriver {
 
@@ -43,7 +43,11 @@ public class VirtualDeviceDriver implements DeviceDriver {
                     Map.entry("serialNumber", "VIRT-UNIFIED-001"),
                     Map.entry("firmwareVersion", "1.0.0-unified"),
                     Map.entry("ratedPowerKw", "1480"),
-                    Map.entry("unitIndex", "1")
+                    Map.entry("unitIndex", "1"),
+                    Map.entry("tankIndex", "11"),
+                    Map.entry("initialLevelMm", "5000"),
+                    Map.entry("rateBiasMmPerHour", "0"),
+                    Map.entry("maxLevelMm", "10000")
             )
     );
 
@@ -109,8 +113,14 @@ public class VirtualDeviceDriver implements DeviceDriver {
     private final VirtualTecPoll.DguState tecDguState = new VirtualTecPoll.DguState();
     private final VirtualTecPoll.LoadState tecLoadState = new VirtualTecPoll.LoadState();
     private final VirtualOgpPoll.OgpState ogpState = new VirtualOgpPoll.OgpState();
+    private final VirtualTransneftPoll.TankState transneftTankState = new VirtualTransneftPoll.TankState();
+    private final VirtualTransneftPoll.RdpHubState transneftHubState = new VirtualTransneftPoll.RdpHubState();
     private double ratedPowerKw = 1480.0;
     private int unitIndex = 1;
+    private int tankIndex = 11;
+    private double initialLevelMm = 5000;
+    private double rateBiasMmPerHour = 0;
+    private double maxLevelMm = 10000;
     private volatile boolean connected;
 
     @Override
@@ -138,6 +148,10 @@ public class VirtualDeviceDriver implements DeviceDriver {
         readConfig("filling", value -> filling = Boolean.parseBoolean(value));
         readConfig("ratedPowerKw", value -> ratedPowerKw = Double.parseDouble(value));
         readConfig("unitIndex", value -> unitIndex = Integer.parseInt(value));
+        readConfig("tankIndex", value -> tankIndex = Integer.parseInt(value));
+        readConfig("initialLevelMm", value -> initialLevelMm = Double.parseDouble(value));
+        readConfig("rateBiasMmPerHour", value -> rateBiasMmPerHour = Double.parseDouble(value));
+        readConfig("maxLevelMm", value -> maxLevelMm = Double.parseDouble(value));
         lastPollAt = System.currentTimeMillis();
     }
 
@@ -159,6 +173,10 @@ public class VirtualDeviceDriver implements DeviceDriver {
             case "filling" -> filling = Boolean.parseBoolean(value);
             case "ratedPowerKw" -> ratedPowerKw = Double.parseDouble(value);
             case "unitIndex" -> unitIndex = Integer.parseInt(value);
+            case "tankIndex" -> tankIndex = Integer.parseInt(value);
+            case "initialLevelMm" -> initialLevelMm = Double.parseDouble(value);
+            case "rateBiasMmPerHour" -> rateBiasMmPerHour = Double.parseDouble(value);
+            case "maxLevelMm" -> maxLevelMm = Double.parseDouble(value);
             default -> { }
         }
     }
@@ -197,6 +215,9 @@ public class VirtualDeviceDriver implements DeviceDriver {
             case "tec-dgu" -> VirtualTecPoll.pollDgu(driverObject, tecDguState);
             case "tec-load" -> VirtualTecPoll.pollLoad(driverObject, tecLoadState);
             case "ogp-print-line" -> VirtualOgpPoll.poll(driverObject, ogpState);
+            case "transneft-tank" -> VirtualTransneftPoll.pollTank(
+                    driverObject, transneftTankState, tankIndex, initialLevelMm, rateBiasMmPerHour, maxLevelMm);
+            case "transneft-rdp" -> VirtualTransneftPoll.pollRdpHub(driverObject, transneftHubState);
             default -> readDemoProfile();
         }
     }

@@ -2521,6 +2521,198 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
   flex: 1;
 }
 
+.dash-widget-scada-mimic {
+  padding: 0.35rem 0.5rem 0.5rem;
+}
+
+.dash-widget-scada-mimic .scada-mimic-viewport {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.scada-mimic-view-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 4;
+  display: flex;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+.scada-mimic-view-controls .scada-mimic-reset-zoom {
+  pointer-events: auto;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.scada-mimic-viewport,
+.scada-mimic-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+}
+
+body.scada-mimic-editor-open {
+  overflow: hidden;
+}
+
+.scada-mimic-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 15000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.scada-mimic-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.scada-mimic-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.scada-toolbar-group {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.scada-toolbar-spacer {
+  flex: 1;
+}
+
+.scada-mimic-editor-toolbar button.active {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.scada-mimic-editor-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+}
+
+.scada-mimic-editor-sidebar,
+.scada-mimic-editor-props {
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  padding: 0.5rem;
+}
+
+.scada-mimic-editor-props {
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+
+.scada-mimic-editor-canvas-wrap {
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-subtle, var(--bg));
+}
+
+.scada-palette input[type="search"] {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.scada-palette-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.scada-palette-categories button.active {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.scada-palette-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.scada-palette-item {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.scada-palette-item.active {
+  outline: 1px solid var(--accent);
+}
+
+.scada-palette-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.scada-props-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.scada-binding-slot {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem;
+  margin-bottom: 0.5rem;
+  min-width: 0;
+}
+
+.scada-binding-slot input.mono,
+.scada-props-panel input.mono {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.78rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.scada-import-export {
+  margin-top: 1rem;
+}
+
+.scada-import-export textarea {
+  width: 100%;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.75rem;
+}
+
+.scada-import-export-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
 .dash-widget-title {
   flex-shrink: 0;
   font-size: 0.85rem;

@@ -357,7 +357,27 @@
 
 **Назначение:** live SCADA mimic для demo mini-TEC (optional bootstrap). Без доп. полей — данные с объекта по `objectPath` / `selectionKey`.
 
-**См.:** [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md).
+**См.:** [REFERENCE_MINI_TEC_WALKTHROUGH.md](REFERENCE_MINI_TEC_WALKTHROUGH.md). **Предпочтительно:** виджет [`scada-mimic`](#scada-mimic--scada-мнемосхема) + объект `MIMIC` или `diagramJson`.
+
+---
+
+### scada-mimic — SCADA мнемосхема
+
+**Назначение:** конфигурируемая мнемосхема / P&ID / однолинейная схема с каталогом символов и live-привязками к переменным платформы.
+
+**Оператор:** просмотр состояния; pan/zoom; клик по элементу с `actions` — управление (toggle / setVariable / invokeFunction).
+
+| Поле | Описание |
+|------|----------|
+| `diagramJson` | JSON документа схемы (если не задан `mimicPath`) |
+| `mimicPath` | Путь объекта `MIMIC` — diagram загружается с сервера |
+| `defaultZoom` | Масштаб (default `1`) |
+| `panEnabled` | Масштабирование колёсиком (default `true`) |
+| `showGrid` | Сетка в preview (reserved) |
+
+**Редактор:** Dashboard Builder → «Открыть редактор мнемосхемы»; Explorer → объект `MIMIC`.
+
+**См.:** [SCADA_MIMIC.md](SCADA_MIMIC.md).
 
 ---
 

@@ -762,6 +762,18 @@ export function buildSampleWidget(type: WidgetType, index: number): DashboardWid
         h: 5,
         objectPath: "",
       };
+    case "scada-mimic":
+      return {
+        ...base,
+        type: "scada-mimic",
+        title: "SCADA мнемосхема",
+        w: 12,
+        h: 8,
+        objectPath: "",
+        panEnabled: true,
+        defaultZoom: 0.95,
+        mimicPath: "root.platform.mimics.transneft-omsk-rdp",
+      };
     default:
       return { ...base, type: "value", title: "Значение", variableName: "temperature", decimals: 1 };
   }

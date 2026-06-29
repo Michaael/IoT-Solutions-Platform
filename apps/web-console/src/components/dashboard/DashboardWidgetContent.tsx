@@ -27,6 +27,7 @@ const SvgWidgetView = lazy(() => import("./widgets/SvgWidgetView"));
 const LabelWidgetView = lazy(() => import("./widgets/LabelWidgetView"));
 const ImageWidgetView = lazy(() => import("./widgets/ImageWidgetView"));
 const MiniTecSldWidgetView = lazy(() => import("./widgets/MiniTecSldWidgetView"));
+const ScadaMimicWidgetView = lazy(() => import("./widgets/ScadaMimicWidgetView"));
 const HtmlSnippetWidgetView = lazy(() => import("./widgets/HtmlSnippetWidgetView"));
 const ObjectTreeWidgetView = lazy(() => import("./widgets/ObjectTreeWidgetView"));
 const BreadcrumbsWidgetView = lazy(() => import("./widgets/BreadcrumbsWidgetView"));
@@ -263,6 +264,16 @@ export default function DashboardWidgetContent({
       return (
         <LazyWidget>
           <MiniTecSldWidgetView
+            widget={widget}
+            refreshIntervalMs={refreshIntervalMs}
+            editable={editable}
+          />
+        </LazyWidget>
+      );
+    case "scada-mimic":
+      return (
+        <LazyWidget>
+          <ScadaMimicWidgetView
             widget={widget}
             refreshIntervalMs={refreshIntervalMs}
             editable={editable}

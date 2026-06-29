@@ -17,6 +17,9 @@ public enum ObjectType {
     /** Dashboard catalog folder. */
     DASHBOARDS,
     DASHBOARD,
+    /** SCADA mimic catalog folder. */
+    MIMICS,
+    MIMIC,
     /** Workflow catalog folder. */
     WORKFLOWS,
     WORKFLOW,

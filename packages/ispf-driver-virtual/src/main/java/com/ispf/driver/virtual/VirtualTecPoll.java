@@ -228,19 +228,19 @@ final class VirtualTecPoll {
         updateStatus(driver);
     }
 
-    private static void updateMeas(DeviceDriver.DriverObject driver, String name, double value, String unit) {
+    static void updateMeas(DeviceDriver.DriverObject driver, String name, double value, String unit) {
         driver.updateVariable(name, DataRecord.single(MEASUREMENT, Map.of("value", value, "unit", unit)));
     }
 
-    private static void updateBool(DeviceDriver.DriverObject driver, String name, boolean value) {
+    static void updateBool(DeviceDriver.DriverObject driver, String name, boolean value) {
         driver.updateVariable(name, DataRecord.single(BOOL, Map.of("value", value)));
     }
 
-    private static void updateInt(DeviceDriver.DriverObject driver, String name, int value) {
+    static void updateInt(DeviceDriver.DriverObject driver, String name, int value) {
         driver.updateVariable(name, DataRecord.single(INT, Map.of("value", value)));
     }
 
-    private static void updateStatus(DeviceDriver.DriverObject driver) {
+    static void updateStatus(DeviceDriver.DriverObject driver) {
         driver.updateVariable("status", DataRecord.single(STATUS, Map.of(
                 "online", true,
                 "lastSeen", Instant.now().toString()

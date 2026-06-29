@@ -30,6 +30,7 @@ export const LOCALE_NAMESPACES = [
   "platform",
   "runtime",
   "journal",
+  "scada",
 ] as const;
 
 export type LocaleNamespace = (typeof LOCALE_NAMESPACES)[number];

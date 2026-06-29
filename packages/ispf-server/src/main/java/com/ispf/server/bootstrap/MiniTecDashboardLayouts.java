@@ -180,7 +180,8 @@ public final class MiniTecDashboardLayouts {
 
     public static final String SINGLE_LINE = """
             {"columns":12,"rowHeight":72,%s,"widgets":[
-            {"id":"sld","type":"mini-tec-sld","title":"Однолинейная схема Мини-ТЭЦ","x":0,"y":0,"w":12,"h":5},
+            {"id":"sld","type":"scada-mimic","title":"Однолинейная схема Мини-ТЭЦ","x":0,"y":0,"w":12,"h":5,
+            "mimicPath":"%s","panEnabled":true,"defaultZoom":1},
             {"id":"island","type":"indicator","title":"Островной режим","x":0,"y":5,"w":4,"h":1,
             "objectPath":"%s","variableName":"islandMode",
             "trueLabel":"Активно","falseLabel":"Параллель с сетью"},
@@ -191,6 +192,7 @@ public final class MiniTecDashboardLayouts {
             ]}
             """.formatted(
             STYLES,
+            MiniTecPaths.MIMIC_SINGLE_LINE,
             MiniTecPaths.STATION_HUB,
             MiniTecPaths.STATION_HUB,
             MiniTecPaths.STATION_HUB

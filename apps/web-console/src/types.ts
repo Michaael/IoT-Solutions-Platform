@@ -49,6 +49,8 @@ export type ObjectType =
   | "MIGRATION"
   | "SCREENS"
   | "SCREEN"
+  | "MIMICS"
+  | "MIMIC"
   | "AGENT"
   | "VISUAL_GROUP"
   | "CUSTOM";

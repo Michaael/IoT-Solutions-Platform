@@ -106,7 +106,10 @@ public final class AgentWidgetCatalog {
             w("steps-panel", "composition", "Wizard steps", List.of(),
                     "stepsJson, activeStepKey"),
             w("nav-menu", "composition", "Navigation menu", List.of(),
-                    "itemsJson [{label,dashboardPath}]")
+                    "itemsJson [{label,dashboardPath}]"),
+            w("scada-mimic", "static", "SCADA mimic diagram (symbols + live bindings)", List.of(),
+                    "diagramJson, mimicPath, defaultZoom, panEnabled"),
+            w("mini-tec-sld", "composition", "Legacy mini-TEC SLD widget (prefer scada-mimic)", List.of(), "")
     );
 
     private AgentWidgetCatalog() {

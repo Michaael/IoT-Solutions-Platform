@@ -41,7 +41,8 @@ export type WidgetType =
   | "spreadsheet"
   | "liquid-gauge"
   | "nav-menu"
-  | "mini-tec-sld";
+  | "mini-tec-sld"
+  | "scada-mimic";
 
 export type DashboardOpenMode = "navigate" | "modal";
 
@@ -415,6 +416,16 @@ export interface MiniTecSldWidget extends DashboardWidgetBase {
   type: "mini-tec-sld";
 }
 
+/** Configurable SCADA mimic diagram with symbol library and live bindings. */
+export interface ScadaMimicWidget extends DashboardWidgetBase {
+  type: "scada-mimic";
+  diagramJson?: string;
+  mimicPath?: string;
+  defaultZoom?: number;
+  showGrid?: boolean;
+  panEnabled?: boolean;
+}
+
 export interface CompositeWidget extends DashboardWidgetBase {
   type: "composite-widget";
   childrenJson?: string;
@@ -701,6 +712,7 @@ export type DashboardWidget =
   | VariableEditorWidget
   | SvgWidget
   | MiniTecSldWidget
+  | ScadaMimicWidget
   | CompositeWidget
   | SubDashboardWidget
   | PanelWidget
@@ -738,6 +750,13 @@ export interface DashboardView {
   refreshIntervalMs: number;
   layout: DashboardLayout;
   layoutJson: string;
+}
+
+export interface MimicView {
+  path: string;
+  title: string;
+  refreshIntervalMs: number;
+  diagramJson: string;
 }
 
 export const WIDGET_TYPES: Array<{ type: WidgetType; label: string }> = (
@@ -785,6 +804,7 @@ export const WIDGET_TYPES: Array<{ type: WidgetType; label: string }> = (
     "liquid-gauge",
     "nav-menu",
     "mini-tec-sld",
+    "scada-mimic",
   ] as WidgetType[]
 ).map((type) => ({ type, label: type }));
 

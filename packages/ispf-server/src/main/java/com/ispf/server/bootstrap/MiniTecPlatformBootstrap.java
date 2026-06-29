@@ -12,6 +12,7 @@ import com.ispf.server.correlator.CorrelatorActionType;
 import com.ispf.server.correlator.CorrelatorPatternType;
 import com.ispf.server.config.BootstrapProperties;
 import com.ispf.server.dashboard.DashboardService;
+import com.ispf.server.mimic.MimicService;
 import com.ispf.server.driver.DriverRuntimeService;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectTemplateService;
@@ -37,6 +38,7 @@ public class MiniTecPlatformBootstrap {
     private final ObjectTemplateService templateService;
     private final ObjectManager objectManager;
     private final DashboardService dashboardService;
+    private final MimicService mimicService;
     private final WorkflowService workflowService;
     private final AutomationTreeService automationTreeService;
     private final DriverRuntimeService driverRuntimeService;
@@ -49,6 +51,7 @@ public class MiniTecPlatformBootstrap {
             ObjectTemplateService templateService,
             ObjectManager objectManager,
             DashboardService dashboardService,
+            MimicService mimicService,
             WorkflowService workflowService,
             AutomationTreeService automationTreeService,
             DriverRuntimeService driverRuntimeService,
@@ -60,6 +63,7 @@ public class MiniTecPlatformBootstrap {
         this.templateService = templateService;
         this.objectManager = objectManager;
         this.dashboardService = dashboardService;
+        this.mimicService = mimicService;
         this.workflowService = workflowService;
         this.automationTreeService = automationTreeService;
         this.driverRuntimeService = driverRuntimeService;
@@ -86,6 +90,7 @@ public class MiniTecPlatformBootstrap {
         ensureDevice("dgu", "ДГУ", MiniTecModelBootstrap.DGU_MODEL, 0);
         ensureDevice("load-module", "Нагрузочный модуль", MiniTecModelBootstrap.LOAD_MODEL, 0);
         ensureHub();
+        ensureMimics();
         ensureDashboards();
         ensureWorkflows();
         ensureAutomation();
@@ -191,6 +196,21 @@ public class MiniTecPlatformBootstrap {
                 DataRecord.single(DataSchema.builder("v").field("value", FieldType.STRING).build(), Map.of("value", value))
         );
         objectManager.persistNodeTree(path);
+    }
+
+    private void ensureMimics() {
+        ensureMimic(MiniTecPaths.MIMIC_SINGLE_LINE, "Однолинейная схема Мини-ТЭЦ", MiniTecMimicDocument.DIAGRAM_JSON);
+    }
+
+    private void ensureMimic(String path, String title, String diagramJson) {
+        if (objectManager.tree().findByPath(path).isEmpty()) {
+            int dot = path.lastIndexOf('.');
+            objectManager.create(path.substring(0, dot), path.substring(dot + 1), ObjectType.MIMIC, title, "", "mimic-v1");
+        }
+        mimicService.ensureMimicStructure(path);
+        mimicService.updateTitle(path, title);
+        mimicService.saveDiagram(path, diagramJson);
+        mimicService.getMimic(path);
     }
 
     private void ensureDashboards() {
