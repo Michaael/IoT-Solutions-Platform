@@ -2304,6 +2304,42 @@ body.dashboard-editor-fullscreen {
   border-right: none;
 }
 
+.dashboard-rules-sidebar {
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--border);
+  background: var(--bg-elevated);
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-rules-sidebar__header {
+  flex-shrink: 0;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-rules-sidebar__header h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.dashboard-rules-sidebar__header .hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.dashboard-rules-sidebar > .panel,
+.dashboard-rules-sidebar .panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+}
+
 .dashboard-body {
   display: flex;
   flex: 1;

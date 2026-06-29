@@ -122,11 +122,39 @@ EXAMPLE_PURPOSES = {
 
 FEATURE_INDEX = [
     {
-        "id": "bundles",
-        "title": "Bundle deploy",
-        "description": "Declarative manifest: migrations, functions, dashboards, workflows",
-        "keywords": "bundle deploy import manifest",
-        "docRef": "APPLICATIONS.md",
+        "id": "application-principles",
+        "title": "Application creation principles",
+        "description": "Canonical P1-P10 north star for solution developers and agents",
+        "keywords": "application principles north star tree-first bundle declarative",
+        "docRef": "APPLICATION_PRINCIPLES.md",
+    },
+    {
+        "id": "agent-knowledge",
+        "title": "Agent knowledge index",
+        "description": "All application creation approaches and full doc map for internal agent",
+        "keywords": "agent knowledge application create bundle tree-first operator",
+        "docRef": "AGENT_KNOWLEDGE.md",
+    },
+    {
+        "id": "platform-logic",
+        "title": "Platform rules",
+        "description": "BindingRule + dashboard context + onContextChange",
+        "keywords": "platform rule context dashboard cel",
+        "docRef": "PLATFORM_LOGIC.md",
+    },
+    {
+        "id": "bindings",
+        "title": "CEL bindings",
+        "description": "Variable bindings, platform functions, binding rules",
+        "keywords": "binding cel scale counterRate refAt",
+        "docRef": "BINDINGS.md",
+    },
+    {
+        "id": "solution-guide",
+        "title": "Solution developer guide",
+        "description": "Lifecycle: register, migrate, functions, bundle, operator UI",
+        "keywords": "solution developer lifecycle terminal",
+        "docRef": "SOLUTION_DEVELOPER_GUIDE.md",
     },
     {
         "id": "bff",
@@ -299,14 +327,28 @@ def build_example_summaries(examples: list[dict]) -> list[dict]:
 
 def build_doc_chunks() -> list[dict]:
     slices = [
+        ("application-principles", "Application creation principles P1-P10", "application-principles", DOCS / "APPLICATION_PRINCIPLES.md", 8000),
+        ("agent-knowledge", "Agent application approaches", "agent-knowledge", DOCS / "AGENT_KNOWLEDGE.md", 16000),
+        ("solution-developer", "Solution developer lifecycle", "solution", DOCS / "SOLUTION_DEVELOPER_GUIDE.md", 9000),
         ("public-api", "Public API", "all", DOCS / "SOLUTION_DEVELOPER_PUBLIC_API.md", 6000),
-        ("applications", "Applications deploy", "all", DOCS / "APPLICATIONS.md", 6000),
+        ("applications", "Applications deploy", "applications", DOCS / "APPLICATIONS.md", 9000),
+        ("platform-logic", "Platform rules dashboard context", "platform-logic", DOCS / "PLATFORM_LOGIC.md", 7000),
+        ("bindings", "CEL bindings", "bindings", DOCS / "BINDINGS.md", 6000),
+        ("object-functions", "Object tree functions", "functions", DOCS / "OBJECT_FUNCTIONS.md", 7000),
+        ("models", "Object models", "models", DOCS / "MODELS.md", 6000),
         ("drivers", "Device drivers", "drivers", DOCS / "DRIVERS.md", 10000),
         ("workflows", "Workflows BPMN", "workflows", DOCS / "WORKFLOWS.md", 6000),
-        ("automation", "Automation correlators", "workflows", DOCS / "AUTOMATION.md", 5000),
-        ("dashboards", "Dashboards widgets", "dashboards", DOCS / "DASHBOARDS.md", 6000),
+        ("automation", "Automation correlators", "automation", DOCS / "AUTOMATION.md", 5000),
+        ("dashboards", "Dashboards widgets", "dashboards", DOCS / "DASHBOARDS.md", 8000),
+        ("widgets", "Widget catalog", "widgets", DOCS / "WIDGETS.md", 8000),
         ("messaging", "Messaging events NATS", "features", DOCS / "MESSAGING.md", 5000),
-        ("object-model", "Object tree model", "features", DOCS / "OBJECT_MODEL.md", 5000),
+        ("object-model", "Object tree model", "object-model", DOCS / "OBJECT_MODEL.md", 6000),
+        ("ai-development", "AI agent ContextPack", "ai", DOCS / "AI_DEVELOPMENT.md", 7000),
+        ("architecture", "Architecture principles", "architecture", DOCS / "ARCHITECTURE.md", 5000),
+        ("web-console", "Web Console admin", "web-console", DOCS / "WEB_CONSOLE.md", 5000),
+        ("reports", "SQL reports", "reports", DOCS / "REPORTS.md", 5000),
+        ("lab-training", "Lab training exercises", "lab", DOCS / "LAB_TRAINING.md", 5000),
+        ("mes-walkthrough", "MES reference walkthrough", "mes", DOCS / "REFERENCE_MES_WALKTHROUGH.md", 5000),
     ]
     chunks: list[dict] = []
     for chunk_id, title, topic, path, max_chars in slices:
@@ -324,6 +366,44 @@ def build_doc_chunks() -> list[dict]:
             }
         )
     return chunks
+
+
+def build_doc_catalog() -> list[dict]:
+    """Index of all docs/*.md for agent routing (titles from first # heading)."""
+    catalog: list[dict] = []
+    for path in sorted(DOCS.glob("*.md")):
+        text = read_text(path, 400)
+        title = path.stem.replace("_", " ")
+        for line in text.splitlines():
+            if line.startswith("# "):
+                title = line[2:].strip()
+                break
+        catalog.append(
+            {
+                "id": path.stem.lower(),
+                "path": f"docs/{path.name}",
+                "title": title,
+                "keywords": f"{path.stem} {title}",
+            }
+        )
+    for path in sorted((DOCS / "decisions").glob("*.md")):
+        if path.name == "README.md":
+            continue
+        text = read_text(path, 300)
+        title = path.stem
+        for line in text.splitlines():
+            if line.startswith("# "):
+                title = line[2:].strip()
+                break
+        catalog.append(
+            {
+                "id": f"adr-{path.stem}",
+                "path": f"docs/decisions/{path.name}",
+                "title": title,
+                "keywords": f"adr decision {path.stem} {title}",
+            }
+        )
+    return catalog
 
 
 def build_pack() -> dict:
@@ -349,7 +429,13 @@ def build_pack() -> dict:
         "driverCatalog": parse_driver_catalog(drivers_doc),
         "exampleSummaries": build_example_summaries(examples),
         "docChunks": build_doc_chunks(),
+        "docCatalog": build_doc_catalog(),
         "apiSlice": {
+            "applicationPrinciplesDoc": read_text(DOCS / "APPLICATION_PRINCIPLES.md", 8000),
+            "agentKnowledgeDoc": read_text(DOCS / "AGENT_KNOWLEDGE.md", 12000),
+            "solutionDeveloperDoc": read_text(DOCS / "SOLUTION_DEVELOPER_GUIDE.md", 8000),
+            "platformLogicDoc": read_text(DOCS / "PLATFORM_LOGIC.md", 6000),
+            "bindingsDoc": read_text(DOCS / "BINDINGS.md", 5000),
             "publicApiDoc": read_text(DOCS / "SOLUTION_DEVELOPER_PUBLIC_API.md", 8000),
             "applicationsDoc": read_text(DOCS / "APPLICATIONS.md", 8000),
             "messagingDoc": read_text(DOCS / "MESSAGING.md", 6000),

@@ -9,6 +9,7 @@ import com.ispf.server.object.ObjectManager;
 import com.ispf.core.object.ObjectType;
 import com.ispf.server.bootstrap.FixtureModelBootstrap;
 import com.ispf.server.dashboard.DashboardLayouts;
+import com.ispf.server.dashboard.DashboardDemoRulesBootstrap;
 import com.ispf.server.driver.DeviceProvisioningService;
 import com.ispf.plugin.workflow.WorkflowLifecycleStatus;
 import com.ispf.server.workflow.WorkflowDefinitions;
@@ -36,6 +37,7 @@ public class ModelApplicationRunner {
     private final ModelApplicationService modelApplicationService;
     private final SystemObjectStructureService structureService;
     private final DeviceProvisioningService deviceProvisioningService;
+    private final DashboardDemoRulesBootstrap dashboardDemoRulesBootstrap;
 
     public ModelApplicationRunner(
             ModelEngine modelEngine,
@@ -44,7 +46,8 @@ public class ModelApplicationRunner {
             ModelBindingRulesMerger bindingRulesMerger,
             ModelApplicationService modelApplicationService,
             SystemObjectStructureService structureService,
-            DeviceProvisioningService deviceProvisioningService
+            DeviceProvisioningService deviceProvisioningService,
+            DashboardDemoRulesBootstrap dashboardDemoRulesBootstrap
     ) {
         this.modelEngine = modelEngine;
         this.modelRegistry = modelRegistry;
@@ -53,6 +56,7 @@ public class ModelApplicationRunner {
         this.modelApplicationService = modelApplicationService;
         this.structureService = structureService;
         this.deviceProvisioningService = deviceProvisioningService;
+        this.dashboardDemoRulesBootstrap = dashboardDemoRulesBootstrap;
     }
 
     public void restoreAttachments() {
@@ -179,6 +183,11 @@ public class ModelApplicationRunner {
         });
 
         ensureMeterMqttBusDevice();
+    }
+
+    /** Idempotent demo platform rules — runs on every startup (prod has fixtures disabled). */
+    public void ensureDashboardDemoRules() {
+        dashboardDemoRulesBootstrap.ensureDemoRules();
     }
 
     private void ensureMeterMqttBusDevice() {

@@ -19,6 +19,7 @@ See [0004](decisions/0004-ai-artifact-generation-gates.md) and [0005](decisions/
 | FW-44 | Tree-first agent | `com.ispf.server.ai.agent.*`, REST `/api/v1/ai/agent/**` |
 | FW-44b | MCP adapter | `com.ispf.server.ai.mcp.*`, profile `mcp`, REST `/api/v1/ai/mcp` |
 | FW-45 | Platform knowledge briefing | `PlatformBriefingService`, `ContextPackSearchService`, agent tools |
+| FW-46 | Agent knowledge base | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) — подходы к приложениям, карта docs |
 | FW-47 | Agent discovery tools | `AgentDiscoveryTools` — functions, events, variable schemas |
 | FW-48 | Agent automation tools | `AgentAutomationTools` — alerts, correlators, operator UI, `create_variable`, cluster playbooks |
 
@@ -37,7 +38,9 @@ Outputs:
 - `ai/context/generated/ispf-context-pack.json`
 - `packages/ispf-server/src/main/resources/ai/context-pack.json`
 
-Pack includes bundle schema fields, script steps, widget types, API doc slices, reference examples, **driverCatalog**, **featureIndex**, **exampleSummaries**, and **docChunks** for scored search.
+Pack includes bundle schema fields, script steps, widget types, API doc slices, reference examples, **driverCatalog**, **featureIndex**, **exampleSummaries**, **docCatalog** (index of all `docs/*.md`), and **docChunks** for scored search.
+
+Primary agent router doc: [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) (`search_context topic=agent-knowledge`).
 
 CI and release workflows run `python tools/ai-pack/build.py` before server tests/build (`ISPF_VERSION` from tag in release).
 
@@ -355,6 +358,7 @@ Commercial bundles: sign **after** AI edits (`contentSha256` covers manifest bod
 
 ## Related docs
 
+- [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) — approaches to applications, full doc index for agent
 - [PLUGINS.md](PLUGINS.md) — LLM provider outside core (like drivers)
 - [APPLICATIONS.md](APPLICATIONS.md) — deploy API
 - [DASHBOARDS.md](DASHBOARDS.md) — widget registry for generated dashboards

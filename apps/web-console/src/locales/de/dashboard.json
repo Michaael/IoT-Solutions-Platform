@@ -44,5 +44,13 @@
   "settings.rowHeight": "Zeilenhöhe (px)",
   "settings.theme": "Design",
   "settings.themeDefault": "Standard",
-  "settings.title": "Dashboard-Einstellungen"
+  "settings.title": "Dashboard-Einstellungen",
+  "rules.tab": "Regeln",
+  "rules.title": "Platform-Regeln",
+  "rules.hint": "CEL-Regeln auf diesem Dashboard-Objekt: Context, Widget-Sichtbarkeit, Events. Gleiche Engine wie Objekt-Bindings.",
+  "rules.templates.onSelectMode": "Modus bei Auswahl",
+  "rules.templates.showWidget": "Widget im Detail anzeigen",
+  "rules.templates.hideWidget": "Widget im Idle ausblenden",
+  "editor.deprecation.payloadFilterExpr": "Legacy Mini-DSL. Bevorzugen: Platform-Regeln (Tab Regeln) mit CEL auf Event-Payload.",
+  "editor.deprecation.requireSessionParamsJson": "Legacy-Prüfung. Bevorzugen: Platform-Regeln mit CEL auf context.params.*."
 }

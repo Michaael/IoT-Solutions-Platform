@@ -120,6 +120,18 @@ describe("activatorsSummary", () => {
       },
     })).toBe("—");
   });
+
+  it("includes context-change activator", () => {
+    expect(activatorsSummary({
+      activators: {
+        onStartup: false,
+        onVariableChange: [],
+        onEvent: null,
+        periodicMs: 0,
+        onContextChange: true,
+      },
+    })).toBe("context");
+  });
 });
 
 describe("patchBindingActivators", () => {

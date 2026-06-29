@@ -20,9 +20,12 @@ import {
 } from "./DashboardContext";
 import DashboardGrid from "./DashboardGrid";
 import DashboardModal from "./DashboardModal";
-import WidgetEditorPanel from "./WidgetEditorPanel";
 import DashboardSettingsPanel from "./DashboardSettingsPanel";
+import DashboardRulesPanel from "./DashboardRulesPanel";
+import WidgetEditorPanel from "./WidgetEditorPanel";
 import { nextWidgetZIndex } from "./widgetLayerUtils";
+import { useDashboardContextSync } from "../../hooks/useDashboardContextSync";
+import { getStoredSession } from "../../auth/session";
 
 interface DashboardBuilderProps {
   path: string;
@@ -56,6 +59,8 @@ function isKeyboardEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
+type EditorSidePanel = "widget" | "settings" | "rules";
+
 export default function DashboardBuilder({
   path,
   onClose,
@@ -79,8 +84,8 @@ export default function DashboardBuilder({
   const [draftTitle, setDraftTitle] = useState<string | null>(null);
   const [draftRefreshMs, setDraftRefreshMs] = useState<number | null>(null);
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
+  const [editorSidePanel, setEditorSidePanel] = useState<EditorSidePanel>("widget");
   const [showJson, setShowJson] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [modalDashboard, setModalDashboard] = useState<ModalState | null>(null);
   const layoutRef = useRef<DashboardLayout>(resolveDashboardLayout(undefined));
   const selectedWidgetIdRef = useRef<string | null>(null);
@@ -91,9 +96,18 @@ export default function DashboardBuilder({
       session ?? {
         selection: selection ?? {},
         params: params ?? {},
+        widgets: {},
       },
     [session, selection, params]
   );
+
+  useDashboardContextSync({
+    path,
+    enabled: operatorMode && Boolean(onSessionChange),
+    session: currentSession,
+    onSessionChange: onSessionChange ?? (() => {}),
+    updatedBy: getStoredSession()?.username,
+  });
 
   const applySession = (patch?: OpenDashboardOptions): DashboardSession => {
     const next = mergeSession(currentSession, patch);
@@ -165,6 +179,7 @@ export default function DashboardBuilder({
     setDraftTitle(null);
     setDraftRefreshMs(null);
     setSelectedWidgetId(null);
+    setEditorSidePanel("widget");
   }, [path]);
 
   const title = draftTitle ?? dashboard.data?.title ?? path;
@@ -248,7 +263,15 @@ export default function DashboardBuilder({
     const next = { ...layout, widgets: [...layout.widgets, widget] };
     setDraftLayout(next);
     setSelectedWidgetId(widget.id);
+    setEditorSidePanel("widget");
     setMode("edit");
+  };
+
+  const selectWidget = (widgetId: string | null) => {
+    setSelectedWidgetId(widgetId);
+    if (widgetId) {
+      setEditorSidePanel("widget");
+    }
   };
 
   const updateWidgets = (widgets: DashboardWidget[]) => {
@@ -379,13 +402,26 @@ export default function DashboardBuilder({
               {t("json")}
             </button>
             {mode === "edit" && (
-              <button
-                type="button"
-                className={`btn ${showSettings ? "primary" : ""}`}
-                onClick={() => setShowSettings((v) => !v)}
-              >
-                {t("settings")}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className={`btn ${editorSidePanel === "settings" ? "primary" : ""}`}
+                  onClick={() =>
+                    setEditorSidePanel((panel) => (panel === "settings" ? "widget" : "settings"))
+                  }
+                >
+                  {t("settings")}
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${editorSidePanel === "rules" ? "primary" : ""}`}
+                  onClick={() =>
+                    setEditorSidePanel((panel) => (panel === "rules" ? "widget" : "rules"))
+                  }
+                >
+                  {t("rules.tab")}
+                </button>
+              </>
             )}
             {onOpenProperties && (
               <button type="button" className="btn" onClick={onOpenProperties}>
@@ -439,7 +475,7 @@ export default function DashboardBuilder({
                 refreshIntervalMs={refreshIntervalMs}
                 editable
                 selectedWidgetId={selectedWidgetId}
-                onSelectWidget={setSelectedWidgetId}
+                onSelectWidget={selectWidget}
                 onLayoutChange={handleLayoutChange}
                 subDashboardDepth={subDashboardDepth}
               />
@@ -449,7 +485,7 @@ export default function DashboardBuilder({
             </main>
           </DashboardProvider>
 
-          {showSettings ? (
+          {editorSidePanel === "settings" ? (
             <DashboardSettingsPanel
               layout={layout}
               refreshIntervalMs={refreshIntervalMs}
@@ -457,6 +493,8 @@ export default function DashboardBuilder({
               onLayoutChange={updateLayoutSettings}
               onRefreshIntervalChange={setDraftRefreshMs}
             />
+          ) : editorSidePanel === "rules" ? (
+            <DashboardRulesPanel path={path} widgets={layout.widgets} />
           ) : (
             <WidgetEditorPanel
               widget={selectedWidget}
@@ -493,6 +531,7 @@ export default function DashboardBuilder({
                 embeddedModal={embeddedModal}
                 selectedWidgetId={null}
                 subDashboardDepth={subDashboardDepth}
+                contextWidgets={currentSession.widgets}
               />
               {!operatorMode && showJson && (
                 <pre className="dashboard-json-panel">{layoutToJson(layout)}</pre>

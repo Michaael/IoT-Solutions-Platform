@@ -37,7 +37,31 @@
 | `activators.periodicMs` | Периодический пересчёт (0 = выкл.) |
 | `condition` | CEL; пусто = всегда |
 | `expression` | CEL или одна platform function |
-| `target` | Целевая переменная и поле схемы |
+| `target` | Куда записать результат (см. **Target kinds** ниже) |
+
+### Target kinds (Platform Rule)
+
+Расширение модели — ADR [0019](decisions/0019-platform-rule-unification.md). Если `target.kind` отсутствует → **`variable`** (обратная совместимость).
+
+| `kind` | Поля | Назначение |
+|--------|------|------------|
+| `variable` | `variableName`, `field` | Как сегодня — запись в переменную объекта |
+| `context` | `path` (dot-notation) | Запись в `@dashboardContext` на объекте `DASHBOARD` |
+| `event` | `eventName` | Публикация platform event; payload из `expression` |
+
+Пример dashboard rule (planned):
+
+```json
+{
+  "id": "alarm-mode",
+  "activators": { "onContextChange": true },
+  "condition": "context.selection.device != \"\"",
+  "expression": "\"alarm\"",
+  "target": { "kind": "context", "path": "params.mode" }
+}
+```
+
+Activator **`onContextChange`** — пересчёт при изменении `@dashboardContext`. Полная спецификация: [PLATFORM_LOGIC.md](PLATFORM_LOGIC.md).
 
 **Cross-object:** activator на remote path + `refAt("path", var)` в expression. При изменении remote переменной (в т.ч. driver telemetry) `BindingPropagationListener` пересчитывает правила на consumer-объектах.
 

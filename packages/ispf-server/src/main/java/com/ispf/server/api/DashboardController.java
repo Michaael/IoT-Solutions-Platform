@@ -36,6 +36,19 @@ public class DashboardController {
                 .orElseGet(() -> dashboardService.getDashboard(path));
     }
 
+    @GetMapping("/by-path/context")
+    public DashboardService.DashboardContextView getContext(@RequestParam String path) {
+        return dashboardService.getContext(path);
+    }
+
+    @PutMapping("/by-path/context")
+    public DashboardService.DashboardContextView saveContext(
+            @RequestParam String path,
+            @RequestBody SaveContextRequest request
+    ) {
+        return dashboardService.saveContext(path, request.context(), request.updatedBy());
+    }
+
     private DashboardService.DashboardView mapProxyDashboard(FederationProxyService.FederationProxyTarget target) {
         var json = federationProxyService.proxyDashboard(target);
         String localPath = json.path("path").asText(target.localPath());
@@ -72,5 +85,11 @@ public class DashboardController {
     }
 
     public record SaveTitleRequest(@NotBlank String title) {
+    }
+
+    public record SaveContextRequest(
+            java.util.Map<String, Object> context,
+            String updatedBy
+    ) {
     }
 }

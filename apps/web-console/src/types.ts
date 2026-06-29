@@ -129,11 +129,18 @@ export interface BindingActivators {
   periodicMs: number;
   /** When true, rule runs on a dedicated single-thread executor (coalesced per rule id). */
   async?: boolean;
+  /** When true, rule runs when @dashboardContext changes. */
+  onContextChange?: boolean;
 }
 
+export type BindingTargetKind = "variable" | "context" | "event";
+
 export interface BindingTarget {
-  variableName: string;
+  kind?: BindingTargetKind | null;
+  variableName?: string | null;
   field?: string | null;
+  path?: string | null;
+  eventName?: string | null;
 }
 
 export interface BindingRule {

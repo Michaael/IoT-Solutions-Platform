@@ -958,6 +958,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext, t: TFunction): ReactNod
             value={widget.requireSessionParamsJson}
             onChange={(v) => update({ requireSessionParamsJson: v || undefined })}
           />
+          <p className="hint">{t("editor.deprecation.requireSessionParamsJson")}</p>
           <KeyValueEditor
             label="syncFieldsToSessionJson"
             value={widget.syncFieldsToSessionJson}
@@ -1083,6 +1084,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext, t: TFunction): ReactNod
               placeholder="count>10 && name contains abc"
             />
           </label>
+          <p className="hint">{t("editor.deprecation.payloadFilterExpr")}</p>
         </>
       );
 
@@ -1337,6 +1339,7 @@ function renderWidgetTypeFields(ctx: WidgetFieldContext, t: TFunction): ReactNod
             value={widget.requireSessionParamsJson}
             onChange={(v) => update({ requireSessionParamsJson: v || undefined })}
           />
+          <p className="hint">{t("editor.deprecation.requireSessionParamsJson")}</p>
         </>
       );
 

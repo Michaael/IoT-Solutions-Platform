@@ -14,12 +14,14 @@ export { activatorsSummary } from "./bindingActivatorsUtils";
 interface BindingActivatorsEditorProps {
   activators: BindingActivators;
   eventNames: string[];
+  dashboardMode?: boolean;
   onChange: (activators: BindingActivators) => void;
 }
 
 export default function BindingActivatorsEditor({
   activators,
   eventNames,
+  dashboardMode = false,
   onChange,
 }: BindingActivatorsEditorProps) {
   const { t } = useTranslation("inspector");
@@ -49,6 +51,17 @@ export default function BindingActivatorsEditor({
         />
         {t("bindings.activators.onStartup")}
       </label>
+
+      {dashboardMode && (
+        <label className="checkbox-label inline full">
+          <input
+            type="checkbox"
+            checked={Boolean(activators.onContextChange)}
+            onChange={(e) => patch({ onContextChange: e.target.checked })}
+          />
+          {t("bindings.activators.onContextChange")}
+        </label>
+      )}
 
       <label className="full">
         {t("bindings.activators.periodicMs")}

@@ -13,6 +13,7 @@
 | `title` | Заголовок экрана |
 | `layout` | JSON сетки виджетов |
 | `refreshIntervalMs` | Интервал опроса (мс), по умолчанию 5000 |
+| `@dashboardContext` | **Planned** — JSON session (selection, params, widgets); см. [PLATFORM_LOGIC.md](PLATFORM_LOGIC.md) |
 
 Демо:
 
@@ -181,6 +182,25 @@ sequenceDiagram
   V->>C: читает selection[device]
   V->>API: variables для выбранного path
 ```
+
+## Логика дашборда (Platform Rule)
+
+**Статус:** спецификация (ADR [0019](decisions/0019-platform-rule-unification.md)); runtime — по фазам реализации.
+
+Сегодня `DashboardContext` в web-console — React state + `sessionStorage`. Целевая модель:
+
+1. **`@dashboardContext`** — reserved JSON-переменная на объекте `DASHBOARD` (источник истины на сервере).
+2. **Binding rules** на том же объекте с `target.kind: context` или `event` — show/hide, режимы, события в journal.
+3. **Виджеты** — только layout и адреса данных (`selectionKey`, `paramKey`); без `behaviorJson` / mini-DSL.
+
+| Задача | Механизм (planned) |
+|--------|-------------------|
+| Таблица → детали | `selectionKey` + publishers пишут `selection.*` в context |
+| Скрыть панель при alarm | rule → `widgets.alarm-panel.visible = false` |
+| Fire event при смене режима | rule → `target.kind: event` |
+| Фильтр event-feed | CEL `condition`, не `payloadFilterExpr` |
+
+Подробнее: [PLATFORM_LOGIC.md](PLATFORM_LOGIC.md), [BINDINGS.md](BINDINGS.md#target-kinds-platform-rule).
 
 ## Связанный выбор (`selectionKey`) — кратко
 

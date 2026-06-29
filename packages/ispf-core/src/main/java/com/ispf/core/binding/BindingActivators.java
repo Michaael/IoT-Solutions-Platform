@@ -12,7 +12,8 @@ public record BindingActivators(
         List<BindingVariableRef> onVariableChange,
         String onEvent,
         long periodicMs,
-        @JsonProperty("async") Boolean asyncFlag
+        @JsonProperty("async") Boolean asyncFlag,
+        @JsonProperty("onContextChange") Boolean onContextChangeFlag
 ) {
     public BindingActivators {
         onVariableChange = onVariableChange != null ? List.copyOf(onVariableChange) : List.of();
@@ -23,13 +24,18 @@ public record BindingActivators(
         return asyncFlag != null && asyncFlag;
     }
 
+    /** Whether this rule runs when {@code @dashboardContext} changes. */
+    public boolean onContextChange() {
+        return onContextChangeFlag != null && onContextChangeFlag;
+    }
+
     public BindingActivators(
             boolean onStartup,
             List<BindingVariableRef> onVariableChange,
             String onEvent,
             long periodicMs
     ) {
-        this(onStartup, onVariableChange, onEvent, periodicMs, false);
+        this(onStartup, onVariableChange, onEvent, periodicMs, false, false);
     }
 
     public BindingActivators(
@@ -39,7 +45,7 @@ public record BindingActivators(
             long periodicMs,
             boolean async
     ) {
-        this(onStartup, onVariableChange, onEvent, periodicMs, Boolean.valueOf(async));
+        this(onStartup, onVariableChange, onEvent, periodicMs, Boolean.valueOf(async), false);
     }
 
     public static BindingActivators onLocalChange() {

@@ -32,6 +32,7 @@
 | [0016](0016-clickhouse-event-journal.md) | ClickHouse event journal SPI (P3b) | Accepted |
 | [0017](0017-telemetry-ingest-pipeline.md) | MQTT gateway, thread pools, JDBC historian | Accepted |
 | [0018](0018-fixture-models-and-cel-applicability.md) | Fixture-модели + CEL applicability для RELATIVE | Accepted |
+| [0019](0019-platform-rule-unification.md) | Единая Platform Rule (dashboard context + bindings) | Proposed |
 
 ## Шаблон нового ADR
 

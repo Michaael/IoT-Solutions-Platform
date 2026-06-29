@@ -27,5 +27,6 @@ class ContextPackBuildTest {
         assertTrue(pack.get("exampleSummaries") instanceof List<?> examples && !examples.isEmpty());
         assertTrue(pack.get("featureIndex") instanceof List<?> features && !features.isEmpty());
         assertTrue(pack.get("docChunks") instanceof List<?> chunks && !chunks.isEmpty());
+        assertTrue(pack.get("docCatalog") instanceof List<?> catalog && !catalog.isEmpty());
     }
 }

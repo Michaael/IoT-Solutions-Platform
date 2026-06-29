@@ -476,6 +476,21 @@ export function fetchDashboard(path: string): Promise<DashboardView> {
   return request(`/api/v1/dashboards/by-path?path=${encodeURIComponent(path)}`);
 }
 
+export function fetchDashboardContext(path: string): Promise<import("./utils/dashboardContext").DashboardContextView> {
+  return request(`/api/v1/dashboards/by-path/context?path=${encodeURIComponent(path)}`);
+}
+
+export function saveDashboardContext(
+  path: string,
+  context: import("./utils/dashboardContext").DashboardContextPatch,
+  updatedBy?: string
+): Promise<import("./utils/dashboardContext").DashboardContextView> {
+  return request(`/api/v1/dashboards/by-path/context?path=${encodeURIComponent(path)}`, {
+    method: "PUT",
+    body: JSON.stringify({ context, updatedBy: updatedBy ?? null }),
+  });
+}
+
 export function saveDashboardLayout(path: string, layoutJson: string): Promise<DashboardView> {
   return request(`/api/v1/dashboards/by-path/layout?path=${encodeURIComponent(path)}`, {
     method: "PUT",

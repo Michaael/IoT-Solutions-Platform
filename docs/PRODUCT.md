@@ -55,7 +55,7 @@ graph LR
 
 ### Основной принцип
 
-**Бизнес-логика живёт на платформе** — в моделях, переменных, событиях, функциях и workflow **дерева объектов**. Платформа поставляет generic-движки (CEL, bindings, BPMN, script runtime, drivers); решение наполняет их declarative-конфигурацией. Bundle deploy — упаковка конфигурации, а не отдельный runtime. Подробнее: [ARCHITECTURE.md](ARCHITECTURE.md#основной-принцип-бизнес-логика-в-механизмах-платформы). Следующая волна развития — [ROADMAP.md § Phase 5](ROADMAP.md#phase-5--усиление-механизмов-north-star) (модели, функции, события, workflow, bundle как упаковка дерева).
+**Бизнес-логика живёт на платформе** — в моделях, переменных, событиях, функциях и workflow **дерева объектов**. Платформа поставляет generic-движки (CEL, bindings, BPMN, script runtime, drivers); решение наполняет их declarative-конфигурацией. Bundle deploy — упаковка конфигурации, а не отдельный runtime. Свод принципов для разработчиков и агентов: [APPLICATION_PRINCIPLES.md](APPLICATION_PRINCIPLES.md). Подробнее: [ARCHITECTURE.md](ARCHITECTURE.md#основной-принцип-бизнес-логика-в-механизмах-платформы). Следующая волна развития — [ROADMAP.md § Phase 5](ROADMAP.md#phase-5--усиление-механизмов-north-star) (модели, функции, события, workflow, bundle как упаковка дерева).
 
 ### Ключевые преимущества
 

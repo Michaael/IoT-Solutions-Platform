@@ -42,8 +42,9 @@ public class ContextPackSearchService {
         if (matchesTopic(normalizedTopic, "examples", "all")) {
             collectExampleHits(pack, q, hits);
         }
-        if (matchesTopic(normalizedTopic, "workflows", "dashboards", "all")) {
-            collectDocChunkHits(pack, q, hits, normalizedTopic);
+        collectDocChunkHits(pack, q, hits, normalizedTopic);
+        if (matchesTopic(normalizedTopic, "agent-knowledge", "all")) {
+            collectDocCatalogHits(pack, q, hits);
         }
         if (hits.isEmpty()) {
             collectLegacyDocHits(pack, q, hits);
@@ -238,6 +239,23 @@ public class ContextPackSearchService {
                 payload.put("topic", row.get("topic"));
                 payload.put("snippet", snippet(String.valueOf(row.get("text")), q));
                 hits.add(hit("doc", String.valueOf(row.get("id")), score, payload));
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void collectDocCatalogHits(Map<String, Object> pack, String q, List<Map<String, Object>> hits) {
+        Object catalog = pack.get("docCatalog");
+        if (!(catalog instanceof List<?> list)) {
+            return;
+        }
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> row)) {
+                continue;
+            }
+            int score = scoreRow(row, q, Set.of("id", "title", "path", "keywords"));
+            if (score > 0) {
+                hits.add(hit("docCatalog", String.valueOf(row.get("id")), score, castMap(row)));
             }
         }
     }

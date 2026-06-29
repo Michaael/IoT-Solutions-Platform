@@ -2,16 +2,25 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteBindingRule, fetchBindingRules, saveBindingRules } from "../api";
-import type { BindingRule } from "../types";
+import type { BindingRule, BindingTargetKind } from "../types";
 import BindingActivatorsEditor, { activatorsSummary } from "./BindingActivatorsEditor";
 import BindingExpressionField from "./BindingExpressionField";
 import {
   emptyBindingRule,
+  emptyDashboardContextRule,
   isBindingRuleSaveable,
   isExistingBindingRule,
   mergeBindingRules,
   prepareBindingRuleForSave,
+  targetKind,
+  targetSummary,
 } from "./bindingRulesUtils";
+
+interface RuleTemplate {
+  id: string;
+  label: string;
+  rule: BindingRule;
+}
 
 interface BindingRulesPanelProps {
   path: string;
@@ -19,7 +28,11 @@ interface BindingRulesPanelProps {
   eventNames?: string[];
   variableNames?: string[];
   functionNames?: string[];
+  dashboardMode?: boolean;
+  ruleTemplates?: RuleTemplate[];
 }
+
+const TARGET_KINDS: BindingTargetKind[] = ["variable", "context", "event"];
 
 export default function BindingRulesPanel({
   path,
@@ -27,6 +40,8 @@ export default function BindingRulesPanel({
   eventNames = [],
   variableNames = [],
   functionNames = [],
+  dashboardMode = false,
+  ruleTemplates = [],
 }: BindingRulesPanelProps) {
   const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
@@ -45,6 +60,7 @@ export default function BindingRulesPanel({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["binding-rules", path] });
       queryClient.invalidateQueries({ queryKey: ["variables", path] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-context", path] });
       setEditing(null);
     },
   });
@@ -54,22 +70,58 @@ export default function BindingRulesPanel({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["binding-rules", path] });
       queryClient.invalidateQueries({ queryKey: ["variables", path] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-context", path] });
     },
   });
+
+  const startNewRule = () => {
+    setEditing(dashboardMode ? emptyDashboardContextRule() : emptyBindingRule());
+  };
+
+  const applyTemplate = (template: RuleTemplate) => {
+    const suffix = Date.now().toString(36).slice(-4);
+    setEditing({
+      ...template.rule,
+      id: `${template.rule.id}-${suffix}`,
+      name: template.label,
+    });
+  };
+
+  const setTargetKind = (kind: BindingTargetKind) => {
+    if (!editing) return;
+    const nextTarget =
+      kind === "context"
+        ? { kind, path: "params.mode" as const }
+        : kind === "event"
+          ? { kind, eventName: "" as const }
+          : { kind, variableName: "", field: "value" as const };
+    setEditing({ ...editing, target: nextTarget });
+  };
 
   if (rulesQuery.isLoading) {
     return <p>{t("inspector:bindings.loading")}</p>;
   }
 
   const rules = rulesQuery.data ?? [];
+  const editingKind = editing ? targetKind(editing) : "variable";
 
   return (
     <section className="panel">
       {canManage && (
         <div className="panel-toolbar">
-          <button type="button" className="btn primary small" onClick={() => setEditing(emptyBindingRule())}>
+          <button type="button" className="btn primary small" onClick={startNewRule}>
             {t("inspector:bindings.addRule")}
           </button>
+          {ruleTemplates.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              className="btn small"
+              onClick={() => applyTemplate(template)}
+            >
+              {template.label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -92,7 +144,7 @@ export default function BindingRulesPanel({
               {rules.map((rule) => (
                 <tr key={rule.id}>
                   <td><code>{rule.id}</code></td>
-                  <td><code>{rule.target.variableName}</code></td>
+                  <td><code>{targetSummary(rule.target)}</code></td>
                   <td className="mono small" title={rule.expression}>{rule.expression || "—"}</td>
                   <td className="small">{activatorsSummary(rule)}</td>
                   <td>{rule.enabled ? t("common:action.yes") : t("common:action.no")}</td>
@@ -134,19 +186,68 @@ export default function BindingRulesPanel({
                   required
                 />
               </label>
-              <label className="full">
-                {t("inspector:bindings.targetVariable")}
-                <input
-                  value={editing.target.variableName}
-                  onChange={(e) =>
-                    setEditing({
-                      ...editing,
-                      target: { ...editing.target, variableName: e.target.value },
-                    })
-                  }
-                  required
-                />
-              </label>
+              {(dashboardMode || editingKind !== "variable") && (
+                <label className="full">
+                  {t("inspector:bindings.targetKind")}
+                  <select
+                    value={editingKind}
+                    onChange={(e) => setTargetKind(e.target.value as BindingTargetKind)}
+                  >
+                    {TARGET_KINDS.map((kind) => (
+                      <option key={kind} value={kind}>
+                        {t(`inspector:bindings.targetKind.${kind}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {editingKind === "variable" && (
+                <label className="full">
+                  {t("inspector:bindings.targetVariable")}
+                  <input
+                    value={editing.target.variableName ?? ""}
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        target: { ...editing.target, kind: "variable", variableName: e.target.value },
+                      })
+                    }
+                    required
+                  />
+                </label>
+              )}
+              {editingKind === "context" && (
+                <label className="full">
+                  {t("inspector:bindings.targetContextPath")}
+                  <input
+                    value={editing.target.path ?? ""}
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        target: { ...editing.target, kind: "context", path: e.target.value },
+                      })
+                    }
+                    placeholder="params.mode"
+                    required
+                  />
+                  <span className="hint">{t("inspector:bindings.targetContextPathHint")}</span>
+                </label>
+              )}
+              {editingKind === "event" && (
+                <label className="full">
+                  {t("inspector:bindings.targetEventName")}
+                  <input
+                    value={editing.target.eventName ?? ""}
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        target: { ...editing.target, kind: "event", eventName: e.target.value },
+                      })
+                    }
+                    required
+                  />
+                </label>
+              )}
               <label className="full">
                 {t("inspector:bindings.column.expression")}
                 <BindingExpressionField
@@ -167,10 +268,14 @@ export default function BindingRulesPanel({
                   variableNames={variableNames}
                   functionNames={functionNames}
                 />
+                {dashboardMode && (
+                  <span className="hint">{t("inspector:bindings.dashboardConditionHint")}</span>
+                )}
               </label>
               <BindingActivatorsEditor
                 activators={editing.activators}
                 eventNames={eventNames}
+                dashboardMode={dashboardMode}
                 onChange={(activators) => setEditing({ ...editing, activators })}
               />
               <label className="checkbox-label inline full">

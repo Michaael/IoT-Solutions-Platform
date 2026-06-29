@@ -20,8 +20,17 @@ public record BindingRule(
         if (expression == null || expression.isBlank()) {
             throw new IllegalArgumentException("Binding rule expression is required");
         }
-        if (target == null || target.variableName() == null || target.variableName().isBlank()) {
+        if (target == null) {
             throw new IllegalArgumentException("Binding rule target is required");
+        }
+        if (target.isVariable() && (target.variableName() == null || target.variableName().isBlank())) {
+            throw new IllegalArgumentException("Binding rule target.variableName is required");
+        }
+        if (target.isContext() && (target.path() == null || target.path().isBlank())) {
+            throw new IllegalArgumentException("Binding rule target.path is required for context effect");
+        }
+        if (target.isEvent() && (target.eventName() == null || target.eventName().isBlank())) {
+            throw new IllegalArgumentException("Binding rule target.eventName is required for event effect");
         }
         if (activators == null) {
             activators = BindingActivators.onLocalChange();

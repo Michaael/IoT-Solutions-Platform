@@ -13,15 +13,17 @@ export type DashboardOpenMode = "navigate" | "modal";
 export interface DashboardSession {
   selection: Record<string, string>;
   params: Record<string, unknown>;
+  widgets?: Record<string, { visible?: boolean }>;
 }
 
 export interface OpenDashboardOptions {
   selection?: Record<string, string>;
   params?: Record<string, unknown>;
+  widgets?: Record<string, { visible?: boolean }>;
 }
 
 export function emptySession(): DashboardSession {
-  return { selection: {}, params: {} };
+  return { selection: {}, params: {}, widgets: {} };
 }
 
 export function mergeSession(
@@ -34,6 +36,7 @@ export function mergeSession(
   return {
     selection: patch.selection ? { ...current.selection, ...patch.selection } : current.selection,
     params: patch.params ? { ...current.params, ...patch.params } : current.params,
+    widgets: patch.widgets ? { ...(current.widgets ?? {}), ...patch.widgets } : current.widgets,
   };
 }
 
@@ -53,6 +56,7 @@ const noop = () => {};
 const defaultValue: DashboardContextValue = {
   selection: {},
   params: {},
+  widgets: {},
   setSelection: noop,
   setParams: noop,
   navigateToDashboard: noop,
@@ -100,6 +104,7 @@ export function DashboardProvider({
     ({
       selection: controlledSelection ?? internalSession.selection,
       params: controlledParams ?? internalSession.params,
+      widgets: internalSession.widgets,
     } satisfies DashboardSession);
 
   const sessionRef = useRef(session);
@@ -148,6 +153,7 @@ export function DashboardProvider({
       embeddedModal,
       selection: session.selection,
       params: session.params,
+      widgets: session.widgets,
       setSelection,
       setParams,
       navigateToDashboard: onNavigateDashboard ?? noop,

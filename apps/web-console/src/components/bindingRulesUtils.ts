@@ -1,4 +1,4 @@
-import type { BindingRule } from "../types";
+import type { BindingRule, BindingTarget } from "../types";
 import { defaultBindingActivators } from "./bindingActivatorsUtils";
 
 export function emptyBindingRule(): BindingRule {
@@ -10,8 +10,42 @@ export function emptyBindingRule(): BindingRule {
     activators: defaultBindingActivators(),
     condition: "",
     expression: "",
-    target: { variableName: "", field: "value" },
+    target: { kind: "variable", variableName: "", field: "value" },
   };
+}
+
+export function emptyDashboardContextRule(): BindingRule {
+  return {
+    id: "",
+    name: "",
+    enabled: true,
+    order: 0,
+    activators: {
+      onStartup: false,
+      onVariableChange: [],
+      onEvent: null,
+      periodicMs: 0,
+      onContextChange: true,
+    },
+    condition: "",
+    expression: "",
+    target: { kind: "context", path: "params.mode" },
+  };
+}
+
+export function targetKind(rule: BindingRule): NonNullable<BindingTarget["kind"]> {
+  return rule.target.kind ?? "variable";
+}
+
+export function targetSummary(target: BindingTarget): string {
+  const kind = target.kind ?? "variable";
+  if (kind === "context") {
+    return `context.${target.path ?? "?"}`;
+  }
+  if (kind === "event") {
+    return `event:${target.eventName ?? "?"}`;
+  }
+  return target.variableName?.trim() || "—";
 }
 
 export function mergeBindingRules(rules: BindingRule[], rule: BindingRule): BindingRule[] {
@@ -22,20 +56,33 @@ export function mergeBindingRules(rules: BindingRule[], rule: BindingRule): Bind
 }
 
 export function isBindingRuleSaveable(rule: BindingRule): boolean {
-  return Boolean(
-    rule.id.trim()
-    && rule.target.variableName.trim()
-    && rule.expression.trim(),
-  );
+  if (!rule.id.trim() || !rule.expression.trim()) {
+    return false;
+  }
+  const kind = targetKind(rule);
+  if (kind === "context") {
+    return Boolean(rule.target.path?.trim());
+  }
+  if (kind === "event") {
+    return Boolean(rule.target.eventName?.trim());
+  }
+  return Boolean(rule.target.variableName?.trim());
 }
 
 export function prepareBindingRuleForSave(rule: BindingRule): BindingRule {
   const trimmedId = rule.id.trim();
+  const kind = targetKind(rule);
   return {
     ...rule,
     id: trimmedId,
     name: rule.name?.trim() || trimmedId,
-    target: { ...rule.target, field: rule.target.field ?? "value" },
+    target: {
+      kind,
+      variableName: kind === "variable" ? (rule.target.variableName?.trim() ?? "") : rule.target.variableName ?? null,
+      field: rule.target.field ?? "value",
+      path: kind === "context" ? (rule.target.path?.trim() ?? "") : rule.target.path ?? null,
+      eventName: kind === "event" ? (rule.target.eventName?.trim() ?? "") : rule.target.eventName ?? null,
+    },
   };
 }
 

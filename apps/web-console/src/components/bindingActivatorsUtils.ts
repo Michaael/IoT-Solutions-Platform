@@ -71,6 +71,9 @@ export function activatorsSummary(rule: { activators: BindingActivators }): stri
   for (const ref of rule.activators.onVariableChange ?? []) {
     parts.push(`${ref.objectPath}:${ref.variableName}`);
   }
+  if (rule.activators.onContextChange) {
+    parts.push("context");
+  }
   if (rule.activators.onEvent) {
     parts.push(`event:${rule.activators.onEvent}`);
   }

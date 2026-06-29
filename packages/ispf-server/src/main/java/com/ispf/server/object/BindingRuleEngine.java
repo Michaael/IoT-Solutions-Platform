@@ -2,8 +2,12 @@ package com.ispf.server.object;
 
 import com.ispf.core.binding.BindingRule;
 import com.ispf.core.binding.BindingRulesConstants;
+import com.ispf.core.binding.BindingTarget;
+import com.ispf.core.dashboard.DashboardContextConstants;
 import com.ispf.core.model.DataRecord;
 import com.ispf.core.model.DataSchema;
+import com.ispf.core.model.FieldType;
+import com.ispf.core.object.ObjectType;
 import com.ispf.core.object.PlatformObject;
 import com.ispf.core.object.Variable;
 import com.ispf.expression.BindingEvaluationContext;
@@ -11,14 +15,19 @@ import com.ispf.expression.BindingExpressionEvaluator;
 import com.ispf.expression.ExpressionEngine;
 import com.ispf.expression.ExpressionException;
 import com.ispf.server.binding.BindingInvokeAuditService;
+import com.ispf.server.dashboard.DashboardContextSupport;
+import com.ispf.server.event.EventService;
 import com.ispf.server.persistence.ObjectEntityMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -29,6 +38,10 @@ public class BindingRuleEngine {
     private static final int MAX_DEPTH = 16;
     private static final ThreadLocal<Integer> ACTIVATION_DEPTH = ThreadLocal.withInitial(() -> 0);
 
+    private static final DataSchema CONTEXT_VALUE_SCHEMA = DataSchema.builder("dashboardContext")
+            .field("value", FieldType.STRING)
+            .build();
+
     private final ObjectManager objectManager;
     private final BindingRulesService bindingRulesService;
     private final BindingExpressionEvaluator expressionEvaluator;
@@ -38,6 +51,8 @@ public class BindingRuleEngine {
     private final BindingRuleAsyncExecutor asyncExecutor;
     private final BindingInvokeAuditService bindingAuditService;
     private final ObjectEntityMapper entityMapper;
+    private final ObjectMapper objectMapper;
+    private final EventService eventService;
 
     public BindingRuleEngine(
             ObjectManager objectManager,
@@ -48,7 +63,9 @@ public class BindingRuleEngine {
             ApplicationEventPublisher eventPublisher,
             BindingRuleAsyncExecutor asyncExecutor,
             BindingInvokeAuditService bindingAuditService,
-            ObjectEntityMapper entityMapper
+            ObjectEntityMapper entityMapper,
+            ObjectMapper objectMapper,
+            EventService eventService
     ) {
         this.objectManager = objectManager;
         this.bindingRulesService = bindingRulesService;
@@ -59,14 +76,21 @@ public class BindingRuleEngine {
         this.asyncExecutor = asyncExecutor;
         this.bindingAuditService = bindingAuditService;
         this.entityMapper = entityMapper;
+        this.objectMapper = objectMapper;
+        this.eventService = eventService;
     }
 
     public void onStartup(String objectPath) {
         runRules(objectPath, Trigger.startup(), false);
     }
 
+    public void onContextChange(String objectPath) {
+        runRules(objectPath, Trigger.contextChange(), true);
+    }
+
     public void onVariableChanged(String ruleObjectPath, String changedObjectPath, String changedVariable) {
         if (BindingRulesConstants.isReservedVariable(changedVariable)
+                || DashboardContextConstants.isReservedVariable(changedVariable)
                 || BindingStateVariables.BINDING_STATE.equals(changedVariable)) {
             return;
         }
@@ -109,7 +133,7 @@ public class BindingRuleEngine {
                 trigger = Trigger.manual();
             }
             for (String variableName : changedVariables) {
-                if (!BindingRulesConstants.isReservedVariable(variableName)) {
+                if (shouldPublishVariableUpdate(variableName)) {
                     eventPublisher.publishEvent(ObjectChangeEvent.variableUpdated(objectPath, variableName));
                 }
             }
@@ -118,6 +142,11 @@ public class BindingRuleEngine {
                 ACTIVATION_DEPTH.set(Math.max(0, ACTIVATION_DEPTH.get() - 1));
             }
         }
+    }
+
+    private static boolean shouldPublishVariableUpdate(String variableName) {
+        return !BindingRulesConstants.isReservedVariable(variableName)
+                && !BindingStateVariables.BINDING_STATE.equals(variableName);
     }
 
     private boolean evaluatePass(String objectPath, Trigger trigger, Set<String> changedVariables) {
@@ -154,7 +183,7 @@ public class BindingRuleEngine {
         Set<String> changedVariables = new LinkedHashSet<>();
         if (evaluateRule(object, rule, changedVariables, trigger)) {
             for (String variableName : changedVariables) {
-                if (!BindingRulesConstants.isReservedVariable(variableName)) {
+                if (shouldPublishVariableUpdate(variableName)) {
                     eventPublisher.publishEvent(ObjectChangeEvent.variableUpdated(objectPath, variableName));
                 }
             }
@@ -170,12 +199,29 @@ public class BindingRuleEngine {
                     trigger.changedObjectPath(),
                     trigger.changedVariable()
             );
+            case CONTEXT_CHANGE -> rule.activators().onContextChange();
             case EVENT -> rule.activators().matchesEvent(trigger.eventName());
             case PERIODIC -> rule.id().equals(trigger.ruleId()) && rule.activators().hasPeriodicSchedule();
         };
     }
 
     private boolean evaluateRule(
+            PlatformObject object,
+            BindingRule rule,
+            Set<String> changedVariables,
+            Trigger trigger
+    ) {
+        BindingTarget target = rule.target();
+        if (target.isContext()) {
+            return evaluateContextRule(object, rule, changedVariables, trigger);
+        }
+        if (target.isEvent()) {
+            return evaluateEventRule(object, rule, trigger);
+        }
+        return evaluateVariableRule(object, rule, changedVariables, trigger);
+    }
+
+    private boolean evaluateVariableRule(
             PlatformObject object,
             BindingRule rule,
             Set<String> changedVariables,
@@ -191,8 +237,8 @@ public class BindingRuleEngine {
             if (!conditionPasses(object, rule.condition())) {
                 return false;
             }
-            Variable target = object.getVariable(rule.target().variableName()).orElse(null);
-            if (target == null) {
+            Variable targetVariable = object.getVariable(rule.target().variableName()).orElse(null);
+            if (targetVariable == null) {
                 success = false;
                 error = "Unknown target variable: " + rule.target().variableName();
                 return false;
@@ -201,7 +247,7 @@ public class BindingRuleEngine {
                     object,
                     rule.target().variableName(),
                     rule.expression(),
-                    target.schema(),
+                    targetVariable.schema(),
                     evaluationContext
             );
             if (computed.isEmpty()) {
@@ -210,11 +256,11 @@ public class BindingRuleEngine {
                 return false;
             }
             DataRecord nextValue = computed.get();
-            previous = target.value().orElse(null);
+            previous = targetVariable.value().orElse(null);
             next = nextValue;
             if (!BindingExpressionEvaluator.recordsEqual(previous, nextValue)) {
-                target.setComputedValue(nextValue);
-                objectManager.persistBindingRuleTarget(object.path(), target);
+                targetVariable.setComputedValue(nextValue);
+                objectManager.persistBindingRuleTarget(object.path(), targetVariable);
                 changedVariables.add(rule.target().variableName());
                 changed = true;
                 return true;
@@ -238,12 +284,127 @@ public class BindingRuleEngine {
         }
     }
 
+    private boolean evaluateContextRule(
+            PlatformObject object,
+            BindingRule rule,
+            Set<String> changedVariables,
+            Trigger trigger
+    ) {
+        if (object.type() != ObjectType.DASHBOARD) {
+            return false;
+        }
+        long start = System.nanoTime();
+        boolean success = true;
+        boolean changed = false;
+        String error = null;
+        String previousJson = null;
+        String nextJson = null;
+        try {
+            if (!conditionPasses(object, rule.condition())) {
+                return false;
+            }
+            Object computed = expressionEngine.evaluate(rule.expression(), object, readContextMap(object));
+            String currentJson = readContextJson(object);
+            Map<String, Object> context = DashboardContextSupport.parseContextJson(currentJson, objectMapper);
+            previousJson = DashboardContextSupport.toJson(context, objectMapper);
+            DashboardContextSupport.setAtPath(context, rule.target().path(), computed);
+            nextJson = DashboardContextSupport.toJson(context, objectMapper);
+            if (nextJson.equals(previousJson)) {
+                return false;
+            }
+            persistDashboardContext(object.path(), nextJson);
+            changedVariables.add(DashboardContextConstants.VARIABLE);
+            changed = true;
+            return true;
+        } catch (RuntimeException ex) {
+            success = false;
+            error = ex.getMessage();
+            throw ex;
+        } finally {
+            bindingAuditService.recordCel(
+                    object.path(),
+                    rule,
+                    trigger.kind().name(),
+                    success,
+                    changed,
+                    error,
+                    System.nanoTime() - start,
+                    entityMapper.auditDiff(previousJson, nextJson)
+            );
+        }
+    }
+
+    private boolean evaluateEventRule(PlatformObject object, BindingRule rule, Trigger trigger) {
+        long start = System.nanoTime();
+        boolean success = true;
+        boolean changed = false;
+        String error = null;
+        try {
+            if (!conditionPasses(object, rule.condition())) {
+                return false;
+            }
+            if (object.events().get(rule.target().eventName()) == null) {
+                success = false;
+                error = "Unknown event: " + rule.target().eventName();
+                return false;
+            }
+            Object computed = expressionEngine.evaluate(rule.expression(), object, readContextMap(object));
+            DataRecord payload = payloadFromExpressionResult(computed);
+            eventService.fire(object.path(), rule.target().eventName(), payload);
+            changed = true;
+            return true;
+        } catch (RuntimeException ex) {
+            success = false;
+            error = ex.getMessage();
+            throw ex;
+        } finally {
+            bindingAuditService.recordCel(
+                    object.path(),
+                    rule,
+                    trigger.kind().name(),
+                    success,
+                    changed,
+                    error,
+                    System.nanoTime() - start,
+                    null
+            );
+        }
+    }
+
+    private void persistDashboardContext(String objectPath, String contextJson) {
+        DataRecord record = DataRecord.single(CONTEXT_VALUE_SCHEMA, Map.of("value", contextJson));
+        objectManager.upsertSystemVariable(
+                objectPath,
+                DashboardContextConstants.VARIABLE,
+                CONTEXT_VALUE_SCHEMA,
+                record
+        );
+    }
+
+    private static String readContextJson(PlatformObject object) {
+        return object.getVariable(DashboardContextConstants.VARIABLE)
+                .flatMap(Variable::value)
+                .map(record -> record.firstRow().get("value"))
+                .map(Object::toString)
+                .filter(value -> !value.isBlank())
+                .orElse(DashboardContextSupport.EMPTY_JSON);
+    }
+
+    private static DataRecord payloadFromExpressionResult(Object computed) {
+        DataSchema schema = DataSchema.builder("ruleEventPayload")
+                .field("value", FieldType.STRING)
+                .build();
+        String value = computed != null ? String.valueOf(computed) : "";
+        return DataRecord.single(schema, Map.of("value", value));
+    }
+
     private boolean conditionPasses(PlatformObject object, String condition) {
         if (condition == null || condition.isBlank()) {
             return true;
         }
         try {
-            Object result = expressionEngine.evaluate(condition, object);
+            Map<String, Object> context = readContextMap(object);
+            Object result = expressionEngine.evaluate(condition, object, context);
             if (result instanceof Boolean bool) {
                 return bool;
             }
@@ -253,6 +414,10 @@ public class BindingRuleEngine {
         }
     }
 
+    private Map<String, Object> readContextMap(PlatformObject object) {
+        return DashboardContextSupport.parseContextJson(readContextJson(object), objectMapper);
+    }
+
     private record Trigger(
             Kind kind,
             String changedObjectPath,
@@ -260,7 +425,7 @@ public class BindingRuleEngine {
             String eventName,
             String ruleId
     ) {
-        enum Kind { STARTUP, VARIABLE_CHANGE, MANUAL, EVENT, PERIODIC }
+        enum Kind { STARTUP, VARIABLE_CHANGE, MANUAL, CONTEXT_CHANGE, EVENT, PERIODIC }
 
         static Trigger startup() {
             return new Trigger(Kind.STARTUP, null, null, null, null);
@@ -268,6 +433,10 @@ public class BindingRuleEngine {
 
         static Trigger manual() {
             return new Trigger(Kind.MANUAL, null, null, null, null);
+        }
+
+        static Trigger contextChange() {
+            return new Trigger(Kind.CONTEXT_CHANGE, null, null, null, null);
         }
 
         static Trigger variableChange(String changedObjectPath, String changedVariable) {

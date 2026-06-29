@@ -1,6 +1,7 @@
 package com.ispf.server.object;
 
 import com.ispf.core.binding.BindingRulesConstants;
+import com.ispf.core.dashboard.DashboardContextConstants;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -25,6 +26,10 @@ public class BindingPropagationListener {
             return;
         }
         if (event.type() != ObjectChangeType.VARIABLE_UPDATED || event.variableName() == null) {
+            return;
+        }
+        if (DashboardContextConstants.isReservedVariable(event.variableName())) {
+            bindingRuleEngine.onContextChange(event.path());
             return;
         }
         if (BindingRulesConstants.isReservedVariable(event.variableName())

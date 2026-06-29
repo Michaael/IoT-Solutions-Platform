@@ -63,6 +63,30 @@ describe("isBindingRuleSaveable", () => {
     expect(isBindingRuleSaveable(sampleRule({ target: { variableName: " ", field: "value" } }))).toBe(false);
     expect(isBindingRuleSaveable(sampleRule({ expression: "  " }))).toBe(false);
   });
+
+  it("accepts context and event targets", () => {
+    expect(
+      isBindingRuleSaveable(
+        sampleRule({
+          target: { kind: "context", path: "params.mode" },
+          expression: '"detail"',
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isBindingRuleSaveable(
+        sampleRule({
+          target: { kind: "event", eventName: "alarm.raised" },
+          expression: "payload",
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isBindingRuleSaveable(
+        sampleRule({ target: { kind: "context", path: "  " }, expression: "true" }),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("prepareBindingRuleForSave", () => {

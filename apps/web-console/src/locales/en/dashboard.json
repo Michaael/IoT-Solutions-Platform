@@ -44,5 +44,13 @@
   "settings.rowHeight": "Row height (px)",
   "settings.theme": "Theme",
   "settings.themeDefault": "Default",
-  "settings.title": "Dashboard settings"
+  "settings.title": "Dashboard settings",
+  "rules.tab": "Rules",
+  "rules.title": "Platform rules",
+  "rules.hint": "CEL rules on this dashboard object: context, widget visibility, events. Same engine as object bindings.",
+  "rules.templates.onSelectMode": "Mode on selection",
+  "rules.templates.showWidget": "Show widget in detail",
+  "rules.templates.hideWidget": "Hide widget when idle",
+  "editor.deprecation.payloadFilterExpr": "Legacy mini-DSL. Prefer Platform rules (Rules tab) with CEL condition on event payload.",
+  "editor.deprecation.requireSessionParamsJson": "Legacy gate. Prefer Platform rules with CEL on context.params.* before showing or enabling actions."
 }

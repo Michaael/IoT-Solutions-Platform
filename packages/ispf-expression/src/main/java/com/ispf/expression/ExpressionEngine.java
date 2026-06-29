@@ -24,6 +24,7 @@ public class ExpressionEngine {
     private final CelCompiler compiler = CelCompilerFactory.standardCelCompilerBuilder()
             .addVar("self", SimpleType.DYN)
             .addVar("parent", SimpleType.DYN)
+            .addVar("context", SimpleType.DYN)
             .build();
 
     private final CelCompiler payloadCompiler = CelCompilerFactory.standardCelCompilerBuilder()
@@ -49,7 +50,11 @@ public class ExpressionEngine {
     }
 
     public Object evaluate(String expression, PlatformObject platformObject) {
-        return compile(expression).evaluate(platformObject);
+        return compile(expression).evaluate(platformObject, null, Map.of());
+    }
+
+    public Object evaluate(String expression, PlatformObject platformObject, Map<String, Object> context) {
+        return compile(expression).evaluate(platformObject, null, context != null ? context : Map.of());
     }
 
     /**
@@ -91,12 +96,16 @@ public class ExpressionEngine {
         }
 
         public Object evaluate(PlatformObject platformObject) {
-            return evaluate(platformObject, null);
+            return evaluate(platformObject, null, Map.of());
         }
 
         Object evaluate(PlatformObject platformObject, String watchVariable) {
+            return evaluate(platformObject, watchVariable, Map.of());
+        }
+
+        Object evaluate(PlatformObject platformObject, String watchVariable, Map<String, Object> context) {
             try {
-                return program().eval(buildBindings(platformObject, watchVariable));
+                return program().eval(buildBindings(platformObject, watchVariable, context));
             } catch (Exception e) {
                 throw new ExpressionException("Evaluation failed: " + source, e);
             }
@@ -154,10 +163,18 @@ public class ExpressionEngine {
     }
 
     private static Map<String, Object> buildBindings(PlatformObject platformObject) {
-        return buildBindings(platformObject, null);
+        return buildBindings(platformObject, null, Map.of());
     }
 
     private static Map<String, Object> buildBindings(PlatformObject platformObject, String watchVariable) {
+        return buildBindings(platformObject, watchVariable, Map.of());
+    }
+
+    private static Map<String, Object> buildBindings(
+            PlatformObject platformObject,
+            String watchVariable,
+            Map<String, Object> context
+    ) {
         Map<String, Object> self = new HashMap<>();
         for (Variable variable : platformObject.variables().values()) {
             Optional<DataRecord> value = variable.value();
@@ -174,6 +191,7 @@ public class ExpressionEngine {
         Map<String, Object> bindings = new HashMap<>();
         bindings.put("self", self);
         bindings.put("parent", Map.of());
+        bindings.put("context", context != null ? context : Map.of());
         return bindings;
     }
 

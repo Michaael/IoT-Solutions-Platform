@@ -44,5 +44,13 @@
   "settings.rowHeight": "行高（px）",
   "settings.theme": "主题",
   "settings.themeDefault": "默认",
-  "settings.title": "仪表板设置"
+  "settings.title": "仪表板设置",
+  "rules.tab": "规则",
+  "rules.title": "平台规则",
+  "rules.hint": "此仪表板对象上的 CEL 规则：context、小部件可见性、事件。与对象绑定同一引擎。",
+  "rules.templates.onSelectMode": "选择时切换模式",
+  "rules.templates.showWidget": "详情模式下显示小部件",
+  "rules.templates.hideWidget": "空闲时隐藏小部件",
+  "editor.deprecation.payloadFilterExpr": "旧版 mini-DSL。请改用平台规则（规则选项卡）并对事件 payload 使用 CEL。",
+  "editor.deprecation.requireSessionParamsJson": "旧版门禁。请改用对 context.params.* 的 CEL 平台规则。"
 }

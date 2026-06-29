@@ -137,6 +137,7 @@ public class ObjectManager {
         });
         modelApplicationRunner.getObject().syncAllModelBackedVariableMetadata();
         modelApplicationRunner.getObject().restoreAttachments();
+        modelApplicationRunner.getObject().ensureDashboardDemoRules();
         initialized = true;
     }
 

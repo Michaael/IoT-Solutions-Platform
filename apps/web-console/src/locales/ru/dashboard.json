@@ -44,5 +44,13 @@
   "settings.rowHeight": "Высота строки (px)",
   "settings.theme": "Тема",
   "settings.themeDefault": "По умолчанию",
-  "settings.title": "Настройки дашборда"
+  "settings.title": "Настройки дашборда",
+  "rules.tab": "Правила",
+  "rules.title": "Platform rules",
+  "rules.hint": "CEL-правила на объекте дашборда: context, видимость виджетов, события. Тот же движок, что и привязки объекта.",
+  "rules.templates.onSelectMode": "Режим при выборе",
+  "rules.templates.showWidget": "Показать виджет в detail",
+  "rules.templates.hideWidget": "Скрыть виджет в idle",
+  "editor.deprecation.payloadFilterExpr": "Устаревший mini-DSL. Используйте Platform rules (вкладка «Правила») с CEL на payload события.",
+  "editor.deprecation.requireSessionParamsJson": "Устаревшая проверка. Используйте Platform rules с CEL на context.params.*."
 }

@@ -8,6 +8,10 @@ import {
   resolveWidgetZIndex,
   sortWidgetsForRender,
 } from "./widgetLayerUtils";
+import {
+  isWidgetVisibleAtRuntime,
+  type ContextWidgets,
+} from "./widgetRuntimeVisibility";
 
 const SELECTED_Z_BOOST = 10_000;
 
@@ -24,6 +28,7 @@ interface DashboardGridProps {
   onSelectWidget?: (id: string) => void;
   onLayoutChange?: (widgets: DashboardWidget[]) => void;
   subDashboardDepth?: number;
+  contextWidgets?: ContextWidgets;
 }
 
 interface GridMetrics {
@@ -93,6 +98,7 @@ export default function DashboardGrid({
   onSelectWidget,
   onLayoutChange,
   subDashboardDepth = 0,
+  contextWidgets,
 }: DashboardGridProps) {
   const { t } = useTranslation("dashboard");
   const { containerRef, width } = useContainerWidth();
@@ -209,8 +215,8 @@ export default function DashboardGrid({
     if (editable) {
       return sorted;
     }
-    return sorted.filter(isWidgetVisible);
-  }, [editable, layout.widgets]);
+    return sorted.filter((widget) => isWidgetVisibleAtRuntime(widget, contextWidgets));
+  }, [contextWidgets, editable, layout.widgets]);
 
   return (
     <div

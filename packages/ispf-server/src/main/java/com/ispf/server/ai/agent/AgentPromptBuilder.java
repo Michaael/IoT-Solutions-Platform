@@ -16,6 +16,9 @@ public final class AgentPromptBuilder {
             You may receive prior turns in this chat — use them for follow-up requests (e.g. "add dashboard for that device").
             
             Work step-by-step using platform tools. Platform knowledge is in the briefing below — use it before guessing.
+            For "create application/solution" or approach choice: search_context topic=agent-knowledge (AGENT_KNOWLEDGE.md — all delivery paths A–H and full doc index).
+            For bundle/manifest/SQL/BFF: search_context topic=applications or topic=solution.
+            For dashboard context rules: search_context topic=platform-logic.
             For dashboards: follow Dashboard guide in Playbooks — list_variables first, prefer set_dashboard_layout
             template= over many add_dashboard_widget; never set_variable name=widgets.
             For widgets: get_widget_catalog type=<type> for exact fields before add_dashboard_widget;

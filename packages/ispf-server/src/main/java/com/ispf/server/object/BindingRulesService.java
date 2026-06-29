@@ -10,6 +10,7 @@ import com.ispf.core.binding.BindingVariableRef;
 import com.ispf.core.model.DataRecord;
 import com.ispf.core.model.DataSchema;
 import com.ispf.core.model.FieldType;
+import com.ispf.core.object.ObjectType;
 import com.ispf.core.object.PlatformObject;
 import com.ispf.core.object.Variable;
 import com.ispf.expression.BindingDependencyParser;
@@ -78,8 +79,26 @@ public class BindingRulesService {
 
     private void validateRule(String objectPath, BindingRule rule) {
         PlatformObject object = objectManager.require(objectPath);
-        if (object.getVariable(rule.target().variableName()).isEmpty()) {
-            throw new IllegalArgumentException("Unknown target variable: " + rule.target().variableName());
+        BindingTarget target = rule.target();
+        if (target.isVariable()) {
+            if (object.getVariable(target.variableName()).isEmpty()) {
+                throw new IllegalArgumentException("Unknown target variable: " + target.variableName());
+            }
+            return;
+        }
+        if (target.isContext()) {
+            if (object.type() != ObjectType.DASHBOARD) {
+                throw new IllegalArgumentException("Context target is only allowed on DASHBOARD objects");
+            }
+            if (target.path() == null || target.path().isBlank()) {
+                throw new IllegalArgumentException("Context target.path is required");
+            }
+            return;
+        }
+        if (target.isEvent()) {
+            if (target.eventName() == null || target.eventName().isBlank()) {
+                throw new IllegalArgumentException("Event target.eventName is required");
+            }
         }
     }
 
@@ -147,11 +166,13 @@ public class BindingRulesService {
                     activators.onVariableChange(),
                     onEvent,
                     periodicMs,
-                    activators.async()
+                    activators.async(),
+                    activators.onContextChange()
             );
         }
         if (activators.onVariableChange().isEmpty()
                 && !activators.onStartup()
+                && !activators.onContextChange()
                 && !activators.hasPeriodicSchedule()
                 && (activators.onEvent() == null || activators.onEvent().isBlank())) {
             activators = defaultActivators("", expression);
@@ -178,7 +199,13 @@ public class BindingRulesService {
                     BindingActivatorsDto.from(rule.activators()),
                     rule.condition(),
                     rule.expression(),
-                    new BindingTargetDto(rule.target().variableName(), rule.target().field())
+                    new BindingTargetDto(
+                            rule.target().kind(),
+                            rule.target().variableName(),
+                            rule.target().field(),
+                            rule.target().path(),
+                            rule.target().eventName()
+                    )
             );
         }
 
@@ -191,7 +218,13 @@ public class BindingRulesService {
                     activators != null ? activators.toActivators() : null,
                     condition,
                     expression,
-                    new BindingTarget(target.variableName(), target.field())
+                    new BindingTarget(
+                            target.kind(),
+                            target.variableName(),
+                            target.field(),
+                            target.path(),
+                            target.eventName()
+                    )
             );
         }
     }
@@ -201,7 +234,8 @@ public class BindingRulesService {
             List<BindingVariableRefDto> onVariableChange,
             String onEvent,
             long periodicMs,
-            Boolean async
+            Boolean async,
+            Boolean onContextChange
     ) {
         static BindingActivatorsDto from(BindingActivators activators) {
             return new BindingActivatorsDto(
@@ -209,7 +243,8 @@ public class BindingRulesService {
                     activators.onVariableChange().stream().map(BindingVariableRefDto::from).toList(),
                     activators.onEvent(),
                     activators.periodicMs(),
-                    activators.async()
+                    activators.async(),
+                    activators.onContextChange()
             );
         }
 
@@ -222,7 +257,8 @@ public class BindingRulesService {
                     refs,
                     onEvent,
                     periodicMs,
-                    async != null && async
+                    async != null && async,
+                    onContextChange != null && onContextChange
             );
         }
     }
@@ -237,6 +273,12 @@ public class BindingRulesService {
         }
     }
 
-    private record BindingTargetDto(String variableName, String field) {
+    private record BindingTargetDto(
+            String kind,
+            String variableName,
+            String field,
+            String path,
+            String eventName
+    ) {
     }
 }

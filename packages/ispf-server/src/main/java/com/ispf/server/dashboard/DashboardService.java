@@ -2,6 +2,7 @@ package com.ispf.server.dashboard;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import com.ispf.core.dashboard.DashboardContextConstants;
 import com.ispf.core.object.PlatformObject;
 import com.ispf.core.object.ObjectType;
 import com.ispf.core.object.Variable;
@@ -13,6 +14,7 @@ import com.ispf.server.plugin.model.SystemObjectStructureService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +32,10 @@ public class DashboardService {
 
     private static final DataSchema REFRESH_SCHEMA = DataSchema.builder("refreshIntervalMs")
             .field("value", FieldType.INTEGER)
+            .build();
+
+    private static final DataSchema CONTEXT_SCHEMA = DataSchema.builder("dashboardContext")
+            .field("value", FieldType.STRING)
             .build();
 
     private final ObjectManager objectManager;
@@ -53,6 +59,58 @@ public class DashboardService {
             throw new IllegalArgumentException("Not a dashboard object: " + path);
         }
         structureService.ensureDashboardStructure(path);
+        ensureDashboardContextVariable(path);
+    }
+
+    @Transactional
+    public void ensureDashboardContextVariable(String path) {
+        PlatformObject node = objectManager.require(path);
+        if (node.getVariable(DashboardContextConstants.VARIABLE).isPresent()) {
+            return;
+        }
+        objectManager.upsertSystemVariable(
+                path,
+                DashboardContextConstants.VARIABLE,
+                CONTEXT_SCHEMA,
+                DataRecord.single(CONTEXT_SCHEMA, Map.of("value", DashboardContextSupport.EMPTY_JSON))
+        );
+    }
+
+    public DashboardContextView getContext(String path) {
+        ensureDashboardStructure(path);
+        PlatformObject node = objectManager.require(path);
+        String json = readContextJson(node);
+        Map<String, Object> context = DashboardContextSupport.parseContextJson(json, objectMapper);
+        return new DashboardContextView(path, context, json);
+    }
+
+    @Transactional
+    public DashboardContextView saveContext(String path, Map<String, Object> contextPatch, String updatedBy) {
+        ensureDashboardStructure(path);
+        PlatformObject node = objectManager.require(path);
+        if (node.type() != ObjectType.DASHBOARD) {
+            throw new IllegalArgumentException("Not a dashboard object: " + path);
+        }
+        String currentJson = readContextJson(node);
+        Map<String, Object> merged = DashboardContextSupport.parseContextJson(currentJson, objectMapper);
+        if (contextPatch != null) {
+            mergeContextPatch(merged, contextPatch);
+        }
+        if (updatedBy != null && !updatedBy.isBlank()) {
+            merged.put("updatedBy", updatedBy);
+        }
+        merged.put("updatedAt", java.time.Instant.now().toString());
+        String nextJson = DashboardContextSupport.toJson(merged, objectMapper);
+        objectManager.upsertSystemVariable(
+                path,
+                DashboardContextConstants.VARIABLE,
+                CONTEXT_SCHEMA,
+                DataRecord.single(CONTEXT_SCHEMA, Map.of("value", nextJson))
+        );
+        PlatformObject updated = objectManager.require(path);
+        String finalJson = readContextJson(updated);
+        Map<String, Object> finalContext = DashboardContextSupport.parseContextJson(finalJson, objectMapper);
+        return new DashboardContextView(path, finalContext, finalJson);
     }
 
     public DashboardView getDashboard(String path) {
@@ -209,5 +267,46 @@ public class DashboardService {
             Object layout,
             String layoutJson
     ) {
+    }
+
+    public record DashboardContextView(
+            String path,
+            Map<String, Object> context,
+            String contextJson
+    ) {
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void mergeContextPatch(Map<String, Object> target, Map<String, Object> patch) {
+        if (patch.containsKey("selection") && patch.get("selection") instanceof Map<?, ?> selection) {
+            Map<String, Object> current = (Map<String, Object>) target.computeIfAbsent(
+                    "selection",
+                    ignored -> new LinkedHashMap<>()
+            );
+            current.putAll((Map<String, Object>) selection);
+        }
+        if (patch.containsKey("params") && patch.get("params") instanceof Map<?, ?> params) {
+            Map<String, Object> current = (Map<String, Object>) target.computeIfAbsent(
+                    "params",
+                    ignored -> new LinkedHashMap<>()
+            );
+            current.putAll((Map<String, Object>) params);
+        }
+        if (patch.containsKey("widgets") && patch.get("widgets") instanceof Map<?, ?> widgets) {
+            Map<String, Object> current = (Map<String, Object>) target.computeIfAbsent(
+                    "widgets",
+                    ignored -> new LinkedHashMap<>()
+            );
+            current.putAll((Map<String, Object>) widgets);
+        }
+    }
+
+    private static String readContextJson(PlatformObject node) {
+        return node.getVariable(DashboardContextConstants.VARIABLE)
+                .flatMap(Variable::value)
+                .map(record -> record.firstRow().get("value"))
+                .map(Object::toString)
+                .filter(value -> !value.isBlank())
+                .orElse(DashboardContextSupport.EMPTY_JSON);
     }
 }

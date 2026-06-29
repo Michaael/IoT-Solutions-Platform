@@ -15,6 +15,7 @@ import com.ispf.plugin.model.ModelType;
 import com.ispf.plugin.model.ModelVariableDefinition;
 import com.ispf.plugin.model.SystemIntrinsicModels;
 import com.ispf.server.dashboard.DashboardLayouts;
+import com.ispf.server.dashboard.DashboardContextSupport;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -372,6 +373,14 @@ public class ModelBootstrap {
                                 STRING_VALUE_SCHEMA,
                                 true,
                                 true, DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", DashboardLayouts.EMPTY_DASHBOARD))
+                        ),
+                        ModelVariableDefinition.of(
+                                com.ispf.core.dashboard.DashboardContextConstants.VARIABLE,
+                                "Operator session context (selection, params, widgets)",
+                                "runtime",
+                                STRING_VALUE_SCHEMA,
+                                true,
+                                false, DataRecord.single(STRING_VALUE_SCHEMA, Map.of("value", DashboardContextSupport.EMPTY_JSON))
                         )
                 ),
                 List.of(),
