@@ -42,3 +42,6 @@ deploy/verify-if-mib-followup.py
 deploy/verify-restore-dashboard.py
 deploy/web-console.tar.gz
 deploy/web-console.zip
+
+# убираем локальные настройки курсора из проекта
+.cursor/

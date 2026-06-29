@@ -43,7 +43,9 @@ import AgentChatStatusBar from "./components/AgentChatStatusBar";
 import LoginView from "./components/LoginView";
 import PlatformUpdateBanner from "./components/PlatformUpdateBanner";
 import LocaleSwitcher from "./components/LocaleSwitcher";
+import ThemeSwitcher from "./components/ThemeSwitcher";
 import { AgentChatProvider, useAgentChatOptional } from "./context/AgentChatContext";
+import { ThemeProvider, useThemeController } from "./theme";
 import { isModelsPath } from "./types/models";
 import { isOperatorAppChildPath } from "./utils/operatorAppsPath";
 import { APPLICATIONS_ROOT } from "./utils/createObjectMode";
@@ -105,7 +107,7 @@ function useAppMode(session: AuthSession | null): ["admin" | "operator", (mode: 
   return [mode, setMode];
 }
 
-export default function App() {
+function AppShell() {
   const { t } = useTranslation(["shell", "common", "explorer"]);
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession());
   const [authBootstrapping, setAuthBootstrapping] = useState(
@@ -561,6 +563,7 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-actions">
+          <ThemeSwitcher />
           <LocaleSwitcher />
           <button type="button" className="btn" onClick={() => void handleLogout()}>
             {t("common:action.logout")}
@@ -838,5 +841,14 @@ export default function App() {
       )}
     </div>
     </AgentChatProvider>
+  );
+}
+
+export default function App() {
+  const theme = useThemeController();
+  return (
+    <ThemeProvider value={theme}>
+      <AppShell />
+    </ThemeProvider>
   );
 }

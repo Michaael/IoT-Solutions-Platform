@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { java } from "@codemirror/lang-java";
-import { vscodeDark } from "@uiw/codemirror-theme-vscode";
+import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import { EditorView } from "@codemirror/view";
+import { useTheme } from "../../theme";
 
 interface JavaFunctionEditorProps {
   value: string;
@@ -15,6 +16,7 @@ export default function JavaFunctionEditor({
   onChange,
   readOnly = false,
 }: JavaFunctionEditorProps) {
+  const { resolvedTheme } = useTheme();
   const extensions = useMemo(
     () => [java(), EditorView.lineWrapping],
     []
@@ -25,7 +27,7 @@ export default function JavaFunctionEditor({
       <CodeMirror
         value={value}
         height="420px"
-        theme={vscodeDark}
+        theme={resolvedTheme === "dark" ? vscodeDark : vscodeLight}
         extensions={extensions}
         onChange={onChange}
         readOnly={readOnly}
