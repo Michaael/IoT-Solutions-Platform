@@ -44,7 +44,8 @@ public class VmwareDeviceDriver implements DeviceDriver {
                     "username", "administrator@vsphere.local",
                     "password", "",
                     "timeoutMs", "10000",
-                    "pollIntervalMs", "60000"
+                    "pollIntervalMs", "60000",
+                    "useHttp", "false"
             )
     );
 
@@ -53,6 +54,7 @@ public class VmwareDeviceDriver implements DeviceDriver {
     private String username = "administrator@vsphere.local";
     private String password = "";
     private long timeoutMs = 10000;
+    private boolean useHttp;
     private HttpClient client;
     private int lastStatusCode = -1;
     private volatile boolean lastConnectOk;
@@ -80,6 +82,7 @@ public class VmwareDeviceDriver implements DeviceDriver {
             case "username" -> username = value;
             case "password" -> password = value;
             case "timeoutMs" -> timeoutMs = Long.parseLong(value.trim());
+            case "useHttp" -> useHttp = Boolean.parseBoolean(value.trim());
             default -> { }
         }
     }
@@ -128,7 +131,8 @@ public class VmwareDeviceDriver implements DeviceDriver {
 
     private void retrieveServiceContent() throws DriverException {
         try {
-            String endpoint = "https://" + host + "/sdk";
+            String scheme = useHttp ? "http" : "https";
+            String endpoint = scheme + "://" + host + "/sdk";
             String envelope = """
                     <?xml version="1.0" encoding="UTF-8"?>
                     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"

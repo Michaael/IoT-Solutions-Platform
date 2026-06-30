@@ -66,7 +66,7 @@
 | **BL-23** | Write path: **BACnet**, **IEC 104** | P2 | Done | Driver |
 | **BL-24** | **DNP3**: полный Class 0/1/2/3 poll (сейчас connectivity check) | P2 | Done | Driver |
 | **BL-25** | **DLMS** write | P2 | Done | Driver |
-| **BL-26** | Stub promotion: Ethernet/IP, OPC DA, OPC Bridge, CORBA, VMware, SMI-S | P3 | Partial | Driver |
+| **BL-26** | Stub promotion: Ethernet/IP, OPC DA, OPC Bridge, CORBA, VMware, SMI-S | P3 | Done | Driver |
 | **BL-27** | `DriverMaturityRegistry` ↔ реальные capabilities (auto или manual matrix) | P2 | Done | Driver catalog |
 | **BL-28** | Device driver panel: write/command UI поверх runtime API | P2 | Done | Driver UI |
 | **BL-29** | CWMP `SetParameterValues` write | P3 | Done | Driver |
@@ -661,7 +661,7 @@ Backlog P2/P3 — time & timezones ([ADR-0020](decisions/0020-time-and-timezones
 
 | Дата | Изменение |
 | ---- | --------- |
-| 2026-06-30 | BL-60 Done: `brick-metadata-v1` + `GET /platform/brick/export` (JSON-LD/Turtle) |
+| 2026-06-30 | BL-26 Done: loopback tests for ethernet-ip/opc-da/opc-bridge/corba/vmware/smi-s; registry → BETA |
 | 2026-06-30 | BL-30 Done: `BacnetDeviceDriverNetworkTest`, `BacnetPointTest`; loopback subnet for 127.0.0.1 |
 | 2026-06-30 | BL-57 Done: `HaystackMetadataPanel` inspector tab + marker multiselect |
 | 2026-06-30 | BL-56/58 Done: ADR-0021 + `haystack-metadata-v1` demo + `GET /platform/haystack/export`; BL-57 Partial (inspector tag editor) |

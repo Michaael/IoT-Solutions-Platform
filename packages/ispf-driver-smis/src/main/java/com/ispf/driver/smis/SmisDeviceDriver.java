@@ -39,7 +39,8 @@ public class SmisDeviceDriver implements DeviceDriver {
                     "password", "",
                     "namespace", "root/pg",
                     "timeoutMs", "10000",
-                    "pollIntervalMs", "60000"
+                    "pollIntervalMs", "60000",
+                    "useHttp", "false"
             )
     );
 
@@ -50,6 +51,7 @@ public class SmisDeviceDriver implements DeviceDriver {
     private String password = "";
     private String namespace = "root/pg";
     private long timeoutMs = 10000;
+    private boolean useHttp;
     private HttpClient client;
     private int lastStatusCode = -1;
     private volatile boolean profilesEnumerated;
@@ -79,6 +81,7 @@ public class SmisDeviceDriver implements DeviceDriver {
             case "password" -> password = value;
             case "namespace" -> namespace = value.trim();
             case "timeoutMs" -> timeoutMs = Long.parseLong(value.trim());
+            case "useHttp" -> useHttp = Boolean.parseBoolean(value.trim());
             default -> { }
         }
     }
@@ -128,7 +131,8 @@ public class SmisDeviceDriver implements DeviceDriver {
 
     private void enumerateProfiles() throws DriverException {
         try {
-            String endpoint = "https://" + host + ":" + port + "/cimom";
+            String scheme = useHttp ? "http" : "https";
+            String endpoint = scheme + "://" + host + ":" + port + "/cimom";
             String envelope = """
                     <?xml version="1.0" encoding="UTF-8"?>
                     <CIM CIMVERSION="2.0" DTDVERSION="2.0">

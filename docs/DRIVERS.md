@@ -360,12 +360,14 @@ Loopback test: `CoapDeviceDriverTest` (in-process Californium CoAP server).
 
 | `driverId` | Maturity | Заметка |
 |------------|----------|---------|
-| `corba` | STUB/BETA | CORBA IIOP TCP shell |
-| `ethernet-ip` | STUB/BETA | EtherNet/IP session stub |
-| `opc-da` | STUB/BETA | OPC DA (DCOM/native) |
-| `opc-bridge` | STUB/BETA | OPC/LON bridge TCP |
-| `vmware` | STUB/BETA | vSphere SOAP stub |
-| `smi-s` | STUB/BETA | SMI-S CIM-XML stub |
+| `corba` | BETA | CORBA IIOP TCP shell |
+| `ethernet-ip` | BETA | EtherNet/IP session stub |
+| `opc-da` | BETA | OPC DA (DCOM/native) |
+| `opc-bridge` | BETA | OPC/LON bridge TCP |
+| `vmware` | BETA | vSphere SOAP stub |
+| `smi-s` | BETA | SMI-S CIM-XML stub |
+
+Loopback tests (BL-26): `EthernetIpDeviceDriverTest`, `OpcDaDeviceDriverTest`, `OpcBridgeDeviceDriverTest`, `CorbaDeviceDriverTest`, `VmwareDeviceDriverTest` (`useHttp`), `SmisDeviceDriverTest` (`useHttp`).
 
 Отдельный хвост: native STUB promotion — см. § Stub promotion ниже.
 
