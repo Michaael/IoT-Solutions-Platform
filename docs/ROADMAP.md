@@ -247,12 +247,12 @@ Track: **UI** (не REQ-PF — не меняет platform API). См. [0013](dec
 | 20.18 | Notifications, federation polish, backup/restore, MCP admin | BL-44…48 | P3 | Done (BL-44…48) |
 | 20.19 | Playwright e2e (см. также Phase 18.1) | BL-50 | P1 | Partial |
 | 20.20 | Operator manifest screens + spreadsheet history binding | BL-51…54 | P3 | Done |
-| 20.21 | Frontend component tests (widgets, inspector) | BL-55 | P2 | Partial |
+| 20.21 | Frontend component tests (widgets, inspector) | BL-55 | P2 | Done |
 | 20.22 | Haystack/Brick semantic layer (ADR, tags mixin, export) | BL-56…62 | P3 | Deferred |
 
 **Partial — расшифровка:** 20.15 — **BL-28 Done** (write UI), BL-27/30 Planned; 20.16 — settings UI Done, backend write/query Planned; 20.17 — **BL-41,42 Done**, BL-43 Planned; 20.19 = Phase 18.1 smoke baseline; 20.20 — **BL-53 Done**, BL-51/52/54 Planned.
 
-**Следующие приоритеты:** BL-30 (BACnet loopback / driver QA tail), BL-55 optional widget RTL tail.
+**Следующие приоритеты:** BL-30 (driver loopback tail), BL-50 staging e2e (optional).
 
 **Спринты:** см. [CODE_AUDIT_BACKLOG.md § Sprint planning](CODE_AUDIT_BACKLOG.md#sprint-planning-рекомендация).
 

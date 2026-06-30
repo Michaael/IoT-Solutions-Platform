@@ -95,7 +95,7 @@
 | **BL-52** | Operator shell: responsive / mobile layout breakpoints | P3 | Done | Operator |
 | **BL-53** | Spreadsheet: расширение Excel function set + warning UX при import | P2 | Done | Spreadsheet |
 | **BL-54** | Spreadsheet: binding ячеек к variable history | P3 | Done | Spreadsheet |
-| **BL-55** | Frontend vitest: binding activators, journal export, chart/gantt utils; RTL dashboard widgets + inspector | P2 | Partial | QA |
+| **BL-55** | Frontend vitest: binding activators, journal export, chart/gantt utils; RTL dashboard widgets + inspector | P2 | Done | QA |
 
 ### Wave G — Semantic interoperability (Haystack / Brick)
 
@@ -520,23 +520,20 @@ Brick Schema         — optional formal graph export (P3, по заказчик
 
 ### BL-55 — Frontend vitest (utils + widget logic)
 
-**Сделано (Partial):**
+**Статус (2026-06-30):** Done — acceptance выполнен (inspector panels + widget editors + smoke RTL widget views).
+
+**Сделано:**
 
 - [x] `bindingActivatorsUtils.test.ts` — event select/remote path/summary (17 tests)
 - [x] `journalExport.test.ts` — CSV mappers, row union, `downloadJournalExport` (node stubs)
 - [x] `chartOhlcUtils.test.ts` — live/bucket OHLC + stats (7 tests)
 - [x] `ganttChartView.test.ts` — viewport, bar layout, ticks, row patch (12 tests)
-- [x] `npm test` — 42 files, 217 tests green
-
-**Остаётся для полного закрытия BL-55:**
-
 - [x] RTL: `BindingActivatorsEditor`, `PlatformBindingComposer`
 - [x] RTL: `PlatformLicenseCard`, `CreateVariableDialog`
-- [x] RTL: `LabelWidgetView`, `ValueWidgetView`, `WidgetEditorPanel`, `ProgressWidgetView`
-- [ ] RTL/component tests: remaining dashboard widget views (optional tail)
-- [ ] Playwright overlap — см. BL-50 (Done)
+- [x] RTL: `LabelWidgetView`, `ValueWidgetView`, `WidgetEditorPanel`, `ProgressWidgetView`, `GaugeWidgetView`, `TimerWidgetView`
+- [x] `renderWithDashboard` / `renderWithInspector` test helpers
 
-**Acceptance (полное закрытие):** smoke RTL на ключевые inspector panels + 2–3 widget editors без регрессий в CI.
+**Acceptance:** smoke RTL на ключевые inspector panels + widget editors — выполнен.
 
 ---
 
@@ -657,7 +654,7 @@ Backlog P2/P3 — time & timezones ([ADR-0020](decisions/0020-time-and-timezones
 
 | Дата | Изменение |
 | ---- | --------- |
-| 2026-06-30 | BL-30: BACnet `bindAddress`/`bindPort`, loopback simulator + connect smoke; BL-55: `ProgressWidgetView` RTL |
+| 2026-06-30 | BL-55 Done: RTL `GaugeWidgetView`, `TimerWidgetView`; inspector + dashboard widget smoke complete |
 | 2026-06-30 | BL-55: RTL `LabelWidgetView`, `ValueWidgetView`, `WidgetEditorPanel`; BL-30: `HttpDeviceDriverTest` loopback |
 | 2026-06-30 | BL-29 Done: CWMP `SetParameterValues` write + runtime API test; BL-55: RTL `PlatformLicenseCard`, `CreateVariableDialog` |
 | 2026-06-30 | Wave H: time & timezones → BL-66…71, [ADR-0020](decisions/0020-time-and-timezones.md), [ROADMAP Phase 21](ROADMAP.md#phase-21--time--timezones) |
