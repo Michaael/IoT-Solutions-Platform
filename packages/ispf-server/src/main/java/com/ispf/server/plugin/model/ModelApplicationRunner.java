@@ -6,6 +6,7 @@ import com.ispf.core.model.DataRecord;
 import com.ispf.core.model.DataSchema;
 import com.ispf.core.model.FieldType;
 import com.ispf.server.object.ObjectBindingStatePort;
+import com.ispf.server.object.BindingRulesService;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.core.object.ObjectType;
 import com.ispf.server.bootstrap.FixtureModelBootstrap;
@@ -40,6 +41,7 @@ public class ModelApplicationRunner {
     private final DeviceProvisioningService deviceProvisioningService;
     private final DashboardDemoRulesBootstrap dashboardDemoRulesBootstrap;
     private final ObjectBindingStatePort bindingStatePort;
+    private final BindingRulesService bindingRulesService;
 
     public ModelApplicationRunner(
             ModelEngine modelEngine,
@@ -50,7 +52,8 @@ public class ModelApplicationRunner {
             SystemObjectStructureService structureService,
             DeviceProvisioningService deviceProvisioningService,
             DashboardDemoRulesBootstrap dashboardDemoRulesBootstrap,
-            ObjectBindingStatePort bindingStatePort
+            ObjectBindingStatePort bindingStatePort,
+            BindingRulesService bindingRulesService
     ) {
         this.modelEngine = modelEngine;
         this.modelRegistry = modelRegistry;
@@ -61,6 +64,7 @@ public class ModelApplicationRunner {
         this.deviceProvisioningService = deviceProvisioningService;
         this.dashboardDemoRulesBootstrap = dashboardDemoRulesBootstrap;
         this.bindingStatePort = bindingStatePort;
+        this.bindingRulesService = bindingRulesService;
     }
 
     public void restoreAttachments() {
@@ -208,6 +212,10 @@ public class ModelApplicationRunner {
         if (device.getVariable("temperature").isEmpty()) {
             bindingStatePort.invalidateCache(devicePath);
             modelEngine.applyModel(model.id(), devicePath);
+            bindingRulesMerger.mergeModelRules(devicePath, model, Map.of(), false);
+            objectManager.persistNodeTree(devicePath);
+        } else if (bindingRulesService.listRules(devicePath).isEmpty()) {
+            bindingStatePort.invalidateCache(devicePath);
             bindingRulesMerger.mergeModelRules(devicePath, model, Map.of(), false);
             objectManager.persistNodeTree(devicePath);
         }

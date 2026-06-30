@@ -62,17 +62,15 @@ class BindingActivatorsRuntimeTest {
         ruleId = "rule-" + targetVariable;
         ensureDoubleVariable(targetVariable, 0.0);
 
-        bindingRulesService.saveRules(DEVICE, List.of(
-                new BindingRule(
-                        ruleId,
-                        targetVariable,
-                        true,
-                        0,
-                        new BindingActivators(false, List.of(), EVENT_NAME, 0),
-                        "",
-                        "42.0",
-                        new BindingTarget(targetVariable, "value")
-                )
+        bindingRulesService.upsertRule(DEVICE, new BindingRule(
+                ruleId,
+                targetVariable,
+                true,
+                0,
+                new BindingActivators(false, List.of(), EVENT_NAME, 0),
+                "",
+                "42.0",
+                new BindingTarget(targetVariable, "value")
         ));
         dependencyIndex.rebuild(DEVICE);
 
@@ -89,17 +87,15 @@ class BindingActivatorsRuntimeTest {
         ruleId = "rule-" + targetVariable;
         ensureDoubleVariable(targetVariable, 0.0);
 
-        bindingRulesService.saveRules(DEVICE, List.of(
-                new BindingRule(
-                        ruleId,
-                        targetVariable,
-                        true,
-                        0,
-                        new BindingActivators(false, List.of(), null, 100),
-                        "",
-                        "7.5",
-                        new BindingTarget(targetVariable, "value")
-                )
+        bindingRulesService.upsertRule(DEVICE, new BindingRule(
+                ruleId,
+                targetVariable,
+                true,
+                0,
+                new BindingActivators(false, List.of(), null, 100),
+                "",
+                "7.5",
+                new BindingTarget(targetVariable, "value")
         ));
         dependencyIndex.rebuild(DEVICE);
 
@@ -114,23 +110,20 @@ class BindingActivatorsRuntimeTest {
         ruleId = "rule-" + targetVariable;
         ensureDoubleVariable(targetVariable, 0.0);
 
-        List<BindingRule> saved = bindingRulesService.saveRules(DEVICE, List.of(
-                new BindingRule(
-                        ruleId,
-                        targetVariable,
-                        true,
-                        0,
-                        new BindingActivators(false, List.of(), "  " + EVENT_NAME + "  ", 0),
-                        "",
-                        "1.0",
-                        new BindingTarget(targetVariable, "value")
-                )
+        BindingRule saved = bindingRulesService.upsertRule(DEVICE, new BindingRule(
+                ruleId,
+                targetVariable,
+                true,
+                0,
+                new BindingActivators(false, List.of(), "  " + EVENT_NAME + "  ", 0),
+                "",
+                "1.0",
+                new BindingTarget(targetVariable, "value")
         ));
         dependencyIndex.rebuild(DEVICE);
 
-        assertThat(saved).hasSize(1);
-        assertThat(saved.getFirst().activators().onEvent()).isEqualTo(EVENT_NAME);
-        assertThat(saved.getFirst().activators().onVariableChange()).isEmpty();
+        assertThat(saved.activators().onEvent()).isEqualTo(EVENT_NAME);
+        assertThat(saved.activators().onVariableChange()).isEmpty();
     }
 
     private void ensureDoubleVariable(String name, double initial) {

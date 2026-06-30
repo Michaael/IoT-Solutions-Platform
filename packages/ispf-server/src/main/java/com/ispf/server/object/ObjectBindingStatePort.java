@@ -33,6 +33,7 @@ public class ObjectBindingStatePort implements BindingStatePort {
     private final ObjectManager objectManager;
     private final ObjectMapper objectMapper;
     private final ConcurrentHashMap<String, ObjectNode> cacheByObjectPath = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> locksByObjectPath = new ConcurrentHashMap<>();
 
     public ObjectBindingStatePort(ObjectManager objectManager, ObjectMapper objectMapper) {
         this.objectManager = objectManager;
@@ -50,11 +51,14 @@ public class ObjectBindingStatePort implements BindingStatePort {
 
     @Override
     public Double putDouble(String key, double value) {
-        ObjectNode entry = mutableEntryForKey(key);
-        Double previous = entry.has("double") ? entry.get("double").asDouble() : null;
-        entry.put("double", value);
-        persist(key);
-        return previous;
+        KeyParts parts = KeyParts.parse(key);
+        synchronized (lockFor(parts.objectPath())) {
+            ObjectNode entry = mutableEntryForKey(key);
+            Double previous = entry.has("double") ? entry.get("double").asDouble() : null;
+            entry.put("double", value);
+            persistUnlocked(parts.objectPath());
+            return previous;
+        }
     }
 
     @Override
@@ -68,8 +72,11 @@ public class ObjectBindingStatePort implements BindingStatePort {
 
     @Override
     public void putTimestampMs(String key, long timestampMs) {
-        mutableEntryForKey(key).put("tsMs", timestampMs);
-        persist(key);
+        KeyParts parts = KeyParts.parse(key);
+        synchronized (lockFor(parts.objectPath())) {
+            mutableEntryForKey(key).put("tsMs", timestampMs);
+            persistUnlocked(parts.objectPath());
+        }
     }
 
     @Override
@@ -83,8 +90,11 @@ public class ObjectBindingStatePort implements BindingStatePort {
 
     @Override
     public void putBoolean(String key, boolean value) {
-        mutableEntryForKey(key).put("bool", value);
-        persist(key);
+        KeyParts parts = KeyParts.parse(key);
+        synchronized (lockFor(parts.objectPath())) {
+            mutableEntryForKey(key).put("bool", value);
+            persistUnlocked(parts.objectPath());
+        }
     }
 
     @Override
@@ -95,36 +105,42 @@ public class ObjectBindingStatePort implements BindingStatePort {
             long windowMs,
             DoubleBinaryOperator aggregator
     ) {
-        ObjectNode entry = mutableEntryForKey(key);
-        ArrayNode samples = samplesArray(entry);
-        appendSample(samples, timestampMs, value, windowMs);
-        if (samples.isEmpty()) {
-            persist(key);
-            return Optional.empty();
+        KeyParts parts = KeyParts.parse(key);
+        synchronized (lockFor(parts.objectPath())) {
+            ObjectNode entry = mutableEntryForKey(key);
+            ArrayNode samples = samplesArray(entry);
+            appendSample(samples, timestampMs, value, windowMs);
+            if (samples.isEmpty()) {
+                persistUnlocked(parts.objectPath());
+                return Optional.empty();
+            }
+            double result = samples.get(0).get("v").asDouble();
+            for (int i = 1; i < samples.size(); i++) {
+                result = aggregator.applyAsDouble(result, samples.get(i).get("v").asDouble());
+            }
+            persistUnlocked(parts.objectPath());
+            return Optional.of(result);
         }
-        double result = samples.get(0).get("v").asDouble();
-        for (int i = 1; i < samples.size(); i++) {
-            result = aggregator.applyAsDouble(result, samples.get(i).get("v").asDouble());
-        }
-        persist(key);
-        return Optional.of(result);
     }
 
     @Override
     public Optional<Double> averageTimedWindow(String key, long timestampMs, double value, long windowMs) {
-        ObjectNode entry = mutableEntryForKey(key);
-        ArrayNode samples = samplesArray(entry);
-        appendSample(samples, timestampMs, value, windowMs);
-        if (samples.isEmpty()) {
-            persist(key);
-            return Optional.empty();
+        KeyParts parts = KeyParts.parse(key);
+        synchronized (lockFor(parts.objectPath())) {
+            ObjectNode entry = mutableEntryForKey(key);
+            ArrayNode samples = samplesArray(entry);
+            appendSample(samples, timestampMs, value, windowMs);
+            if (samples.isEmpty()) {
+                persistUnlocked(parts.objectPath());
+                return Optional.empty();
+            }
+            double sum = 0;
+            for (JsonNode sample : samples) {
+                sum += sample.get("v").asDouble();
+            }
+            persistUnlocked(parts.objectPath());
+            return Optional.of(sum / samples.size());
         }
-        double sum = 0;
-        for (JsonNode sample : samples) {
-            sum += sample.get("v").asDouble();
-        }
-        persist(key);
-        return Optional.of(sum / samples.size());
     }
 
     @Override
@@ -133,7 +149,13 @@ public class ObjectBindingStatePort implements BindingStatePort {
     }
 
     public void invalidateCache(String objectPath) {
-        cacheByObjectPath.remove(objectPath);
+        synchronized (lockFor(objectPath)) {
+            cacheByObjectPath.remove(objectPath);
+        }
+    }
+
+    private Object lockFor(String objectPath) {
+        return locksByObjectPath.computeIfAbsent(objectPath, ignored -> new Object());
     }
 
     private ObjectNode entryForKey(String key) {
@@ -185,27 +207,26 @@ public class ObjectBindingStatePort implements BindingStatePort {
         return objectMapper.createObjectNode();
     }
 
-    private void persist(String key) {
-        KeyParts parts = KeyParts.parse(key);
-        ObjectNode root = cacheByObjectPath.get(parts.objectPath());
+    private void persistUnlocked(String objectPath) {
+        ObjectNode root = cacheByObjectPath.get(objectPath);
         if (root == null) {
-            return;
-        }
-        if (objectManager.tree().findByPath(parts.objectPath()).isEmpty()) {
-            cacheByObjectPath.remove(parts.objectPath());
             return;
         }
         try {
             String json = objectMapper.writeValueAsString(root);
             DataRecord record = DataRecord.single(STRING_VALUE, Map.of("value", json));
             objectManager.upsertSystemVariable(
-                    parts.objectPath(),
+                    objectPath,
                     BindingStateVariables.BINDING_STATE,
                     STRING_VALUE,
                     record
             );
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to persist binding state for " + parts.objectPath(), ex);
+        } catch (RuntimeException ex) {
+            cacheByObjectPath.remove(objectPath);
+            if (objectManager.tree().findByPath(objectPath).isEmpty()) {
+                return;
+            }
+            throw new IllegalStateException("Failed to persist binding state for " + objectPath, ex);
         }
     }
 
