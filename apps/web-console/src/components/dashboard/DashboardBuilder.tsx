@@ -23,6 +23,7 @@ import DashboardModal from "./DashboardModal";
 import DashboardSettingsPanel from "./DashboardSettingsPanel";
 import DashboardRulesPanel from "./DashboardRulesPanel";
 import WidgetEditorPanel from "./WidgetEditorPanel";
+import HaystackBindDialog from "./HaystackBindDialog";
 import { nextWidgetZIndex } from "./widgetLayerUtils";
 import { useDashboardContextSync } from "../../hooks/useDashboardContextSync";
 import { getStoredSession } from "../../auth/session";
@@ -86,6 +87,7 @@ export default function DashboardBuilder({
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const [editorSidePanel, setEditorSidePanel] = useState<EditorSidePanel>("widget");
   const [showJson, setShowJson] = useState(false);
+  const [showHaystackBind, setShowHaystackBind] = useState(false);
   const [modalDashboard, setModalDashboard] = useState<ModalState | null>(null);
   const layoutRef = useRef<DashboardLayout>(resolveDashboardLayout(undefined));
   const selectedWidgetIdRef = useRef<string | null>(null);
@@ -403,6 +405,9 @@ export default function DashboardBuilder({
             </button>
             {mode === "edit" && (
               <>
+                <button type="button" className="btn" onClick={() => setShowHaystackBind(true)}>
+                  {t("haystackBind.open")}
+                </button>
                 <button
                   type="button"
                   className={`btn ${editorSidePanel === "settings" ? "primary" : ""}`}
@@ -558,6 +563,16 @@ export default function DashboardBuilder({
             });
           }}
           onClose={() => setModalDashboard(null)}
+        />
+      )}
+      {showHaystackBind && (
+        <HaystackBindDialog
+          layout={layout}
+          onApply={(nextLayout) => {
+            setDraftLayout(nextLayout);
+            setMode("edit");
+          }}
+          onClose={() => setShowHaystackBind(false)}
         />
       )}
     </div>

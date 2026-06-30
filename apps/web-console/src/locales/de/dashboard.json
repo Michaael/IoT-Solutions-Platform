@@ -53,5 +53,14 @@
   "settings.rowHeight": "Zeilenhöhe (px)",
   "settings.theme": "Design",
   "settings.themeDefault": "Standard",
-  "settings.title": "Dashboard-Einstellungen"
+  "settings.title": "Dashboard-Einstellungen",
+  "haystackBind.open": "Nach Haystack-Tags binden",
+  "haystackBind.title": "Widgets nach Haystack-Tags binden",
+  "haystackBind.intro": "Punkte im Teilbaum suchen, bei denen Geräte- und Punkt-Tags übereinstimmen (AND). Fügt Value-Widgets für jeden Treffer hinzu.",
+  "haystackBind.rootPath": "Suchwurzel",
+  "haystackBind.search": "Suchen",
+  "haystackBind.searching": "Suche…",
+  "haystackBind.error": "Haystack-Suche fehlgeschlagen.",
+  "haystackBind.results": "{{count}} Punkt(e) gefunden",
+  "haystackBind.addWidgets": "{{count}} Value-Widget(s) hinzufügen"
 }

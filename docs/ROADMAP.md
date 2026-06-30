@@ -252,7 +252,7 @@ Track: **UI** (не REQ-PF — не меняет platform API). См. [0013](dec
 
 **Partial — расшифровка:** 20.15 — **BL-28 Done** (write UI), BL-27/30 Planned; 20.16 — settings UI Done, backend write/query Planned; 20.17 — **BL-41,42 Done**, BL-43 Planned; 20.19 = Phase 18.1 smoke baseline; 20.20 — **BL-53 Done**, BL-51/52/54 Planned.
 
-**Следующие приоритеты:** BL-60+ Brick (demand-driven); BL-30 BACnet UDP tail.
+**Следующие приоритеты:** BL-60 Brick (demand-driven); BL-61 external Haystack driver; BL-30 BACnet UDP tail.
 
 **Спринты:** см. [CODE_AUDIT_BACKLOG.md § Sprint planning](CODE_AUDIT_BACKLOG.md#sprint-planning-рекомендация).
 

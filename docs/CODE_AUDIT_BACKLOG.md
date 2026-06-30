@@ -109,7 +109,7 @@
 | **BL-59** | Driver point mappings → нормализация Haystack tags (`point`, `sensor`, `unit`) | P3 | Done | Drivers |
 | **BL-60** | Brick Schema overlay: `brickClass`, RDF/Turtle export (demand-driven, BIM/digital twin) | P3 | Planned | Semantic |
 | **BL-61** | `ispf-driver-haystack`: poll external Haystack server (SkySpark/FIN) → variables | P3 | Planned | Driver |
-| **BL-62** | Auto-bind dashboard widgets по tag query (`equip` + `point` + `temp`) | P3 | Planned | Dashboard |
+| **BL-62** | Auto-bind dashboard widgets по tag query (`equip` + `point` + `temp`) | P3 | Done | Dashboard |
 
 ### Wave H — Time & timezones
 
@@ -511,8 +511,9 @@ Brick Schema         — optional formal graph export (P3, по заказчик
 
 **BL-62 — Semantic HMI**
 
-- [ ] Dashboard builder: «bind all points where tags match `equip and temp`»
-- [ ] AI agent tool: `search_by_haystack_tags`
+- [x] Dashboard builder: «bind all points where tags match `equip and temp`»
+- [x] AI agent tool: `search_by_haystack_tags`
+- [x] `GET /api/v1/platform/haystack/search?tags=...`
 
 **Acceptance (минимум для закрытия волны):** BL-56 ADR принят + BL-57 пример equip/point на demo device + BL-58 JSON export одного subtree.
 

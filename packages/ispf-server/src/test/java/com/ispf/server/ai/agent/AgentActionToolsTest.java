@@ -11,6 +11,7 @@ import com.ispf.server.event.EventService;
 import com.ispf.server.api.dto.DataRecordPayloadRequest;
 import com.ispf.server.function.FunctionService;
 import com.ispf.server.object.ObjectManager;
+import com.ispf.server.platform.HaystackExportService;
 import com.ispf.server.security.acl.ObjectAccessService;
 import com.ispf.server.tenant.TenantScopeService;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,8 @@ class AgentActionToolsTest {
     @Mock
     private ModelRegistry modelRegistry;
     @Mock
+    private HaystackExportService haystackExportService;
+    @Mock
     private com.ispf.core.object.ObjectTree objectTree;
 
     private List<PlatformAgentTool> tools;
@@ -65,6 +68,7 @@ class AgentActionToolsTest {
                 tenantScopeService,
                 eventService,
                 modelRegistry,
+                haystackExportService,
                 new ObjectMapper()
         );
     }
@@ -127,6 +131,42 @@ class AgentActionToolsTest {
         ), new AgentContext("admin", null, null));
 
         verify(objectAccessService).requireInvoke(eq("root.platform.devices.demo-sensor-01"), any());
+    }
+
+    @Test
+    void searchHaystackTagsFiltersByAcl() throws Exception {
+        when(haystackExportService.searchByTags(any(), any(), any(), any(Integer.class))).thenReturn(Map.of(
+                "tags", List.of("equip", "point", "temp"),
+                "entityKind", "point",
+                "rootPath", "root.platform",
+                "matches", List.of(
+                        Map.of(
+                                "entityKind", "point",
+                                "objectPath", "root.platform.devices.lab-userA-01",
+                                "variableName", "sineWave",
+                                "dis", "Sine wave"
+                        ),
+                        Map.of(
+                                "entityKind", "point",
+                                "objectPath", "root.platform.devices.hidden",
+                                "variableName", "temp"
+                        )
+                )
+        ));
+        when(tenantScopeService.isPathVisible(eq("root.platform.devices.lab-userA-01"), any())).thenReturn(true);
+        when(tenantScopeService.isPathVisible(eq("root.platform.devices.hidden"), any())).thenReturn(true);
+        when(objectAccessService.canRead(eq("root.platform.devices.lab-userA-01"), any())).thenReturn(true);
+        when(objectAccessService.canRead(eq("root.platform.devices.hidden"), any())).thenReturn(false);
+
+        PlatformAgentTool search = tool("search_by_haystack_tags");
+        Map<String, Object> result = search.execute(
+                Map.of("tags", List.of("equip", "point", "temp")),
+                new AgentContext("admin", null, null)
+        );
+
+        assertEquals("OK", result.get("status"));
+        assertEquals(1, result.get("count"));
+        assertTrue(result.toString().contains("sineWave"));
     }
 
     private PlatformAgentTool tool(String name) {

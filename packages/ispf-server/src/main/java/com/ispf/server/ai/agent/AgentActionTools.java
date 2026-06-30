@@ -12,6 +12,7 @@ import com.ispf.server.application.function.ApplicationFunctionStore;
 import com.ispf.server.event.EventService;
 import com.ispf.server.function.FunctionService;
 import com.ispf.server.object.ObjectManager;
+import com.ispf.server.platform.HaystackExportService;
 import com.ispf.server.security.acl.ObjectAccessService;
 import com.ispf.server.tenant.TenantScopeService;
 import tools.jackson.databind.ObjectMapper;
@@ -41,12 +42,14 @@ final class AgentActionTools {
             TenantScopeService tenantScopeService,
             EventService eventService,
             ModelRegistry modelRegistry,
+            HaystackExportService haystackExportService,
             ObjectMapper objectMapper
     ) {
         return List.of(
                 invokeBffTool(functionService, functionStore, objectAccessService, objectMapper),
                 invokeTreeFunctionTool(functionService, objectAccessService, objectMapper),
                 searchObjectsTool(objectManager, objectAccessService, tenantScopeService),
+                searchHaystackTagsTool(haystackExportService, objectAccessService, tenantScopeService),
                 listObjectModelsTool(modelRegistry),
                 fireEventTool(eventService, objectAccessService),
                 listEventsTool(eventService, objectAccessService)
@@ -206,6 +209,85 @@ final class AgentActionTools {
                 return Map.of("status", "OK", "query", query, "count", matches.size(), "objects", matches);
             }
         };
+    }
+
+    private static PlatformAgentTool searchHaystackTagsTool(
+            HaystackExportService haystackExportService,
+            ObjectAccessService objectAccessService,
+            TenantScopeService tenantScopeService
+    ) {
+        return new PlatformAgentTool() {
+            @Override
+            public String name() {
+                return "search_by_haystack_tags";
+            }
+
+            @Override
+            public String description() {
+                return "Search devices/points by Haystack marker tags (AND semantics). "
+                        + "Args: tags (required, array or comma-separated, e.g. equip,point,temp), "
+                        + "optional rootPath, entityKind (equip|point|all, default point), limit.";
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public Map<String, Object> execute(Map<String, Object> arguments, AgentContext context) {
+                List<String> tags = parseTagsArg(arguments.get("tags"));
+                if (tags.isEmpty()) {
+                    return Map.of("status", "ERROR", "error", "tags is required");
+                }
+                String rootPath = stringArg(arguments, "rootPath");
+                String entityKind = stringArg(arguments, "entityKind");
+                if (entityKind.isBlank()) {
+                    entityKind = "point";
+                }
+                int limit = intArg(arguments, "limit", SEARCH_DEFAULT_LIMIT);
+                Map<String, Object> raw = haystackExportService.searchByTags(rootPath, tags, entityKind, limit);
+                List<Map<String, Object>> rawMatches = (List<Map<String, Object>>) raw.getOrDefault("matches", List.of());
+                var auth = context.authentication();
+                List<Map<String, Object>> visible = new ArrayList<>();
+                for (Map<String, Object> match : rawMatches) {
+                    if (visible.size() >= SEARCH_MAX_LIMIT) {
+                        break;
+                    }
+                    String objectPath = String.valueOf(match.getOrDefault("objectPath", ""));
+                    if (objectPath.isBlank()) {
+                        continue;
+                    }
+                    if (!tenantScopeService.isPathVisible(objectPath, auth)) {
+                        continue;
+                    }
+                    if (!objectAccessService.canRead(objectPath, auth)) {
+                        continue;
+                    }
+                    visible.add(match);
+                }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("status", "OK");
+                result.put("tags", raw.get("tags"));
+                result.put("entityKind", raw.get("entityKind"));
+                result.put("rootPath", raw.get("rootPath"));
+                result.put("count", visible.size());
+                result.put("matches", visible);
+                return result;
+            }
+        };
+    }
+
+    private static List<String> parseTagsArg(Object raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        if (raw instanceof List<?> list) {
+            List<String> tags = new ArrayList<>();
+            for (Object item : list) {
+                if (item != null) {
+                    tags.add(item.toString());
+                }
+            }
+            return HaystackExportService.normalizeTagQuery(tags);
+        }
+        return HaystackExportService.normalizeTagQuery(List.of(raw.toString()));
     }
 
     private static PlatformAgentTool listObjectModelsTool(ModelRegistry modelRegistry) {

@@ -53,5 +53,14 @@
   "rules.templates.showWidget": "Show widget in detail",
   "rules.templates.hideWidget": "Hide widget when idle",
   "editor.deprecation.payloadFilterExpr": "Legacy mini-DSL. Prefer Platform rules (Rules tab) with CEL condition on event payload.",
-  "editor.deprecation.requireSessionParamsJson": "Legacy gate. Prefer Platform rules with CEL on context.params.* before showing or enabling actions."
+  "editor.deprecation.requireSessionParamsJson": "Legacy gate. Prefer Platform rules with CEL on context.params.* before showing or enabling actions.",
+  "haystackBind.open": "Bind by Haystack tags",
+  "haystackBind.title": "Bind widgets by Haystack tags",
+  "haystackBind.intro": "Search points under a subtree where device and point tags match (AND). Adds value widgets for each match.",
+  "haystackBind.rootPath": "Search root path",
+  "haystackBind.search": "Search",
+  "haystackBind.searching": "Searching…",
+  "haystackBind.error": "Haystack search failed.",
+  "haystackBind.results": "{{count}} point(s) matched",
+  "haystackBind.addWidgets": "Add {{count}} value widget(s)"
 }

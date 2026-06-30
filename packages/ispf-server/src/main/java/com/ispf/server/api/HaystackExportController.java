@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -17,6 +18,17 @@ public class HaystackExportController {
 
     public HaystackExportController(HaystackExportService haystackExportService) {
         this.haystackExportService = haystackExportService;
+    }
+
+    @GetMapping("/search")
+    public Map<String, Object> search(
+            Authentication authentication,
+            @RequestParam List<String> tags,
+            @RequestParam(required = false) String rootPath,
+            @RequestParam(defaultValue = "point") String entityKind,
+            @RequestParam(defaultValue = "50") int limit
+    ) {
+        return haystackExportService.searchByTags(rootPath, tags, entityKind, limit);
     }
 
     @GetMapping("/export")

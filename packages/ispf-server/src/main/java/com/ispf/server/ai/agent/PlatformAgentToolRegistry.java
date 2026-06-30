@@ -35,6 +35,7 @@ import com.ispf.server.object.BindingRulesService;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectTemplateService;
 import com.ispf.server.object.ObjectUiIconService;
+import com.ispf.server.platform.HaystackExportService;
 import com.ispf.server.report.ReportService;
 import com.ispf.server.security.PlatformRoleService;
 import com.ispf.server.security.PlatformUserService;
@@ -62,6 +63,7 @@ public class PlatformAgentToolRegistry {
             "list_objects",
             "get_object",
             "search_objects",
+            "search_by_haystack_tags",
             "list_variables",
             "describe_variables",
             "list_functions",
@@ -125,7 +127,8 @@ public class PlatformAgentToolRegistry {
             VariableHistoryService variableHistoryService,
             WorkQueueService workQueueService,
             OperatorAgentMemoryService operatorAgentMemoryService,
-            OperatorAppDocumentService operatorAppDocumentService
+            OperatorAppDocumentService operatorAppDocumentService,
+            HaystackExportService haystackExportService
     ) {
         this.objectMapper = objectMapper;
         List<PlatformAgentTool> tools = new ArrayList<>();
@@ -157,6 +160,7 @@ public class PlatformAgentToolRegistry {
                 tenantScopeService,
                 eventService,
                 modelRegistry,
+                haystackExportService,
                 objectMapper
         ));
         tools.addAll(AgentAutomationTools.all(

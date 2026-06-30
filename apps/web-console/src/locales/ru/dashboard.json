@@ -53,5 +53,14 @@
   "settings.rowHeight": "Высота строки (px)",
   "settings.theme": "Тема",
   "settings.themeDefault": "По умолчанию",
-  "settings.title": "Настройки дашборда"
+  "settings.title": "Настройки дашборда",
+  "haystackBind.open": "Привязка по Haystack-тегам",
+  "haystackBind.title": "Привязка виджетов по Haystack-тегам",
+  "haystackBind.intro": "Поиск точек в поддереве, где теги устройства и точки совпадают (AND). Добавляет value-виджеты для каждого совпадения.",
+  "haystackBind.rootPath": "Корень поиска",
+  "haystackBind.search": "Найти",
+  "haystackBind.searching": "Поиск…",
+  "haystackBind.error": "Ошибка поиска Haystack.",
+  "haystackBind.results": "Найдено точек: {{count}}",
+  "haystackBind.addWidgets": "Добавить {{count}} value-виджет(ов)"
 }

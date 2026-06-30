@@ -53,5 +53,14 @@
   "settings.rowHeight": "行高（px）",
   "settings.theme": "主题",
   "settings.themeDefault": "默认",
-  "settings.title": "仪表板设置"
+  "settings.title": "仪表板设置",
+  "haystackBind.open": "按 Haystack 标签绑定",
+  "haystackBind.title": "按 Haystack 标签绑定组件",
+  "haystackBind.intro": "在子树中搜索设备与点位标签均匹配（AND）的点位，并为每个匹配添加 value 组件。",
+  "haystackBind.rootPath": "搜索根路径",
+  "haystackBind.search": "搜索",
+  "haystackBind.searching": "搜索中…",
+  "haystackBind.error": "Haystack 搜索失败。",
+  "haystackBind.results": "匹配 {{count}} 个点位",
+  "haystackBind.addWidgets": "添加 {{count}} 个 value 组件"
 }
