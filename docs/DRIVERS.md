@@ -386,13 +386,13 @@ Loopback test: `Iec104DeviceDriverTest` против `iec104-server`.
 
 ### bacnet (`ispf-driver-bacnet`)
 
-BACnet/IP read/write property (`present-value`). Конфиг: `host`, `port` (47808), `localDeviceId`, `remoteDeviceId`, `timeoutMs`.
+BACnet/IP read/write property (`present-value`). Конфиг: `host`, `port` (47808), `localDeviceId`, `remoteDeviceId`, `timeoutMs`. Опционально: `bindAddress` (UDP bind, default `0.0.0.0`), `bindPort` (если отличается от `port` на том же хосте).
 
 Point mapping: `objectType:instance:property` (например `analog-output:1:present-value`).
 
 **Write:** `analog-output`/`analog-value` → `Real`; `binary-output`/`binary-value` → `BinaryPV`; `multi-state-output`/`multi-state-value` → `UnsignedInteger`. Read-only: `analog-input`, `binary-input`, `multi-state-input`.
 
-Maturity: **beta** (write без loopback integration test — нужен BACnet simulator).
+Maturity: **beta**. Тесты: guard-rails + `BacnetLoopbackServer` simulator + connect smoke (`BacnetDeviceDriverTest`); полный property exchange — на hardware/BACnet simulator.
 
 ### dnp3 (`ispf-driver-dnp3`)
 

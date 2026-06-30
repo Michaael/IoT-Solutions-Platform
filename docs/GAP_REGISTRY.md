@@ -78,7 +78,7 @@
 | Platform backup | Done | `GET /platform/backup/export`, `POST /platform/backup/import?dryRun=` + System UI | — |
 | Operator manifest | ~98% | spreadsheet history (BL-54) | BL-54 |
 | Spreadsheet widget | ~98% | — | BL-54 done |
-| Frontend component tests | ~70% | RTL remaining widget views (optional) | BL-55 Partial |
+| Frontend component tests | ~75% | RTL optional widget tail | BL-55 Partial |
 | Semantic interoperability | ~0% | Haystack tags, Brick export — deferred | BL-56…62, Phase 20.22 |
 | Time & timezones | ~100% | — | [0020](decisions/0020-time-and-timezones.md) |
 | Scale (load test) | ~100% | — | `ListDevicesLoadTest`, `ISPF_LOAD_P99_CEILING_MS` |
@@ -87,7 +87,7 @@
 
 | Дата | Изменение |
 |------|-----------|
-| 2026-06-30 | BL-55: RTL dashboard widgets + WidgetEditorPanel; BL-30: HTTP driver loopback test |
+| 2026-06-30 | BL-30: BACnet loopback simulator + connect smoke; BL-55: `ProgressWidgetView` RTL |
 | 2026-06-28 | BL-44…47 Done: notifications, federation catalog conflicts + dashboard write proxy, platform backup API/UI |
 | 2026-06-28 | BL-40 Done: ClickHouse variable history write/query; BL-50 e2e Variables + Dashboard builder |
 | 2026-06-28 | ROADMAP Phase 20 sync с CODE_AUDIT: BL-20…22/28/41/42 Done; Partial на 20.15–17,19–21; журналы 0.9.33 |

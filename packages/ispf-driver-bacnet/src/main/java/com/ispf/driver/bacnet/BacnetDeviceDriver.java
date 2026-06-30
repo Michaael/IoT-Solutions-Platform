@@ -8,10 +8,10 @@ import com.ispf.driver.DriverException;
 import com.ispf.driver.DriverMetadata;
 import com.serotonin.bacnet4j.LocalDevice;
 import com.serotonin.bacnet4j.RemoteDevice;
+import com.serotonin.bacnet4j.cache.RemoteEntityCachePolicy;
 import com.serotonin.bacnet4j.exception.BACnetException;
 import com.serotonin.bacnet4j.npdu.ip.IpNetwork;
 import com.serotonin.bacnet4j.npdu.ip.IpNetworkBuilder;
-import com.serotonin.bacnet4j.service.unconfirmed.WhoIsRequest;
 import com.serotonin.bacnet4j.transport.DefaultTransport;
 import com.serotonin.bacnet4j.type.Encodable;
 import com.serotonin.bacnet4j.type.constructed.Address;
@@ -61,10 +61,12 @@ public class BacnetDeviceDriver implements DeviceDriver {
     private LocalDevice localDevice;
     private RemoteDevice remoteDevice;
     private String host = "127.0.0.1";
+    private String bindAddress = "0.0.0.0";
     private int port = 47808;
     private int localDeviceId = 1234;
     private int remoteDeviceId = 1001;
     private int timeoutMs = 5000;
+    private int bindPort = -1;
     private final Map<String, BacnetPoint> points = new ConcurrentHashMap<>();
     private volatile boolean connected;
 
@@ -77,28 +79,39 @@ public class BacnetDeviceDriver implements DeviceDriver {
     public void initialize(DriverObject driverObject) {
         this.driverObject = driverObject;
         readConfig("host", value -> host = value);
+        readConfig("bindAddress", value -> bindAddress = value.trim());
         readConfig("port", value -> port = Integer.parseInt(value));
         readConfig("localDeviceId", value -> localDeviceId = Integer.parseInt(value));
         readConfig("remoteDeviceId", value -> remoteDeviceId = Integer.parseInt(value));
         readConfig("timeoutMs", value -> timeoutMs = Integer.parseInt(value));
+        readConfig("bindPort", value -> bindPort = Integer.parseInt(value));
     }
 
     @Override
     public void connect() throws DriverException {
         try {
+            int networkPort = bindPort >= 0 ? bindPort : port;
             IpNetwork network = new IpNetworkBuilder()
-                    .withLocalBindAddress("0.0.0.0")
-                    .withPort(port)
+                    .withLocalBindAddress(bindAddress)
+                    .withBroadcast("255.255.255.255", 24)
+                    .withPort(networkPort)
                     .withReuseAddress(true)
                     .build();
             localDevice = new LocalDevice(localDeviceId, new DefaultTransport(network));
             localDevice.initialize();
-            localDevice.updateRemoteDevice(remoteDeviceId, toIpAddress(host, port));
-            localDevice.sendGlobalBroadcast(new WhoIsRequest(
-                    new UnsignedInteger(remoteDeviceId),
-                    new UnsignedInteger(remoteDeviceId)
-            ));
-            remoteDevice = localDevice.getRemoteDeviceBlocking(remoteDeviceId, timeoutMs);
+            Address remoteAddress = toIpAddress(host, port);
+            remoteDevice = localDevice.getCachedRemoteDevice(remoteDeviceId);
+            if (remoteDevice != null) {
+                localDevice.updateRemoteDevice(remoteDeviceId, remoteAddress);
+                remoteDevice = localDevice.getCachedRemoteDevice(remoteDeviceId);
+            } else {
+                remoteDevice = new RemoteDevice(localDevice, remoteDeviceId, remoteAddress);
+                localDevice.getRemoteDeviceCache().putEntity(
+                        remoteDeviceId,
+                        remoteDevice,
+                        RemoteEntityCachePolicy.NEVER_EXPIRE
+                );
+            }
             connected = true;
             driverObject.log(
                     DriverLogLevel.INFO,

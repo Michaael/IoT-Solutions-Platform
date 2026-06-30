@@ -362,7 +362,7 @@ RUN_WORKFLOW, FIRE_EVENT, SET_VARIABLE, OPEN_OPERATOR_REPORT
 
 **Статус (2026-06-28):** BL-27 Done — `DriverMetadata.capabilities`, `DriverCapabilityRegistry`, merge в `DriverCatalog`; default maturity **beta** (whitelist PRODUCTION/STUB); UI gating `DriverWriteForm` по `capabilities.includes("write")`; `DriverCatalogConsistencyTest`.
 
-**Статус (2026-06-30):** BL-30 Partial — loopback tests для modbus/opcua/s7/iec104/dnp3/dlms/cwmp/http; BACnet guard-only (нет simulator).
+**Статус (2026-06-30):** BL-30 Partial — loopback tests для modbus/opcua/s7/iec104/dnp3/dlms/cwmp/http; BACnet — `BacnetLoopbackServer` + connect smoke (property exchange на hardware/simulator).
 
 **Статус (2026-06-28):** BL-24 Done — `io.stepfunc:dnp3` master TCP, Class 0/1/2/3 integrity poll; loopback `Dnp3DeviceDriverTest` + `Dnp3LoopbackOutstation`; config `localAddress`/`outstationAddress`; docs в DRIVERS.md.
 
@@ -532,7 +532,7 @@ Brick Schema         — optional formal graph export (P3, по заказчик
 
 - [x] RTL: `BindingActivatorsEditor`, `PlatformBindingComposer`
 - [x] RTL: `PlatformLicenseCard`, `CreateVariableDialog`
-- [x] RTL: `LabelWidgetView`, `ValueWidgetView`, `WidgetEditorPanel`
+- [x] RTL: `LabelWidgetView`, `ValueWidgetView`, `WidgetEditorPanel`, `ProgressWidgetView`
 - [ ] RTL/component tests: remaining dashboard widget views (optional tail)
 - [ ] Playwright overlap — см. BL-50 (Done)
 
@@ -657,6 +657,7 @@ Backlog P2/P3 — time & timezones ([ADR-0020](decisions/0020-time-and-timezones
 
 | Дата | Изменение |
 | ---- | --------- |
+| 2026-06-30 | BL-30: BACnet `bindAddress`/`bindPort`, loopback simulator + connect smoke; BL-55: `ProgressWidgetView` RTL |
 | 2026-06-30 | BL-55: RTL `LabelWidgetView`, `ValueWidgetView`, `WidgetEditorPanel`; BL-30: `HttpDeviceDriverTest` loopback |
 | 2026-06-30 | BL-29 Done: CWMP `SetParameterValues` write + runtime API test; BL-55: RTL `PlatformLicenseCard`, `CreateVariableDialog` |
 | 2026-06-30 | Wave H: time & timezones → BL-66…71, [ADR-0020](decisions/0020-time-and-timezones.md), [ROADMAP Phase 21](ROADMAP.md#phase-21--time--timezones) |
