@@ -362,7 +362,7 @@ RUN_WORKFLOW, FIRE_EVENT, SET_VARIABLE, OPEN_OPERATOR_REPORT
 
 **Статус (2026-06-28):** BL-27 Done — `DriverMetadata.capabilities`, `DriverCapabilityRegistry`, merge в `DriverCatalog`; default maturity **beta** (whitelist PRODUCTION/STUB); UI gating `DriverWriteForm` по `capabilities.includes("write")`; `DriverCatalogConsistencyTest`.
 
-**Статус (2026-06-30):** BL-30 Partial — loopback tests для modbus/opcua/s7/iec104/dnp3/dlms/cwmp/http; BACnet — `BacnetLoopbackServer` + connect smoke (property exchange на hardware/simulator).
+**Статус (2026-06-30):** BL-30 Partial — loopback tests для modbus/opcua/s7/iec104/dnp3/dlms/cwmp/http/coap; BACnet — `BacnetLoopbackServer` + connect smoke.
 
 **Статус (2026-06-28):** BL-24 Done — `io.stepfunc:dnp3` master TCP, Class 0/1/2/3 integrity poll; loopback `Dnp3DeviceDriverTest` + `Dnp3LoopbackOutstation`; config `localAddress`/`outstationAddress`; docs в DRIVERS.md.
 
@@ -449,9 +449,10 @@ RUN_WORKFLOW, FIRE_EVENT, SET_VARIABLE, OPEN_OPERATOR_REPORT
 - [x] Explorer: expand Devices, select device (`?path=` deep link)
 - [x] Dashboard layout API mock (label widget payload)
 - [x] Explorer: Variables tab after inspector load
+- [x] System → Metrics: Platform license card (mocked smoke)
 - [x] Dashboard builder UI render (double-click / Open in editor)
 - [x] Bindings tab: platform function catalog (BL-09 builder)
-- [x] Optional live smoke: `e2e/live.spec.ts` + workflow `.github/workflows/e2e-live.yml` (`E2E_BASE_URL` + secrets)
+- [x] Optional live smoke: `e2e/live.spec.ts` + workflow `.github/workflows/e2e-live.yml` (staging + System/license API)
 
 **Статус:** Done (mocked CI + optional live workflow; prod run needs `E2E_USERNAME` / `E2E_PASSWORD` secrets).
 
@@ -654,6 +655,7 @@ Backlog P2/P3 — time & timezones ([ADR-0020](decisions/0020-time-and-timezones
 
 | Дата | Изменение |
 | ---- | --------- |
+| 2026-06-30 | BL-30: `CoapDeviceDriverTest` loopback; BL-50: System/license Playwright mocked + live smoke |
 | 2026-06-30 | BL-55 Done: RTL `GaugeWidgetView`, `TimerWidgetView`; inspector + dashboard widget smoke complete |
 | 2026-06-30 | BL-55: RTL `LabelWidgetView`, `ValueWidgetView`, `WidgetEditorPanel`; BL-30: `HttpDeviceDriverTest` loopback |
 | 2026-06-30 | BL-29 Done: CWMP `SetParameterValues` write + runtime API test; BL-55: RTL `PlatformLicenseCard`, `CreateVariableDialog` |

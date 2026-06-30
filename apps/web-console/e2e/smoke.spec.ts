@@ -229,3 +229,19 @@ test.describe("operator deep link", () => {
   });
 });
 
+test.describe("system metrics", () => {
+  test("shows platform license card on System → Metrics", async ({ page }) => {
+    await mockAuthenticatedApi(page);
+    await seedAuthSession(page);
+    await page.goto("/?mode=admin");
+
+    await page.getByRole("button", { name: "System" }).click();
+    await expect(page.getByRole("heading", { name: "Platform license" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText("e2e-installation-id")).toBeVisible();
+    await expect(page.getByRole("cell", { name: "community", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Runtime" })).toBeVisible();
+  });
+});
+

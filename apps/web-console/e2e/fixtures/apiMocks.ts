@@ -178,6 +178,73 @@ export async function mockAuthenticatedApi(page: Page, session: MockAuthSession 
           springBootVersion: "3.4.0",
           capabilities: [],
         });
+      case "/api/v1/platform/metrics":
+        return json(route, {
+          timestamp: NOW,
+          sections: [
+            {
+              id: "runtime",
+              title: "Runtime",
+              values: { uptimeSeconds: 3600, heapUsedMb: 256 },
+            },
+          ],
+        });
+      case "/api/v1/platform/license":
+        return json(route, {
+          installationId: "e2e-installation-id",
+          enforce: false,
+          mode: "community",
+          tier: null,
+          expiresAt: null,
+          valid: true,
+          message: "AGPL community mode (e2e mock)",
+        });
+      case "/api/v1/platform/automation-index/stats":
+        return json(route, {
+          alertRulesIndexed: 0,
+          correlatorsIndexed: 0,
+          workflowTriggersIndexed: 0,
+          lastRebuildAt: null,
+        });
+      case "/api/v1/platform/redis/health":
+        return json(route, {
+          enabled: false,
+          connected: false,
+          host: null,
+          port: null,
+          correlatorWindowsEnabled: false,
+          correlatorWindowStore: "jdbc",
+          aclCacheBackend: "local",
+          objectAclTtlSeconds: 60,
+          contextPackTtlSeconds: 60,
+          platformBriefingTtlSeconds: 60,
+          correlatorWindowKeys: null,
+          connectionError: null,
+        });
+      case "/api/v1/platform/nats/health":
+        return json(route, {
+          enabled: false,
+          connected: false,
+          url: null,
+          jetStreamEnabled: false,
+          jetStreamReady: false,
+          streamMessages: null,
+          streamBytes: null,
+          consumerPending: null,
+          connectionError: null,
+        });
+      case "/api/v1/platform/reports/yarg/health":
+        return json(route, {
+          available: false,
+          libreOfficePath: null,
+          message: "e2e mock",
+        });
+      case "/api/v1/platform/mcp/health":
+        return json(route, {
+          enabled: false,
+          available: false,
+          message: "e2e mock",
+        });
       case "/api/v1/operator-apps":
         return json(route, []);
       case "/api/v1/objects/by-path/binding-rules": {

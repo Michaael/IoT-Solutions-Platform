@@ -26,8 +26,9 @@ npm run test:e2e:install
 | Bindings: platform function catalog | `binding expression builder` |
 | Dashboard layout API | `dashboard preview` |
 | Operator `?mode=operator&app=demo` | `operator deep link` |
+| System → Metrics + Platform license | `system metrics` |
 
-**In progress:** none — optional live workflow [`.github/workflows/e2e-live.yml`](../../../.github/workflows/e2e-live.yml) (`workflow_dispatch`, secrets `E2E_USERNAME` / `E2E_PASSWORD`).
+**In progress:** optional live workflow [`.github/workflows/e2e-live.yml`](../../../.github/workflows/e2e-live.yml) — staging default `https://ispf.iot-solutions.ru` (`workflow_dispatch`, secrets `E2E_USERNAME` / `E2E_PASSWORD`). Live suite includes System → Platform license smoke.
 
 ## Run mocked smoke tests (default)
 

@@ -29,7 +29,7 @@
 | **P1** | Inspector | RECORD inline editor | BL-03 Done |
 | **P2** | Dashboard | Chart bubble / radar | Done (BL-65) |
 | **P1** | i18n tails | widget types + binding hints в locale | BL-07 Done |
-| **P1** | Playwright e2e | Admin smoke + inspector/dashboard; staging TBD | BL-50 Partial, 18.1 |
+| **P1** | Playwright e2e | Admin smoke + System/license; live staging via workflow | BL-50 Done |
 | **P1** | Driver write | Modbus, S7, OPC UA | BL-20…22 Done |
 | **P2** | Driver write (tail) | CWMP write | BL-29 Done |
 | **P2** | Bindings UX | Каталог platform bindings + activators UI | BL-09,18 Done; runtime engine in progress |
@@ -62,7 +62,7 @@
 | Licensed driver packs | ~100% | — | FW-50, [LICENSED_DRIVER_PACKS.md](LICENSED_DRIVER_PACKS.md) |
 | Driver stub catalog | ~98% | native stubs | BL-26, [DRIVERS.md](DRIVERS.md) |
 | Driver maturity labels | ~98% | — | — |
-| Frontend e2e (Playwright) | ~60% | CI vs staging/prod URL | BL-50 Partial, Phase 18.1 |
+| Frontend e2e (Playwright) | ~85% | live staging run needs secrets | BL-50 Done (mocked CI + live workflow) |
 | Web Console i18n | ~98% | tails | BL-07 Done |
 | UI ↔ API parity | ~95% | — | BL-01…18 Done |
 | Dashboard widgets (advanced) | ~98% | — | BL-65 done |
@@ -87,7 +87,7 @@
 
 | Дата | Изменение |
 |------|-----------|
-| 2026-06-30 | BL-55 Done: Gauge/Timer RTL; frontend component test wave closed |
+| 2026-06-30 | BL-30: `CoapDeviceDriverTest` loopback; BL-50: System/license mocked + live smoke |
 | 2026-06-28 | BL-44…47 Done: notifications, federation catalog conflicts + dashboard write proxy, platform backup API/UI |
 | 2026-06-28 | BL-40 Done: ClickHouse variable history write/query; BL-50 e2e Variables + Dashboard builder |
 | 2026-06-28 | ROADMAP Phase 20 sync с CODE_AUDIT: BL-20…22/28/41/42 Done; Partial на 20.15–17,19–21; журналы 0.9.33 |

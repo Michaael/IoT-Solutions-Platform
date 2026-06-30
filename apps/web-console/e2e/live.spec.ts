@@ -53,4 +53,31 @@ test.describe("live backend", () => {
     expect(info.name).toContain("ISPF");
     expect(info.version).toMatch(/^\d+\.\d+\.\d+/);
   });
+
+  test("opens System metrics and reads platform license", async ({ page }) => {
+    await page.goto("/");
+
+    const localLogin = page.getByLabel("Username");
+    if (!(await localLogin.isVisible().catch(() => false))) {
+      test.skip(true, "Local login form not available (OIDC-only server)");
+    }
+
+    await localLogin.fill(username!);
+    await page.getByLabel("Password").fill(password!);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page.getByText("Admin console")).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole("button", { name: "System" }).click();
+    await expect(page.getByRole("heading", { name: "Platform license" })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const license = await page.evaluate(async () => {
+      const response = await fetch("/api/v1/platform/license");
+      return response.json() as Promise<{ installationId: string; valid: boolean; mode: string }>;
+    });
+    expect(license.installationId).toBeTruthy();
+    expect(typeof license.valid).toBe("boolean");
+    expect(license.mode).toBeTruthy();
+  });
 });
