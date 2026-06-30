@@ -147,6 +147,28 @@ export function fetchAiContextPack(): Promise<AiContextPackInfo> {
   });
 }
 
+export interface AiModelEntry {
+  id: string;
+  label?: string;
+  providerId?: string;
+}
+
+export interface AiModelsResponse {
+  models?: AiModelEntry[];
+  defaultModel?: string;
+}
+
+export function fetchAiModels(): Promise<AiModelsResponse> {
+  return fetch("/api/v1/ai/models", {
+    headers: getAuthHeaders(),
+  }).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(parseApiError(await response.text(), `Models list failed: ${response.status}`));
+    }
+    return response.json();
+  });
+}
+
 export function fetchAiProviderStatus(): Promise<AiProviderStatus> {
   return fetch("/api/v1/ai/provider", {
     headers: getAuthHeaders(),

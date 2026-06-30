@@ -12,10 +12,20 @@ import {
   updateBundleObjects,
 } from "../api/applications";
 import ApplicationBundlePanel from "./ApplicationBundlePanel";
+import ApplicationLifecyclePanel from "./ApplicationLifecyclePanel";
+import { ObjectPathField } from "../ui";
 
 interface ApplicationDeployPanelProps {
   appId: string;
   canManage: boolean;
+}
+
+function formatDeployedAt(value: string | undefined): string {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
 export default function ApplicationDeployPanel({ appId, canManage }: ApplicationDeployPanelProps) {
@@ -117,10 +127,10 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
 
   return (
     <div className="application-deploy-panel">
-      <ApplicationBundlePanel appId={appId} canManage={canManage} />
-      <hr />
       <h3>{t("deploy.title")}</h3>
       <p className="op-muted">{t("deploy.subtitle", { appId })}</p>
+
+      <ApplicationBundlePanel appId={appId} canManage={canManage} />
 
       {historyQuery.isLoading && <p className="op-muted">{t("deploy.loadingHistory")}</p>}
       {historyQuery.error && (
@@ -142,7 +152,7 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
                   v{entry.version}
                   {entry.active ? ` (${t("deploy.active")})` : ""}
                 </span>
-                <span className="op-muted">{entry.deployedAt}</span>
+                <span className="op-muted">{formatDeployedAt(entry.deployedAt)}</span>
                 {canManage && !entry.active && (
                   <button
                     type="button"
@@ -288,14 +298,11 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
       <h3>{t("deploy.functionVersionsTitle")}</h3>
       <p className="op-muted">{t("deploy.functionVersionsHint")}</p>
       <div className="form-grid">
-        <label>
-          objectPath
-          <input
-            value={fnObjectPath}
-            onChange={(e) => setFnObjectPath(e.target.value)}
-            placeholder="root.platform.devices..."
-          />
-        </label>
+        <ObjectPathField
+          label="objectPath"
+          value={fnObjectPath}
+          onChange={setFnObjectPath}
+        />
         <label>
           functionName
           <input
@@ -324,7 +331,9 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
                   v{entry.version}
                   {entry.active ? ` (${t("deploy.active")})` : ""}
                 </span>
-                {entry.deployedAt && <span className="op-muted">{entry.deployedAt}</span>}
+                {entry.deployedAt && (
+                  <span className="op-muted">{formatDeployedAt(entry.deployedAt)}</span>
+                )}
                 {canManage && !entry.active && (
                   <button
                     type="button"
@@ -352,6 +361,8 @@ export default function ApplicationDeployPanel({ appId, canManage }: Application
           {t("deploy.functionActiveVersion", { version: functionRollbackMutation.data?.version })}
         </div>
       )}
+
+      <ApplicationLifecyclePanel appId={appId} canManage={canManage} />
     </div>
   );
 }

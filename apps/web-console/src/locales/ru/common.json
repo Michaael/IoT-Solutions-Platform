@@ -81,5 +81,10 @@
   "table.enabled": "Включено",
   "table.id": "идентификатор",
   "table.name": "Имя",
-  "table.type": "Тип"
+  "table.type": "Тип",
+  "objectPath.placeholder": "root.platform...",
+  "objectPath.filterHint": "Показаны типы: {{types}}",
+  "objectPath.browseTree": "Выбор из дерева",
+  "modal.select": "Выбрать",
+  "modal.advancedSettings": "Расширенные настройки"
 }

@@ -38,6 +38,7 @@
   "invokeFunction.inputHint": "Пустой rows — платформа подставит inputSchema из descriptor.",
   "invokeFunction.invoke": "Вызвать",
   "invokeFunction.invoking": "Вызов…",
+  "invokeFunction.federatedHint": "Вызов передаётся на federation peer через proxy API.",
   "invokeFunction.result": "Результат",
   "invokeFunction.title": "Вызов функции"
 }

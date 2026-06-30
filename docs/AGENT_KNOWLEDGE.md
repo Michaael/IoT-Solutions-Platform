@@ -73,6 +73,28 @@
 **Playbooks в system prompt:** SNMP, virtual cluster, Modbus, MES, reports, widgets, SCADA mimic — см. `AgentPlaybooks.*`.
 
 **Не использовать:** `set_variable name=widgets` на dashboard; layout только в variable `layout`.
+**SCADA:** `save_mimic_diagram` / `add_mimic_elements` — не `set_variable name=diagram`.
+
+### Полный каталог agent tools (admin, ~85 tools)
+
+| Область | Tools |
+|---------|-------|
+| Discovery | `search_context`, `list_drivers`, `get_driver_help`, `list_examples`, `get_example_bundle`, `get_widget_catalog`, `list_applications` |
+| Object tree | `list_objects`, `get_object`, `create_object`, `delete_object`, `search_objects`, `search_by_haystack_tags`, `list_object_models` |
+| Variables | `list_variables`, `describe_variables`, `set_variable`, `create_variable`, `configure_variable_history` |
+| Drivers | `configure_driver`, `driver_control` |
+| Bindings | `create_binding_rule`, `list_binding_rules`, `configure_platform_context_rule` |
+| Dashboards | `get_dashboard_layout`, `set_dashboard_layout`, `add_dashboard_widget` |
+| SCADA | `list_mimic_symbols`, `save_mimic_diagram`, `add_mimic_elements`, `get_mimic_diagram` |
+| Reports | `list_reports`, `get_report_schema`, `run_report`, `configure_report` |
+| Automation | `configure_alert`, `configure_correlator`, `list_automation`, `get_automation_schema` |
+| Workflows | `get_workflow`, `save_workflow_bpmn`, `run_workflow`, `update_workflow_status`, `list_workflow_instances`, `signal_workflow_instance`, `cancel_workflow_instance` |
+| Applications | `register_application`, `application_data_*`, `deploy_app_binding`, `deploy_app_function`, `validate_bundle`, `dry_run_deploy`, `import_package`, `export_application_bundle`, `rollback_application_deploy`, `pull_application_from_tree` |
+| Functions/events | `list_functions`, `get_function`, `invoke_bff`, `invoke_tree_function`, `fire_event`, `list_events`, `list_event_catalog`, `get_event_schema` |
+| Tree functions | `get_function_template`, `deploy_tree_function` (script **or java**), `invoke_tree_function`; app BFF: `deploy_app_function` (script) |
+| Operator HMI | `configure_operator_ui` |
+| Platform | `list_platform_schedules`, `configure_platform_schedule`, `resolve_timezone`, `export_haystack` |
+| Reference | `get_automation_schema topic=platformMaster` — индекс всех областей |
 
 Документы: [DASHBOARDS.md](DASHBOARDS.md), [DRIVERS.md](DRIVERS.md), [BINDINGS.md](BINDINGS.md), [PLATFORM_LOGIC.md](PLATFORM_LOGIC.md), [AUTOMATION.md](AUTOMATION.md).
 
@@ -88,11 +110,67 @@
 | Устройство | Explorer → Devices → + Object, Inspector → Driver |
 | HMI | Dashboard Builder (Editor → widgets / Rules) |
 | Привязки / CEL | Inspector → Bindings |
-| BPMN | Workflow Builder |
+| BPMN | Workflow Builder (+ cancel/signal активного instance) |
 | Operator shell | `root.platform.operator-apps` → Operator Apps Panel |
-| Deploy app | `root.platform.applications` → + Deploy-приложение |
+| Deploy app (bundle) | `APPLICATION` → Inspector → **Deploy** → Bundle + history + rollback |
+| App lifecycle (REST D) | `APPLICATION` → Deploy → **Application lifecycle** (migrate/seed/status, bindings, reports, functions deploy) |
+| Platform schedules (DB) | **System → App schedules** (`GET/POST /api/v1/schedules`) |
+| Semantic export | **System → Semantic export** (Haystack JSON, Brick JSON-LD/Turtle) |
+| Federation bind | Inspector → Federation; peers → FederationPeersPanel |
+| Timezone (device) | Inspector DEVICE → resolved TZ badge (`GET /platform/timezone/resolve`) |
+| User timezone | Header → TimezoneSwitcher (`PATCH /auth/me/timezone`) |
 
 Документы: [WEB_CONSOLE.md](WEB_CONSOLE.md), [OPERATOR_GUIDE.md](OPERATOR_GUIDE.md).
+
+---
+
+## Web Console ↔ Platform API (prod **0.9.60**, июнь 2026)
+
+**Parity ~100%** для admin/operator сценариев. Детальный реестр: [GAP_REGISTRY.md](GAP_REGISTRY.md).
+
+### Application platform (`/api/v1/applications/{appId}/…`)
+
+| API | UI |
+|-----|-----|
+| `POST /applications` | CreateObjectDialog (+ APPLICATION) |
+| `POST …/deploy`, rollback, history | ApplicationBundlePanel, ApplicationDeployPanel |
+| `GET …/export`, validate, pull-from-tree | ApplicationBundlePanel |
+| `POST …/data/migrate`, `…/data/seed`, `GET …/data/status` | ApplicationLifecyclePanel |
+| `GET/POST …/bindings/*` | ApplicationLifecyclePanel |
+| `GET/POST …/reports/deploy`, run/export | ApplicationLifecyclePanel + operator manifest (legacy path) |
+| `POST …/functions/deploy`, versions, rollback | ApplicationLifecyclePanel + ApplicationDeployPanel |
+| `GET …/events` | ApplicationDeployPanel (event catalog) |
+| `GET …/operator-ui`, `…/hmi-ui` | useOperatorAppsRegistry (fallback) |
+
+### System admin
+
+| API | UI |
+|-----|-----|
+| `GET/POST /api/v1/schedules` | System → App schedules |
+| `GET …/platform/haystack/export`, `…/brick/export` | System → Semantic export |
+| `GET/POST …/platform/backup/*` | System → Metrics → Platform backup |
+| Change sets, runtime settings, journals | SystemView tabs |
+| `GET /ai/models`, `/ai/provider` | AI Studio → Settings |
+
+### Runtime / automation
+
+| API | UI |
+|-----|-----|
+| `POST /workflows/instances/{id}/cancel\|signal` | WorkflowBuilder → Instance panel |
+| `POST /federation/proxy/…/functions/invoke` | InvokeFunctionDialog (federated bind) |
+| Federated variable write | Inspector Save → `PUT /objects/…/variables` (server proxy) |
+| `POST /bff/invoke` | Operator manifest screens |
+| Haystack tag search | HaystackBindDialog (dashboard), HaystackMetadataPanel (device) |
+
+### Намеренно без admin UI (API / MCP / ops)
+
+| API | Кто использует |
+|-----|----------------|
+| `POST /api/v1/ai/mcp` | Внешние MCP-клиенты (Cursor, SDK) |
+| `GET /api/v1/platform/installation-id` | Диагностика / скрипты |
+| Пошаговый REST D без bundle | Агент, CI, curl — дублирует UI Application lifecycle |
+
+**Prod:** https://ispf.iot-solutions.ru — `0.9.60`, `ISPF_BOOTSTRAP_FIXTURES_ENABLED=false` (демо fixtures только после `vps-factory-reset.sh --fixtures`).
 
 ---
 
@@ -137,12 +215,17 @@
 ```text
 1. POST /applications          — register appId, schemaName, tablePrefix
 2. POST .../data/migrate       — SQL migrations
-3. POST .../functions/deploy   — script functions
-4. POST .../bindings/deploy    — SQL → variable sync
-5. POST .../reports/deploy     — reports
-6. POST .../deploy             — full bundle (или только недостающие секции)
-7. PUT  /operator-apps/{id}/ui — operator menu
+3. POST .../data/seed          — demo seed profiles
+4. GET  .../data/status        — applied migration version
+5. POST .../functions/deploy   — script functions
+6. POST .../bindings/deploy    — SQL → variable sync (+ refresh)
+7. POST .../reports/deploy      — reports
+8. POST .../deploy             — full bundle (или только недостающие секции)
+9. PUT  /operator-apps/{id}/ui — operator menu
+10. GET/POST /api/v1/schedules — platform_schedules (отдельно от tree SCHEDULE objects)
 ```
+
+**Web Console (0.9.62):** шаги 2–7 доступны в Inspector → APPLICATION → Deploy → **Application lifecycle**; агент: `register_application`, `application_data_migrate`, `deploy_app_binding`, `deploy_app_function`, …
 
 Документ: [APPLICATIONS.md](APPLICATIONS.md), [API.md](API.md).
 
@@ -334,6 +417,7 @@ URL: `?mode=operator&app={appId}&dashboard={path}`.
 | [0006](decisions/0006-mcp-agent-tool-adapter.md) | MCP |
 | [0010](decisions/0010-binding-rules-only.md) | Binding rules |
 | [0019](decisions/0019-platform-rule-unification.md) | Platform Rule / dashboard |
+| [0020](decisions/0020-time-and-timezones.md) | Time & timezones (UTC storage, user/device TZ) |
 | [decisions/README.md](decisions/README.md) | Полный список ADR |
 
 ### Platform evolution (для контекста, не для генерации)
@@ -361,8 +445,11 @@ URL: `?mode=operator&app={appId}&dashboard={path}`.
 | `platform-logic` | Context, visibility, CEL rules |
 | `bindings` | CEL, counterRate, refAt |
 | `drivers` | SNMP, Modbus, virtual, MQTT |
-| `workflows` | BPMN |
+| `workflows` | BPMN, instance cancel/signal |
 | `automation` | Alerts, correlators |
+| `semantic` | Haystack/Brick export, device metadata |
+| `timezones` | User TZ, device TZ resolve (ADR-0020) |
+| `web-console` | Admin UI, System tabs, Application lifecycle |
 | `object-model` | Tree types, variables |
 | `ai` | Agent tools, ContextPack |
 | `all` | Широкий поиск по docChunks |
@@ -396,12 +483,12 @@ URL: `?mode=operator&app={appId}&dashboard={path}`.
 
 ### «Создай / обнови мнемосхему» (SCADA)
 
-1. `search_context topic=scada` — diagramJson v2, bindings, REST API
-2. Если нужен эталон: bootstrap demo `tank-farm-demo` или `pipeline-scada` (fixtures)
-3. `create_object` type=MIMIC под `root.platform.mimics` → отредактировать diagramJson (UI или API)
-4. `list_variables` на устройствах → привязки symbol binding keys
-5. DASHBOARD + `add_dashboard_widget type=scada-mimic mimicPath=...`
-6. Re-export после правок TS-шаблонов: `exportTankFarmMimic.ts` / `exportPipelineScadaMimics.ts`
+1. `get_automation_schema topic=scada` или `list_mimic_symbols`
+2. `create_object` type=MIMIC под `root.platform.mimics`
+3. **`save_mimic_diagram`** с непустым `elements[]` (tank, valve, label, pipe…) — обязательно
+4. `get_mimic_diagram` — проверить `elementCount > 0`
+5. `list_variables` на устройствах → bindings в symbols
+6. DASHBOARD + `add_dashboard_widget type=scada-mimic mimicPath=...`
 7. **Анонимизация:** без реальных компаний, ФИО, гео-меток в демо
 
 ### «Не ломай platform» (см. [APPLICATION_PRINCIPLES.md](APPLICATION_PRINCIPLES.md) P2, P10)
@@ -421,4 +508,6 @@ URL: `?mode=operator&app={appId}&dashboard={path}`.
 
 ---
 
-*Обновлять при добавлении новых подходов (ADR, REQ-PF) и при расширении docChunks в `tools/ai-pack/build.py`.*
+*Обновлять при добавлении новых подходов (ADR, REQ-PF), расширении Web Console UI↔API и при пересборке docChunks (`python tools/ai-pack/build.py`).*
+
+**Последнее обновление знаний:** 2026-06-30 — UI↔API parity ~100% (Application lifecycle, platform schedules, semantic export, workflow instance control, federation proxy invoke, device TZ resolve); prod **0.9.60**.

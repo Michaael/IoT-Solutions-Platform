@@ -81,5 +81,10 @@
   "table.enabled": "Aktiviert",
   "table.id": "Ausweis",
   "table.name": "Name",
-  "table.type": "Typ"
+  "table.type": "Typ",
+  "objectPath.placeholder": "root.platform...",
+  "objectPath.filterHint": "Angezeigte Typen: {{types}}",
+  "objectPath.browseTree": "Baum durchsuchen",
+  "modal.select": "Auswählen",
+  "modal.advancedSettings": "Erweiterte Einstellungen"
 }

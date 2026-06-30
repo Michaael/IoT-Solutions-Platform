@@ -169,6 +169,18 @@ npm run i18n:translate   # regenerate ru/de/zh from en (tools/i18n/generate-loca
 | **Runtime settings** | `GET/PATCH /api/v1/platform/runtime-settings` |
 | **Events / Functions / Bindings** | Журналы invoke/audit |
 | **Change sets** | Platform change management |
+| **App schedules** | `GET/POST /api/v1/schedules` — JDBC `platform_schedules` (не путать с object-tree `SCHEDULE` → `ScheduleEditor`) |
+| **Semantic export** | Haystack JSON + Brick JSON-LD/Turtle (`GET /platform/haystack/export`, `GET /platform/brick/export`) |
+
+**Application deploy (Inspector → APPLICATION → Deploy):**
+
+| Панель | API |
+|--------|-----|
+| ApplicationBundlePanel | export, validate, deploy, pull-from-tree |
+| ApplicationDeployPanel | deploy history, rollback, event catalog, function versions, bundle-objects lifecycle |
+| ApplicationLifecyclePanel | `data/migrate`, `data/seed`, `data/status`, bindings deploy/refresh, reports deploy, functions deploy |
+
+**WorkflowBuilder:** cancel/signal активного BPMN instance (`POST /workflows/instances/{id}/cancel|signal`).
 
 **Platform backup** (`PlatformBackupPanel`, BL-47): export JSON поддерева `root.platform`; import с dry-run preview. API: `GET /api/v1/platform/backup/export`, `POST /api/v1/platform/backup/import?dryRun=true|false`. Federation proxy-узлы при import пропускаются.
 
@@ -177,7 +189,7 @@ npm run i18n:translate   # regenerate ru/de/zh from en (tools/i18n/generate-loca
 Вкладка **AI Studio** (admin): режимы **Агент** | **Пакет bundle** | **Настройки** (`.tabs`).
 
 - **Агент** — боковая панель чатов; состояние в `AgentChatProvider` (не размонтируется при переключении вкладок или разделов консоли)
-- **Настройки** — провайдер LLM, Context Pack, корневой путь сессий, список инструментов, очистка локального кэша чатов
+- **Настройки** — провайдер LLM, список моделей (`GET /ai/models`), Context Pack, корневой путь сессий, список инструментов, очистка локального кэша чатов
 - **Пакет bundle** — промпт, генерация/валидация/dry-run/publish, история deploy
 
 Фоновое выполнение: HTTP-запрос агента продолжается при переходе в Обозреватель; индикатор в шапке и точка на вкладке AI Studio. После закрытия окна незавершённый запрос восстанавливается из `localStorage` (poll сессии на сервере).

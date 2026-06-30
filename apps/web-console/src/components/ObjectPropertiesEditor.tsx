@@ -45,6 +45,7 @@ import FireEventDialog from "./runtime/FireEventDialog";
 import ObjectFederationBindSection from "./ObjectFederationBindSection";
 import DeviceDriverPanel from "./DeviceDriverPanel";
 import HaystackMetadataPanel from "./HaystackMetadataPanel";
+import ResolvedTimeZoneBadge from "./ResolvedTimeZoneBadge";
 import ApplicationDeployPanel from "./ApplicationDeployPanel";
 import TreeSubtreeExportPanel from "./TreeSubtreeExportPanel";
 import PackageImportPanel from "./PackageImportPanel";
@@ -594,6 +595,9 @@ export default function ObjectPropertiesEditor({
             {!embedded && headerDescription && (
               <p className="hint">{headerDescription}</p>
             )}
+            {(isDevicePreview || ctx.type === "DEVICE") && (
+              <ResolvedTimeZoneBadge objectPath={path} />
+            )}
           </div>
         </div>
         {isDirty && <span className="dirty-pill">{t("common:dirty.changed")}</span>}
@@ -610,13 +614,13 @@ export default function ObjectPropertiesEditor({
       {staleRemote && (
         <div className="banner warning">
           {t("objectEditor.staleRemote", { revision: remoteRevision })}
-          <button type="button" className="btn btn-sm" onClick={() => void reloadFromEditor()}>
+          <button type="button" className="btn small" onClick={() => void reloadFromEditor()}>
             {t("common:action.reload")}
           </button>
           {canManage && (
             <button
               type="button"
-              className="btn btn-sm"
+              className="btn small"
               onClick={() => {
                 setForceNextSave(true);
                 saveMutation.mutate();
@@ -632,18 +636,20 @@ export default function ObjectPropertiesEditor({
         <div className="banner error">{(saveMutation.error as Error).message}</div>
       )}
 
-      <nav className="tabs">
-        {tabs.map((tabId) => (
-          <button
-            key={tabId}
-            type="button"
-            className={tab === tabId ? "active" : ""}
-            onClick={() => setTab(tabId)}
-          >
-            {tabLabel(tabId)}
-          </button>
-        ))}
-      </nav>
+      <div className="tabs-scroll">
+        <nav className="tabs">
+          {tabs.map((tabId) => (
+            <button
+              key={tabId}
+              type="button"
+              className={tab === tabId ? "active" : ""}
+              onClick={() => setTab(tabId)}
+            >
+              {tabLabel(tabId)}
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {tab === "general" && (
         <section className="panel">
@@ -1081,6 +1087,9 @@ export default function ObjectPropertiesEditor({
         <InvokeFunctionDialog
           objectPath={path}
           fn={invokeFunctionTarget}
+          federated={ctx.federated}
+          federationPeerId={ctx.federationPeerId}
+          federationRemotePath={ctx.federationRemotePath}
           onClose={() => setInvokeFunctionTarget(null)}
           onInvoked={() => {
             void reloadFromEditor();

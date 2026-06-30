@@ -39,6 +39,8 @@ Or equivalent manual steps:
 6. SSH: `bash /opt/ispf/bin/apply-platform-update.sh /opt/ispf/staging/<ver>`
 7. Verify: `curl https://ispf.iot-solutions.ru/api/v1/info` → `"version":"<ver>"`
 
+**Prod policy:** `vps-deploy-direct.ps1` sets `ISPF_BOOTSTRAP_FIXTURES_ENABLED=false` on VPS (no demo fixtures). Lab demo: `deploy/vps-factory-reset.sh --fixtures`.
+
 **Host:** `root@ispf.iot-solutions.ru` (SSH key auth).
 
 ## GitHub releases

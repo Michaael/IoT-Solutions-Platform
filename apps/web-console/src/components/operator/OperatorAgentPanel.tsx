@@ -12,6 +12,7 @@ import {
 } from "../../api/operatorAgent";
 import { AgentRunDetails } from "../AiAgentChat";
 import OperatorAgentArtifactsView from "./OperatorAgentArtifacts";
+import { AgentStarterSuggestions } from "../agent/AgentChatArtifacts";
 
 interface ChatMessage {
   id: string;
@@ -195,37 +196,18 @@ export default function OperatorAgentPanel({
       )}
 
       <div className="operator-agent-drawer-log">
-        {messages.length === 0 && !isPending && (
-          <div className="operator-agent-suggestions">
-            <p className="op-muted">{t("agent.emptyHint")}</p>
-            <ul>
-              <li>
-                <button type="button" className="btn link" onClick={() => void sendMessage(t("agent.suggest.alarms"))}>
-                  {t("agent.suggest.alarms")}
-                </button>
-              </li>
-              <li>
-                <button type="button" className="btn link" onClick={() => void sendMessage(t("agent.suggest.trend"))}>
-                  {t("agent.suggest.trend")}
-                </button>
-              </li>
-              <li>
-                <button type="button" className="btn link" onClick={() => void sendMessage(t("agent.suggest.tasks"))}>
-                  {t("agent.suggest.tasks")}
-                </button>
-              </li>
-              <li>
-                <button type="button" className="btn link" onClick={() => void sendMessage(t("agent.suggest.report"))}>
-                  {t("agent.suggest.report")}
-                </button>
-              </li>
-              <li>
-                <button type="button" className="btn link" onClick={() => void sendMessage(t("agent.suggest.remember"))}>
-                  {t("agent.suggest.remember")}
-                </button>
-              </li>
-            </ul>
-          </div>
+        {!messages.some((m) => m.role === "user") && !isPending && (
+          <AgentStarterSuggestions
+            i18nNs="operator"
+            suggestionKeys={[
+              "agent.suggest.alarms",
+              "agent.suggest.trend",
+              "agent.suggest.tasks",
+              "agent.suggest.report",
+              "agent.suggest.remember",
+            ]}
+            onPick={(text) => void sendMessage(text)}
+          />
         )}
         {messages.map((message) => (
           <div

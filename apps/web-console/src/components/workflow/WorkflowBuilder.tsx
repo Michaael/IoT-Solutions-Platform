@@ -2,12 +2,15 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  cancelWorkflowInstance,
   fetchWorkflow,
   runWorkflow,
   saveWorkflowBpmn,
+  signalWorkflowInstance,
   updateWorkflowOperatorApp,
   updateWorkflowStatus,
 } from "../../api";
+import { fetchAuthMe } from "../../api";
 import { fetchOperatorApps } from "../../api/operatorApps";
 import type { WorkflowLifecycleStatus } from "../../types/workflow";
 import { parseInstanceState } from "../../types/workflow";
@@ -40,6 +43,8 @@ export default function WorkflowBuilder({
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [bpmnTab, setBpmnTab] = useState<BpmnTab>("diagram");
   const [draftBpmn, setDraftBpmn] = useState<string | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   const workflow = useQuery({
     queryKey: ["workflow", path],
@@ -84,6 +89,65 @@ export default function WorkflowBuilder({
     mutationFn: (operatorAppId: string) => updateWorkflowOperatorApp(path, operatorAppId),
     onSuccess: (data) => queryClient.setQueryData(["workflow", path], data),
   });
+
+  const authQuery = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: fetchAuthMe,
+    staleTime: 60_000,
+  });
+
+  const refreshWorkflow = (data: Awaited<ReturnType<typeof fetchWorkflow>>) => {
+    queryClient.setQueryData(["workflow", path], data);
+    queryClient.invalidateQueries({ queryKey: ["object-editor", path] });
+  };
+
+  const cancelMutation = useMutation({
+    mutationFn: (reason?: string) => {
+      if (!instance.instanceId) {
+        throw new Error("No instance");
+      }
+      return cancelWorkflowInstance(instance.instanceId, {
+        reason: reason?.trim() || undefined,
+        cancelledBy: authQuery.data?.principal,
+      });
+    },
+    onSuccess: () => {
+      setCancelModalOpen(false);
+      setCancelReason("");
+      void workflow.refetch().then((result) => {
+        if (result.data) {
+          refreshWorkflow(result.data);
+        }
+      });
+    },
+  });
+
+  const signalMutation = useMutation({
+    mutationFn: (signal: string) => {
+      if (!instance.instanceId) {
+        throw new Error("No instance");
+      }
+      return signalWorkflowInstance(instance.instanceId, {
+        signal,
+        operatorId: authQuery.data?.principal,
+      });
+    },
+    onSuccess: () => {
+      void workflow.refetch().then((result) => {
+        if (result.data) {
+          refreshWorkflow(result.data);
+        }
+      });
+    },
+  });
+
+  const canCancel =
+    instance.instanceId
+    && (instance.status === "WAITING" || instance.status === "RUNNING");
+  const canSignal =
+    instance.instanceId
+    && instance.status === "WAITING"
+    && Boolean(instance.pendingSignalName?.trim());
 
   if (workflow.isLoading) {
     return <div className="workflow-shell loading">{t("workflow:loading")}</div>;
@@ -214,20 +278,115 @@ export default function WorkflowBuilder({
           )}
 
           <h3>{t("workflow:instance.title")}</h3>
-          <div className="workflow-instance-grid">
-            <div>
-              <span className="field-label">{t("common:table.id")}</span>
-              <div>{instance.instanceId ?? t("common:empty.dash")}</div>
-            </div>
-            <div>
-              <span className="field-label">{t("workflow:instance.status")}</span>
-              <div>{instance.status ?? t("common:empty.dash")}</div>
-            </div>
-            <div>
-              <span className="field-label">{t("workflow:instance.node")}</span>
-              <div className="mono">{instance.currentNodeId ?? t("common:empty.dash")}</div>
-            </div>
-          </div>
+          {!instance.instanceId ? (
+            <p className="hint">{t("workflow:instance.empty")}</p>
+          ) : (
+            <>
+              <div className="workflow-instance-grid">
+                <div>
+                  <span className="field-label">{t("common:table.id")}</span>
+                  <div className="mono">{instance.instanceId}</div>
+                </div>
+                <div>
+                  <span className="field-label">{t("workflow:instance.status")}</span>
+                  <div>
+                    {instance.status ? (
+                      <span className={`workflow-pill status-${instance.status.toLowerCase()}`}>
+                        {instance.status}
+                      </span>
+                    ) : (
+                      t("common:empty.dash")
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="field-label">{t("workflow:instance.node")}</span>
+                  <div className="mono">{instance.currentNodeId ?? t("common:empty.dash")}</div>
+                </div>
+                {instance.pendingSignalName && (
+                  <div>
+                    <span className="field-label">{t("workflow:instance.pendingSignal")}</span>
+                    <div className="mono">{instance.pendingSignalName}</div>
+                  </div>
+                )}
+                {instance.assignee && (
+                  <div>
+                    <span className="field-label">{t("workflow:instance.assignee")}</span>
+                    <div>{instance.assignee}</div>
+                  </div>
+                )}
+              </div>
+              {(canSignal || canCancel) && (
+                <div className="workflow-instance-actions form-actions">
+                  {canSignal && instance.pendingSignalName && (
+                    <button
+                      type="button"
+                      className="btn primary"
+                      disabled={signalMutation.isPending}
+                      onClick={() => signalMutation.mutate(instance.pendingSignalName!)}
+                    >
+                      {signalMutation.isPending
+                        ? t("workflow:instance.signaling")
+                        : t("workflow:instance.signal", { signal: instance.pendingSignalName })}
+                    </button>
+                  )}
+                  {canCancel && !cancelModalOpen && (
+                    <button
+                      type="button"
+                      className="btn danger"
+                      disabled={cancelMutation.isPending}
+                      onClick={() => setCancelModalOpen(true)}
+                    >
+                      {t("workflow:instance.cancel")}
+                    </button>
+                  )}
+                </div>
+              )}
+              {cancelModalOpen && (
+                <div className="workflow-cancel-inline">
+                  <label>
+                    <span className="field-label">{t("workflow:instance.cancelReason")}</span>
+                    <input
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      placeholder={t("workflow:instance.cancelReasonPlaceholder")}
+                    />
+                  </label>
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      className="btn danger"
+                      disabled={cancelMutation.isPending}
+                      onClick={() => cancelMutation.mutate(cancelReason)}
+                    >
+                      {cancelMutation.isPending
+                        ? t("workflow:instance.cancelling")
+                        : t("workflow:instance.confirmCancel")}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={cancelMutation.isPending}
+                      onClick={() => {
+                        setCancelModalOpen(false);
+                        setCancelReason("");
+                      }}
+                    >
+                      {t("common:action.cancel")}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          {(cancelMutation.error || signalMutation.error) && (
+            <p className="hint error">
+              {String(cancelMutation.error ?? signalMutation.error)}
+            </p>
+          )}
+          {(cancelMutation.isSuccess || signalMutation.isSuccess) && (
+            <p className="hint">{t("workflow:instance.actionDone")}</p>
+          )}
           {instance.history && instance.history.length > 0 && (
             <pre className="workflow-code-block workflow-history">{instance.history.join("\n")}</pre>
           )}

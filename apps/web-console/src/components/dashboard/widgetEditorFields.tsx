@@ -29,6 +29,7 @@ import {
   TabPanelMetaEditor,
 } from "./widgetEditorStructured";
 import ScadaMimicWidgetEditorFields from "./ScadaMimicWidgetEditorFields";
+import { ObjectPathField } from "../../ui";
 
 type ObjectOption = { path: string; displayName: string; variableNames: string[] };
 type DashboardOption = { path: string; displayName: string };
@@ -153,23 +154,14 @@ function PathSelect({
 }) {
   const { t } = useTranslation(["widgets", "common"]);
   return (
-    <FieldLabel caption={label} className="path-select-field">
-      <div className="field-controls">
-        <select value={value} onChange={(e) => onChange(e.target.value)}>
-          <option value="">—</option>
-          {objects.map((ctx) => (
-            <option key={ctx.path} value={ctx.path}>
-              {ctx.displayName}
-            </option>
-          ))}
-        </select>
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder ?? t("editor.placeholder.orEnterPath")}
-        />
-      </div>
-    </FieldLabel>
+    <ObjectPathField
+      className="path-select-field"
+      label={label}
+      value={value}
+      objects={objects.map(({ path, displayName }) => ({ path, displayName }))}
+      onChange={onChange}
+      placeholder={placeholder ?? t("editor.placeholder.orEnterPath")}
+    />
   );
 }
 

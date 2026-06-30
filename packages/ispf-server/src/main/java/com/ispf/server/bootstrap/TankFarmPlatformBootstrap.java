@@ -12,6 +12,7 @@ import com.ispf.server.driver.DriverRuntimeService;
 import com.ispf.server.mimic.MimicService;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectTemplateService;
+import com.ispf.server.operator.OperatorAppUiService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
@@ -58,6 +59,7 @@ public class TankFarmPlatformBootstrap {
     private final MimicService mimicService;
     private final DriverRuntimeService driverRuntimeService;
     private final ApplicationDataService applicationDataService;
+    private final OperatorAppUiService operatorAppUiService;
     private final BootstrapProperties bootstrapProperties;
 
     public TankFarmPlatformBootstrap(
@@ -68,6 +70,7 @@ public class TankFarmPlatformBootstrap {
             MimicService mimicService,
             DriverRuntimeService driverRuntimeService,
             ApplicationDataService applicationDataService,
+            OperatorAppUiService operatorAppUiService,
             BootstrapProperties bootstrapProperties
     ) {
         this.modelBootstrap = modelBootstrap;
@@ -77,12 +80,13 @@ public class TankFarmPlatformBootstrap {
         this.mimicService = mimicService;
         this.driverRuntimeService = driverRuntimeService;
         this.applicationDataService = applicationDataService;
+        this.operatorAppUiService = operatorAppUiService;
         this.bootstrapProperties = bootstrapProperties;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     @Order(Ordered.HIGHEST_PRECEDENCE + 23)
-    public void onReady() {
+    public void onReady() throws Exception {
         if (!bootstrapProperties.isFixturesEnabled()) {
             return;
         }
@@ -99,6 +103,7 @@ public class TankFarmPlatformBootstrap {
                 "Мнемосхема резервуарного парка",
                 TankFarmDashboardLayouts.HMI_LAYOUT
         );
+        ensureOperatorUi();
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -213,6 +218,18 @@ public class TankFarmPlatformBootstrap {
         dashboardService.updateTitle(path, title);
         dashboardService.saveLayout(path, layout);
         dashboardService.updateRefreshInterval(path, 3000);
+    }
+
+    private void ensureOperatorUi() throws Exception {
+        operatorAppUiService.saveUi(
+                TankFarmPaths.APP_ID,
+                TankFarmPaths.DISPLAY_NAME,
+                TankFarmPaths.DASHBOARD,
+                List.of(Map.of(
+                        "path", TankFarmPaths.DASHBOARD,
+                        "title", "Мнемосхема резервуарного парка"
+                ))
+        );
     }
 
     private void startDrivers() {

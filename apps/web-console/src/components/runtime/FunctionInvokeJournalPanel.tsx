@@ -8,6 +8,7 @@ import { parseOptionalJson } from "../../utils/journalDetails";
 import JournalExpandableItem from "../journal/JournalExpandableItem";
 import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
+import { ObjectPathField } from "../../ui";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -135,14 +136,11 @@ export default function FunctionInvokeJournalPanel({
         (mode === "history" || showFilters) ? (
           <div className="journal-filters form-grid">
             {showFilters && !fixedObjectPath && (
-              <label>
-                objectPath
-                <input
-                  value={objectPath}
-                  onChange={(e) => setObjectPath(e.target.value)}
-                  placeholder="root.platform.devices…"
-                />
-              </label>
+              <ObjectPathField
+                label="objectPath"
+                value={objectPath}
+                onChange={setObjectPath}
+              />
             )}
             {showFilters && !fixedFunctionName && (
               <label>

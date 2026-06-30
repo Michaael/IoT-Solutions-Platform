@@ -14,6 +14,7 @@ import {
   removeBundleSectionItem,
   type BundleSectionKey,
 } from "../utils/bundleManifestSections";
+import { ObjectPathField } from "../ui";
 
 interface ApplicationBundlePanelProps {
   appId: string;
@@ -273,14 +274,13 @@ export default function ApplicationBundlePanel({ appId, canManage }: Application
           <h4>{t("bundle.pullPathTitle")}</h4>
           <p className="op-muted">{t("bundle.pullPathHint")}</p>
           <div className="bundle-add-object-form">
-            <label className="full">
-              objectPath
-              <input
-                value={pullPath}
-                onChange={(event) => setPullPath(event.target.value)}
-                placeholder="root.platform.dashboards.my-dashboard"
-              />
-            </label>
+            <ObjectPathField
+              className="full"
+              label="objectPath"
+              value={pullPath}
+              onChange={setPullPath}
+              placeholder="root.platform.dashboards.my-dashboard"
+            />
             <button
               type="button"
               className="btn"

@@ -599,6 +599,40 @@ export function runWorkflow(path: string, triggerObjectPath?: string): Promise<W
   });
 }
 
+export interface CancelWorkflowResult {
+  instanceId: string;
+  status: string;
+  cancelled: boolean;
+  reason?: string;
+  message?: string;
+}
+
+export function cancelWorkflowInstance(
+  instanceId: string,
+  payload?: { reason?: string; detailJson?: string; cancelledBy?: string }
+): Promise<CancelWorkflowResult> {
+  return request(`/api/v1/workflows/instances/${encodeURIComponent(instanceId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export interface SignalWorkflowResult {
+  instanceId: string;
+  signal: string;
+  status: string;
+}
+
+export function signalWorkflowInstance(
+  instanceId: string,
+  payload: { signal: string; operatorId?: string }
+): Promise<SignalWorkflowResult> {
+  return request(`/api/v1/workflows/instances/${encodeURIComponent(instanceId)}/signal`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function fetchWorkQueue(limit = 50, operatorAppId?: string): Promise<import("./types/operator").WorkQueueItem[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (operatorAppId?.trim()) {

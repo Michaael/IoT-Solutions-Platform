@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchAiAgentTools,
   fetchAiContextPack,
+  fetchAiModels,
   fetchAiProviderStatus,
 } from "../api/ai";
 import { useAgentChat } from "../context/AgentChatContext";
@@ -30,6 +31,10 @@ export default function AiStudioSettingsTab() {
   const toolsQuery = useQuery({
     queryKey: ["ai-agent-tools"],
     queryFn: fetchAiAgentTools,
+  });
+  const modelsQuery = useQuery({
+    queryKey: ["ai-models"],
+    queryFn: fetchAiModels,
   });
 
   useEffect(() => {
@@ -74,6 +79,21 @@ export default function AiStudioSettingsTab() {
                 <div>
                   <dt>{t("settings.model")}</dt>
                   <dd><code>{provider.model}</code></dd>
+                </div>
+              )}
+              {modelsQuery.data?.models && modelsQuery.data.models.length > 0 && (
+                <div>
+                  <dt>{t("settings.availableModels")}</dt>
+                  <dd>
+                    <ul className="ai-models-list">
+                      {modelsQuery.data.models.map((model) => (
+                        <li key={model.id}>
+                          <code>{model.id}</code>
+                          {model.label ? ` — ${model.label}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </dd>
                 </div>
               )}
               <div>

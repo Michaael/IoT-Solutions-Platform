@@ -19,7 +19,6 @@ interface FederationPeersTabProps {
   remoteLoginPassword: string;
   setRemoteLoginPassword: (value: string) => void;
   formError: string | null;
-  syncFeedback: string | null;
   tokenApiMissing: boolean;
   createMutation: UseMutationResult<unknown, Error, void, unknown>;
   deleteMutation: UseMutationResult<unknown, Error, string, unknown>;
@@ -45,7 +44,6 @@ export default function FederationPeersTab({
   remoteLoginPassword,
   setRemoteLoginPassword,
   formError,
-  syncFeedback,
   tokenApiMissing,
   createMutation,
   deleteMutation,
@@ -82,7 +80,6 @@ export default function FederationPeersTab({
 
   return (
     <>
-      {syncFeedback && <div className="op-alert op-alert-success">{syncFeedback}</div>}
       {formError && <div className="op-alert op-alert-error">{formError}</div>}
 
       <div className="panel-card">

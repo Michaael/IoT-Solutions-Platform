@@ -249,6 +249,9 @@ public class TreeFirstAgentService {
                     } catch (Exception ex) {
                         toolResult = Map.of("status", "ERROR", "error", ex.getMessage());
                     }
+                    if ("list_reports".equals(toolName)) {
+                        toolResult = OperatorAgentTurnGuard.enrichListReportsResult(toolResult, userMessage);
+                    }
                 }
 
                 Map<String, Object> toolStep = Map.of(
@@ -262,8 +265,7 @@ public class TreeFirstAgentService {
                 steps.add(toolStep);
                 publishStep(session.sessionId(), toolStep);
 
-                if (profile == AgentProfile.OPERATOR
-                        && "list_reports".equals(executedTool)
+                if ("list_reports".equals(executedTool)
                         && "OK".equals(String.valueOf(toolResult.get("status")))) {
                     var clarification = OperatorAgentClarificationBuilder.maybeAfterListReports(steps, userMessage);
                     if (clarification.isPresent()) {

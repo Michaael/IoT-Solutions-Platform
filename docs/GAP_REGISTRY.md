@@ -64,7 +64,7 @@
 | Driver maturity labels | ~98% | — | — |
 | Frontend e2e (Playwright) | ~85% | live staging run needs secrets | BL-50 Done (mocked CI + live workflow) |
 | Web Console i18n | ~98% | tails | BL-07 Done |
-| UI ↔ API parity | ~95% | — | BL-01…18 Done |
+| UI ↔ API parity | ~100% | MCP wire, installation-id (ops-only) | BL-01…18 + lifecycle UI 0.9.60 |
 | Dashboard widgets (advanced) | ~98% | — | BL-65 done |
 | Variable inline editor | ~95% | — | BL-03 Done |
 | Binding rules UX | ~95% | runtime `onEvent`/`periodicMs` engine | in progress |
@@ -79,7 +79,7 @@
 | Operator manifest | ~98% | spreadsheet history (BL-54) | BL-54 |
 | Spreadsheet widget | ~98% | — | BL-54 done |
 | Frontend component tests | ~90% | — | BL-55 Done |
-| Semantic interoperability | ~90% | Full Brick reasoner (out of scope) | BL-56…62, Phase 20.22 |
+| Semantic interoperability | ~100% | Full Brick reasoner (out of scope) | BL-56…62 + export UI 0.9.60 |
 | Time & timezones | ~100% | — | [0020](decisions/0020-time-and-timezones.md) |
 | Scale (load test) | ~100% | — | `ListDevicesLoadTest`, `ISPF_LOAD_P99_CEILING_MS` |
 
@@ -87,6 +87,7 @@
 
 | Дата | Изменение |
 |------|-----------|
+| 2026-06-30 | UI↔API parity ~100%: Application lifecycle, platform schedules, semantic export, workflow cancel/signal, federation proxy invoke, device TZ; prod 0.9.60; AGENT_KNOWLEDGE + ContextPack |
 | 2026-06-30 | BL-57: Haystack inspector tab (`HaystackMetadataPanel`) |
 | 2026-06-30 | BL-30: `CoapDeviceDriverTest` loopback; BL-50: System/license mocked + live smoke |
 | 2026-06-28 | BL-44…47 Done: notifications, federation catalog conflicts + dashboard write proxy, platform backup API/UI |

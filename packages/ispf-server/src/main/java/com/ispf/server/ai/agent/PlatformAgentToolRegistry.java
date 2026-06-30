@@ -42,7 +42,15 @@ import com.ispf.server.security.PlatformUserService;
 import com.ispf.server.security.acl.ObjectAccessService;
 import com.ispf.server.tenant.TenantScopeService;
 import com.ispf.server.history.VariableHistoryService;
+import com.ispf.server.mimic.MimicService;
+import com.ispf.server.application.binding.ApplicationSqlBindingService;
+import com.ispf.server.application.bundle.ApplicationBundlePullFromTreeService;
+import com.ispf.server.application.data.ApplicationDataService;
+import com.ispf.server.persistence.WorkflowInstanceRepository;
+import com.ispf.server.platform.time.PlatformTimeZoneResolver;
+import com.ispf.server.schedule.ScheduleObjectService;
 import com.ispf.server.workflow.WorkQueueService;
+import com.ispf.server.workflow.WorkflowInstanceCancelService;
 import com.ispf.server.workflow.WorkflowService;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -128,7 +136,15 @@ public class PlatformAgentToolRegistry {
             WorkQueueService workQueueService,
             OperatorAgentMemoryService operatorAgentMemoryService,
             OperatorAppDocumentService operatorAppDocumentService,
-            HaystackExportService haystackExportService
+            HaystackExportService haystackExportService,
+            MimicService mimicService,
+            WorkflowInstanceCancelService workflowInstanceCancelService,
+            WorkflowInstanceRepository workflowInstanceRepository,
+            ApplicationDataService applicationDataService,
+            ApplicationSqlBindingService applicationSqlBindingService,
+            ApplicationBundlePullFromTreeService applicationBundlePullFromTreeService,
+            ScheduleObjectService scheduleObjectService,
+            PlatformTimeZoneResolver platformTimeZoneResolver
     ) {
         this.objectMapper = objectMapper;
         List<PlatformAgentTool> tools = new ArrayList<>();
@@ -143,6 +159,49 @@ public class PlatformAgentToolRegistry {
                 objectManager,
                 objectAccessService,
                 tenantScopeService
+        ));
+        tools.addAll(AgentMimicTools.all(
+                mimicService,
+                objectManager,
+                objectAccessService,
+                tenantScopeService,
+                objectMapper
+        ));
+        tools.addAll(AgentWorkflowTools.all(
+                workflowService,
+                workflowInstanceCancelService,
+                workflowInstanceRepository,
+                objectManager,
+                objectAccessService,
+                tenantScopeService,
+                objectMapper
+        ));
+        tools.addAll(AgentApplicationTools.all(
+                applicationDataService,
+                applicationSqlBindingService,
+                bundleDeployService,
+                applicationBundlePullFromTreeService,
+                applicationFunctionStore,
+                objectMapper,
+                objectAccessService,
+                tenantScopeService
+        ));
+        tools.addAll(AgentPlatformTools.all(
+                scheduleObjectService,
+                bindingRulesService,
+                bindingDependencyIndex,
+                bindingRuleEngine,
+                platformTimeZoneResolver,
+                haystackExportService,
+                objectManager,
+                objectAccessService,
+                tenantScopeService
+        ));
+        tools.addAll(AgentFunctionTools.all(
+                objectManager,
+                objectAccessService,
+                tenantScopeService,
+                objectMapper
         ));
         tools.addAll(AgentDiscoveryTools.all(
                 objectManager,

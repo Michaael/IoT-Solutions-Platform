@@ -272,6 +272,198 @@ export interface PullFromTreeResult {
   warnings?: string[];
 }
 
+export interface ApplicationDataStatus {
+  appId?: string;
+  schemaName?: string;
+  version?: string;
+  appliedMigrations?: string[];
+  status?: string;
+}
+
+export async function fetchApplicationDataStatus(appId: string): Promise<ApplicationDataStatus> {
+  const response = await fetch(`/api/v1/applications/${encodeURIComponent(appId)}/data/status`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Data status failed: ${response.status}`);
+  }
+  return response.json() as Promise<ApplicationDataStatus>;
+}
+
+export interface MigrationScriptPayload {
+  id: string;
+  sql: string;
+}
+
+export async function migrateApplicationData(
+  appId: string,
+  payload: { version: string; scripts: MigrationScriptPayload[] }
+): Promise<Record<string, unknown>> {
+  const response = await fetch(`/api/v1/applications/${encodeURIComponent(appId)}/data/migrate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Data migrate failed: ${response.status}`);
+  }
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+export async function seedApplicationData(
+  appId: string,
+  profile: string
+): Promise<Record<string, unknown>> {
+  const response = await fetch(`/api/v1/applications/${encodeURIComponent(appId)}/data/seed`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ profile }),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Data seed failed: ${response.status}`);
+  }
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+export interface ApplicationBindingEntry {
+  objectPath?: string;
+  variable?: string;
+  query?: string;
+  refresh?: string;
+  refreshIntervalMs?: number;
+  enabled?: boolean;
+}
+
+export async function fetchApplicationBindings(appId: string): Promise<ApplicationBindingEntry[]> {
+  const response = await fetch(`/api/v1/applications/${encodeURIComponent(appId)}/bindings`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Bindings list failed: ${response.status}`);
+  }
+  return response.json() as Promise<ApplicationBindingEntry[]>;
+}
+
+export async function deployApplicationBinding(
+  appId: string,
+  payload: ApplicationBindingEntry & {
+    valueField?: string;
+    triggerObjectPath?: string;
+    triggerFunctionName?: string;
+  }
+): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    `/api/v1/applications/${encodeURIComponent(appId)}/bindings/deploy`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Binding deploy failed: ${response.status}`);
+  }
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+export async function refreshApplicationBinding(
+  appId: string,
+  objectPath: string,
+  variable: string
+): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    `/api/v1/applications/${encodeURIComponent(appId)}/bindings/refresh`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ objectPath, variable }),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Binding refresh failed: ${response.status}`);
+  }
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+export interface ApplicationReportEntry {
+  reportId?: string;
+  title?: string;
+  reportType?: string;
+}
+
+export async function fetchApplicationReports(appId: string): Promise<ApplicationReportEntry[]> {
+  const response = await fetch(`/api/v1/applications/${encodeURIComponent(appId)}/reports`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Reports list failed: ${response.status}`);
+  }
+  return response.json() as Promise<ApplicationReportEntry[]>;
+}
+
+export async function deployApplicationReport(
+  appId: string,
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    `/api/v1/applications/${encodeURIComponent(appId)}/reports/deploy`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Report deploy failed: ${response.status}`);
+  }
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+export async function deployApplicationFunction(
+  appId: string,
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    `/api/v1/applications/${encodeURIComponent(appId)}/functions/deploy`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Function deploy failed: ${response.status}`);
+  }
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
 export async function pullApplicationBundleFromTree(
   appId: string,
   options?: {

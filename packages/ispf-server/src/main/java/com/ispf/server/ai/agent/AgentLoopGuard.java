@@ -29,8 +29,12 @@ final class AgentLoopGuard {
         if (isRepeatedTool(lastTool, steps)) {
             return """
                     You called the same tool repeatedly. Change strategy or emit {"type":"finish",...}. \
+                    If the user's intent is unclear, prefer finish with a short question and result.suggestions \
+                    (label + message per option, interactive=true) instead of more blind tool calls. \
                     For dashboards: list_variables first; use set_dashboard_layout template= instead of many add_dashboard_widget; \
                     never set_variable name=widgets. get_widget_catalog type=<type> for exact widget fields. \
+                    For SCADA mimics: save_mimic_diagram or add_mimic_elements with non-empty elements[]; \
+                    list_mimic_symbols for symbolId; get_mimic_diagram to verify elementCount; never set_variable name=diagram. \
                     For platform docs: list_drivers, get_driver_help, get_example_bundle, get_automation_schema instead of search_context loops. \
                     Before invoke_bff: use list_functions and get_function instead of guessing function names.""";
         }

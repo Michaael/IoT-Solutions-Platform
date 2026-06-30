@@ -19,6 +19,9 @@ export interface WorkflowInstanceState {
   completedAt?: string | null;
   history?: string[];
   errorMessage?: string | null;
+  pendingSignalName?: string | null;
+  pendingUserTaskId?: string | null;
+  assignee?: string | null;
 }
 
 export function parseInstanceState(raw: string | undefined | null): WorkflowInstanceState {

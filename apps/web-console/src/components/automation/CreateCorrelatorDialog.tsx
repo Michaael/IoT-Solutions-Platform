@@ -9,6 +9,7 @@ import {
   correlatorActionTargetLabel,
   correlatorActionTargetPlaceholder,
 } from "../../utils/correlatorAction";
+import { ObjectPathField } from "../../ui";
 
 interface CreateCorrelatorDialogProps {
   onClose: () => void;
@@ -105,14 +106,13 @@ export default function CreateCorrelatorDialog({ onClose, onCreated }: CreateCor
               />
             </label>
           )}
-          <label className="full">
-            {t("automation:correlator.objectPath")}
-            <input
-              value={form.objectPath ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, objectPath: e.target.value }))}
-              placeholder={t("automation:correlator.objectPathPlaceholder")}
-            />
-          </label>
+          <ObjectPathField
+            className="full"
+            label={t("automation:correlator.objectPath")}
+            value={form.objectPath ?? ""}
+            onChange={(objectPath) => setForm((f) => ({ ...f, objectPath }))}
+            placeholder={t("automation:correlator.objectPathPlaceholder")}
+          />
           <label>
             {t("automation:correlator.windowSec")}
             <input

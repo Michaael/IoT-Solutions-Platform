@@ -104,21 +104,23 @@ export default function AiStudioBundleTab({
 
   return (
     <div className="panel-card">
-      <label>
-        {t("bundle.appId")}
-        <input value={appId} onChange={(e) => setAppId(e.target.value)} />
-      </label>
+      <div className="form-grid">
+        <label>
+          {t("bundle.appId")}
+          <input value={appId} onChange={(e) => setAppId(e.target.value)} />
+        </label>
 
-      <label className="full">
-        {t("bundle.prompt")}
-        <textarea
-          className="mono"
-          rows={4}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          spellCheck={false}
-        />
-      </label>
+        <label className="full">
+          {t("bundle.prompt")}
+          <textarea
+            className="code-field mono"
+            rows={4}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            spellCheck={false}
+          />
+        </label>
+      </div>
 
       <div className="form-actions">
         <button
@@ -211,30 +213,32 @@ export default function AiStudioBundleTab({
         )}
       </section>
 
-      <label className="full">
-        {t("bundle.manifestJson")}
-        <textarea
-          className="mono"
-          rows={16}
-          value={manifestText}
-          onChange={(e) => setManifestText(e.target.value)}
-          spellCheck={false}
-        />
-      </label>
-
-      {validationText && (
+      <div className="form-grid">
         <label className="full">
-          {t("bundle.validationResult")}
-          <textarea className="mono" rows={8} readOnly value={validationText} />
+          {t("bundle.manifestJson")}
+          <textarea
+            className="json-editor"
+            rows={16}
+            value={manifestText}
+            onChange={(e) => setManifestText(e.target.value)}
+            spellCheck={false}
+          />
         </label>
-      )}
 
-      {dryRunText && (
-        <label className="full">
-          {t("bundle.dryRun")}
-          <textarea className="mono" rows={8} readOnly value={dryRunText} />
-        </label>
-      )}
+        {validationText && (
+          <label className="full">
+            {t("bundle.validationResult")}
+            <textarea className="code-field mono" rows={8} readOnly value={validationText} />
+          </label>
+        )}
+
+        {dryRunText && (
+          <label className="full">
+            {t("bundle.dryRun")}
+            <textarea className="code-field mono" rows={8} readOnly value={dryRunText} />
+          </label>
+        )}
+      </div>
     </div>
   );
 }

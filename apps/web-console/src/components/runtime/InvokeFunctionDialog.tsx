@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { invokeFunction } from "../../api";
+import { proxyFederationFunctionInvoke } from "../../api/federation";
 import type { DataRecord, FunctionDescriptor } from "../../types";
 import DataRecordValueEditor from "../schema/DataRecordValueEditor";
 import { emptyRecord } from "../../utils/record";
@@ -12,6 +13,9 @@ interface InvokeFunctionDialogProps {
   fn: FunctionDescriptor;
   onClose: () => void;
   onInvoked: () => void;
+  federated?: boolean;
+  federationPeerId?: string | null;
+  federationRemotePath?: string | null;
 }
 
 function defaultInputRecord(fn: FunctionDescriptor): DataRecord {
@@ -37,6 +41,9 @@ export default function InvokeFunctionDialog({
   fn,
   onClose,
   onInvoked,
+  federated = false,
+  federationPeerId,
+  federationRemotePath,
 }: InvokeFunctionDialogProps) {
   const { t } = useTranslation(["runtime", "common", "inspector"]);
   const [record, setRecord] = useState<DataRecord>(() => defaultInputRecord(fn));
@@ -62,7 +69,14 @@ export default function InvokeFunctionDialog({
           input = undefined;
         }
       }
-      return invokeFunction(objectPath, fn.name, input);
+      return federated && federationPeerId && federationRemotePath
+        ? proxyFederationFunctionInvoke(
+            federationPeerId,
+            federationRemotePath,
+            fn.name,
+            input as Record<string, unknown> | undefined
+          ).then((result) => result as unknown as DataRecord)
+        : invokeFunction(objectPath, fn.name, input);
     },
     onSuccess: (result) => {
       setResultJson(JSON.stringify(result, null, 2));
@@ -86,6 +100,9 @@ export default function InvokeFunctionDialog({
           <p className="hint">
             <code>{objectPath}</code> → <code>{fn.name}</code>
           </p>
+          {federated && (
+            <p className="hint">{t("runtime:invokeFunction.federatedHint")}</p>
+          )}
           {fn.description && <p className="hint">{fn.description}</p>}
           {hasInputFields ? (
             <>

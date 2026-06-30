@@ -355,7 +355,9 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
         </div>
       )}
 
-      <nav className="federation-tabs" aria-label={t("panel.tabsAria")}>
+      {syncFeedback && <div className="op-alert op-alert-success">{syncFeedback}</div>}
+
+      <nav className="tabs" aria-label={t("panel.tabsAria")}>
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -388,7 +390,6 @@ export default function FederationPeersPanel({ canManage }: FederationPeersPanel
           remoteLoginPassword={remoteLoginPassword}
           setRemoteLoginPassword={setRemoteLoginPassword}
           formError={formError}
-          syncFeedback={syncFeedback}
           tokenApiMissing={tokenApiMissing}
           createMutation={createMutation}
           deleteMutation={deleteMutation}

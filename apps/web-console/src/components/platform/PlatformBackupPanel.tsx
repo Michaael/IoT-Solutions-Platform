@@ -72,7 +72,7 @@ export default function PlatformBackupPanel() {
           type="button"
           className="btn primary"
           disabled={exportMutation.isPending}
-          onClick={() => exportMutation.mutate()}
+          onClick={() => exportMutation.mutate(undefined)}
         >
           {t("backup.export")}
         </button>

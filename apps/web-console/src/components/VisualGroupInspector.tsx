@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { fetchGroupMembers, fetchObjects, updateGroupMembers } from "../api";
+import { fetchGroupMembers, updateGroupMembers } from "../api";
 import type { ObjectSummary } from "../types";
 import { objectTreeKey } from "../utils/treeRowKey";
+import { ObjectTreePickerDialog } from "../ui";
 
 interface VisualGroupInspectorProps {
   path: string;
@@ -23,18 +24,11 @@ export default function VisualGroupInspector({
   const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerQuery, setPickerQuery] = useState("");
   const [selectedMemberPaths, setSelectedMemberPaths] = useState<Set<string>>(new Set());
 
   const membersQuery = useQuery({
     queryKey: ["group-members", path],
     queryFn: () => fetchGroupMembers(path),
-  });
-
-  const allObjectsQuery = useQuery({
-    queryKey: ["objects-all-picker"],
-    queryFn: () => fetchObjects(undefined, true),
-    enabled: pickerOpen,
   });
 
   const members = membersQuery.data ?? [];
@@ -46,21 +40,6 @@ export default function VisualGroupInspector({
       summary: byPath.get(member.path),
     }));
   }, [allObjects, members]);
-
-  const pickerCandidates = useMemo(() => {
-    const existing = new Set(members.map((m) => m.path));
-    const q = pickerQuery.trim().toLowerCase();
-    const pool = allObjectsQuery.data ?? allObjects;
-    return pool
-      .filter((obj) => !obj.groupRef && obj.path !== path && !existing.has(obj.path))
-      .filter((obj) => {
-        if (!q) {
-          return true;
-        }
-        return obj.path.toLowerCase().includes(q) || obj.displayName.toLowerCase().includes(q);
-      })
-      .slice(0, 80);
-  }, [allObjects, allObjectsQuery.data, members, path, pickerQuery]);
 
   const mutateMembers = useMutation({
     mutationFn: (args: { action: "add" | "remove" | "reorder"; paths: string[] }) =>
@@ -139,45 +118,20 @@ export default function VisualGroupInspector({
         ))}
       </ul>
 
-      {pickerOpen && (
-        <div className="modal-backdrop" onClick={() => setPickerOpen(false)}>
-          <div className="modal visual-group-picker" onClick={(e) => e.stopPropagation()}>
-            <h3>{t("visualGroup.addToGroup")}</h3>
-            <input
-              type="search"
-              placeholder={t("visualGroup.searchPlaceholder")}
-              value={pickerQuery}
-              onChange={(e) => setPickerQuery(e.target.value)}
-              autoFocus
-            />
-            <ul className="visual-group-picker-list">
-              {pickerCandidates.map((obj) => (
-                <li key={obj.path}>
-                  <button
-                    type="button"
-                    className="linkish"
-                    onClick={() => {
-                      mutateMembers.mutate(
-                        { action: "add", paths: [obj.path] },
-                        { onSuccess: () => setPickerOpen(false) },
-                      );
-                    }}
-                  >
-                    {obj.displayName}
-                  </button>
-                  <span className="tree-type mono">{obj.path}</span>
-                </li>
-              ))}
-            </ul>
-            {pickerCandidates.length === 0 && <p className="hint">{t("common:empty.noMatches")}</p>}
-            <div className="modal-actions">
-              <button type="button" className="btn" onClick={() => setPickerOpen(false)}>
-                {t("common:action.close")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ObjectTreePickerDialog
+        open={pickerOpen}
+        title={t("visualGroup.addToGroup")}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(memberPath) => {
+          if (memberPath === path || members.some((m) => m.path === memberPath)) {
+            return;
+          }
+          mutateMembers.mutate(
+            { action: "add", paths: [memberPath] },
+            { onSuccess: () => setPickerOpen(false) },
+          );
+        }}
+      />
     </div>
   );
 }

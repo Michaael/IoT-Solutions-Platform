@@ -38,6 +38,16 @@ public final class AgentStepHumanizer {
             case "set_variable" -> "Обновляю «" + arg(arguments, "name") + "» на «" + arg(arguments, "path") + "»";
             case "configure_driver" -> "Настраиваю драйвер на «" + arg(arguments, "devicePath") + "»";
             case "driver_control" -> driverControlLabel(arguments, result);
+            case "save_mimic_diagram" -> "Сохраняю элементы mimic «" + arg(arguments, "path") + "»";
+            case "add_mimic_elements" -> "Добавляю символы на mimic «" + arg(arguments, "path") + "»";
+            case "list_mimic_symbols" -> "Справочник SCADA-символов";
+            case "get_workflow" -> "Читаю workflow «" + arg(arguments, "path") + "»";
+            case "save_workflow_bpmn" -> "Сохраняю BPMN «" + arg(arguments, "path") + "»";
+            case "run_workflow" -> "Запускаю workflow «" + arg(arguments, "path") + "»";
+            case "configure_platform_context_rule" -> "Правило dashboard «" + arg(arguments, "path") + "»";
+            case "configure_platform_schedule" -> "Настраиваю расписание «" + orDefault(arg(arguments, "scheduleId"), arg(arguments, "path")) + "»";
+            case "deploy_tree_function" -> "Деплою функцию «" + arg(arguments, "functionName") + "» на «" + arg(arguments, "path") + "»";
+            case "get_function_template" -> "Шаблон функции: " + orDefault(arg(arguments, "topic"), "comparison");
             case "validate_bundle" -> "Проверяю bundle «" + arg(arguments, "appId") + "»";
             case "dry_run_deploy" -> "Dry-run деплоя «" + arg(arguments, "appId") + "»";
             case "import_package" -> "Импортирую пакет «" + orDefault(arg(arguments, "packageId"), arg(arguments, "appId")) + "»";
@@ -47,6 +57,7 @@ public final class AgentStepHumanizer {
             case "list_app_memory" -> "Память приложения" + memoryQuery(arguments);
             case "remember_app_memory" -> "Запоминаю для приложения";
             case "run_report" -> "Отчёт «" + arg(arguments, "path") + "»";
+            case "get_mimic_diagram" -> "Читаю схему mimic «" + arg(arguments, "path") + "»";
             case "list_events" -> "События «" + orDefault(arg(arguments, "objectPath"), "платформа") + "»";
             default -> "Вызов " + tool;
         };

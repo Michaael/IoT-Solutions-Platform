@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { createAlertRule, validateExpression } from "../../api";
 import type { CreateAlertRulePayload } from "../../types/automation";
+import { ObjectPathField } from "../../ui";
 
 interface CreateAlertRuleDialogProps {
   onClose: () => void;
@@ -69,14 +70,12 @@ export default function CreateAlertRuleDialog({ onClose, onCreated }: CreateAler
               required
             />
           </label>
-          <label className="full">
-            {t("automation:alertRule.targetObject")}
-            <input
-              value={form.objectPath}
-              onChange={(e) => setForm((f) => ({ ...f, objectPath: e.target.value }))}
-              required
-            />
-          </label>
+          <ObjectPathField
+            className="full"
+            label={t("automation:alertRule.targetObject")}
+            value={form.objectPath}
+            onChange={(objectPath) => setForm((f) => ({ ...f, objectPath }))}
+          />
           <label>
             {t("automation:alertRule.variable")}
             <input

@@ -12,6 +12,7 @@ import com.ispf.server.driver.DriverRuntimeService;
 import com.ispf.server.mimic.MimicService;
 import com.ispf.server.object.ObjectManager;
 import com.ispf.server.object.ObjectTemplateService;
+import com.ispf.server.operator.OperatorAppUiService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
@@ -79,6 +80,7 @@ public class PipelineScadaPlatformBootstrap {
     private final MimicService mimicService;
     private final DriverRuntimeService driverRuntimeService;
     private final ApplicationDataService applicationDataService;
+    private final OperatorAppUiService operatorAppUiService;
     private final BootstrapProperties bootstrapProperties;
 
     public PipelineScadaPlatformBootstrap(
@@ -89,6 +91,7 @@ public class PipelineScadaPlatformBootstrap {
             MimicService mimicService,
             DriverRuntimeService driverRuntimeService,
             ApplicationDataService applicationDataService,
+            OperatorAppUiService operatorAppUiService,
             BootstrapProperties bootstrapProperties
     ) {
         this.modelBootstrap = modelBootstrap;
@@ -98,12 +101,13 @@ public class PipelineScadaPlatformBootstrap {
         this.mimicService = mimicService;
         this.driverRuntimeService = driverRuntimeService;
         this.applicationDataService = applicationDataService;
+        this.operatorAppUiService = operatorAppUiService;
         this.bootstrapProperties = bootstrapProperties;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     @Order(Ordered.HIGHEST_PRECEDENCE + 24)
-    public void onReady() {
+    public void onReady() throws Exception {
         if (!bootstrapProperties.isFixturesEnabled()) {
             return;
         }
@@ -123,6 +127,7 @@ public class PipelineScadaPlatformBootstrap {
             );
         }
         ensureMimicAlias();
+        ensureOperatorUi();
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -246,6 +251,19 @@ public class PipelineScadaPlatformBootstrap {
         dashboardService.updateTitle(path, title);
         dashboardService.saveLayout(path, layout);
         dashboardService.updateRefreshInterval(path, 3000);
+    }
+
+    private void ensureOperatorUi() throws Exception {
+        List<Map<String, String>> dashboards = new ArrayList<>();
+        for (FormSeed form : FORMS) {
+            dashboards.add(Map.of("path", form.dashboardPath(), "title", form.title()));
+        }
+        operatorAppUiService.saveUi(
+                PipelineScadaPaths.APP_ID,
+                PipelineScadaPaths.DISPLAY_NAME,
+                PipelineScadaPaths.DASHBOARD,
+                dashboards
+        );
     }
 
     private void startDrivers() {

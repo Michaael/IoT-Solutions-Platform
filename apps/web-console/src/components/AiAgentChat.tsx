@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgentChat } from "../context/AgentChatContext";
 import type { AiAgentStep } from "../api/ai";
+import AgentChatArtifacts, { AgentStarterSuggestions } from "./agent/AgentChatArtifacts";
 
 const CHAT_INPUT_MAX_HEIGHT_PX = 320;
 
@@ -81,6 +82,7 @@ export default function AiAgentChat() {
   const sending = isPending;
   const chatEnabled = providerReady && agentApiReady;
   const toolStepCount = liveSteps.filter((s) => s.type === "tool").length;
+  const hasUserTurns = messages.some((message) => message.role === "user");
 
   return (
     <div className="ai-agent-chat">
@@ -167,10 +169,18 @@ export default function AiAgentChat() {
 
       <div className="ai-agent-chat-main">
         <div className="ai-agent-chat-log">
-          {messages.length === 0 && !isPending && (
-            <p className="ai-agent-chat-empty op-muted">
-              {t("agent.emptyHint")}
-            </p>
+          {!hasUserTurns && !isPending && (
+            <AgentStarterSuggestions
+              i18nNs="ai"
+              suggestionKeys={[
+                "agent.suggest.explore",
+                "agent.suggest.snmp",
+                "agent.suggest.report",
+                "agent.suggest.scada",
+                "agent.suggest.bundle",
+              ]}
+              onPick={(text) => void sendMessage(text)}
+            />
           )}
           {messages.map((message) => (
             <div
@@ -180,6 +190,13 @@ export default function AiAgentChat() {
               }
             >
               <div className="ai-agent-bubble-text">{message.text}</div>
+              {message.role === "agent" && (
+                <AgentChatArtifacts
+                  result={message.result}
+                  i18nNs="ai"
+                  onSuggestMessage={(text) => void sendMessage(text)}
+                />
+              )}
               {message.steps && message.steps.length > 0 && (
                 <AgentRunDetails
                   steps={message.steps}

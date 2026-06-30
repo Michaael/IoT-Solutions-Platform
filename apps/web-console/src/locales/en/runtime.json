@@ -12,6 +12,7 @@
   "invokeFunction.result": "Result",
   "invokeFunction.invoke": "Invoke",
   "invokeFunction.invoking": "Invoking…",
+  "invokeFunction.federatedHint": "Invocation is forwarded to the federation peer via proxy API.",
   "functionJournal.title": "Function invoke journal",
   "functionJournal.subtitle": "Function invokes when audit is enabled for the object",
   "functionJournal.disabledHint": "Enable audit on the object (Functions tab) or check platform settings",

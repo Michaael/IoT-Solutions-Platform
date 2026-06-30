@@ -339,8 +339,10 @@ final class AgentAutomationTools {
 
             @Override
             public String description() {
-                return "Reference for ALERT/CORRELATOR variables, dashboard templates, widgets, object tree, bindings, operator UI, reports. "
-                        + "Optional arg: topic (alert|correlator|dashboard|widget|object|binding|operator|report|all).";
+                return "Reference for ALERT/CORRELATOR variables, dashboard templates, widgets, object tree, bindings, "
+                        + "operator UI, reports, workflows, SCADA, application lifecycle, schedules, platform rules. "
+                        + "Optional arg: topic (alert|correlator|dashboard|widget|object|binding|operator|report|"
+                        + "workflow|scada|lifecycle|schedule|platform-rule|all).";
             }
 
             @Override
@@ -361,6 +363,12 @@ final class AgentAutomationTools {
                     case "binding" -> schema.put("binding", bindingSchema());
                     case "operator" -> schema.put("operator", operatorSchema());
                     case "report", "reports" -> schema.put("reports", AgentPlaybooks.reportsGuide());
+                    case "workflow", "workflows" -> schema.put("workflows", AgentPlaybooks.workflowGuide());
+                    case "scada", "mimic", "mimics" -> schema.put("scada", AgentPlaybooks.scadaMimicGuide());
+                    case "lifecycle", "application" -> schema.put("lifecycle", AgentPlaybooks.applicationLifecycleGuide());
+                    case "schedule", "schedules" -> schema.put("schedules", AgentPlaybooks.scheduleGuide());
+                    case "function", "functions" -> schema.put("functions", AgentPlaybooks.functionsGuide());
+                    case "platform-rule", "platform-rules", "context" -> schema.put("platformRules", AgentPlaybooks.platformRuleGuide());
                     default -> {
                         schema.put("alert", alertSchema());
                         schema.put("correlator", correlatorSchema());
@@ -370,6 +378,13 @@ final class AgentAutomationTools {
                         schema.put("binding", bindingSchema());
                         schema.put("operator", operatorSchema());
                         schema.put("reports", AgentPlaybooks.reportsGuide());
+                        schema.put("workflows", AgentPlaybooks.workflowGuide());
+                        schema.put("scada", AgentPlaybooks.scadaMimicGuide());
+                        schema.put("lifecycle", AgentPlaybooks.applicationLifecycleGuide());
+                        schema.put("schedules", AgentPlaybooks.scheduleGuide());
+                        schema.put("functions", AgentPlaybooks.functionsGuide());
+                        schema.put("platformRules", AgentPlaybooks.platformRuleGuide());
+                        schema.put("platformMaster", AgentPlaybooks.platformMasterGuide());
                         schema.put("objectTypes", objectTypeGuide());
                     }
                 }
@@ -466,9 +481,12 @@ final class AgentAutomationTools {
 
             @Override
             public String description() {
-                return "Create or replace a binding rule on an object. Args: path, id, targetVariable, expression, "
-                        + "condition? (CEL), remoteObjectPath? + remoteVariableName? (cross-object activator), "
-                        + "onStartup? (bool), order? (int).";
+                return "Create or replace a binding rule on an object. Args: path, id, expression, "
+                        + "targetVariable (for kind=variable), optional targetKind (variable|context|event), "
+                        + "contextPath (context target), eventName (event target), condition (CEL), "
+                        + "remoteObjectPath + remoteVariableName (cross-object activator), "
+                        + "onContextChange (bool, dashboard rules), onStartup, order. "
+                        + "For dashboard @dashboardContext rules prefer configure_platform_context_rule.";
             }
 
             @Override
@@ -477,8 +495,12 @@ final class AgentAutomationTools {
                 String id = stringArg(arguments, "id");
                 String targetVariable = stringArg(arguments, "targetVariable");
                 String expression = stringArg(arguments, "expression");
-                if (path.isBlank() || id.isBlank() || targetVariable.isBlank() || expression.isBlank()) {
-                    return Map.of("status", "ERROR", "error", "path, id, targetVariable, expression are required");
+                String targetKind = com.ispf.core.binding.BindingTargetKind.normalize(stringArg(arguments, "targetKind"));
+                if (path.isBlank() || id.isBlank() || expression.isBlank()) {
+                    return Map.of("status", "ERROR", "error", "path, id, expression are required");
+                }
+                if (com.ispf.core.binding.BindingTargetKind.VARIABLE.equals(targetKind) && targetVariable.isBlank()) {
+                    return Map.of("status", "ERROR", "error", "targetVariable is required for targetKind=variable");
                 }
                 var auth = context.authentication();
                 if (!tenantScopeService.isPathVisible(path, auth)) {
@@ -493,6 +515,7 @@ final class AgentAutomationTools {
                         BindingExpressionValidator.validateOrThrow(condition);
                     }
                     BindingActivators activators = buildActivators(arguments, path);
+                    com.ispf.core.binding.BindingTarget target = buildTarget(arguments, targetKind, targetVariable);
                     BindingRule rule = new BindingRule(
                             id,
                             optionalString(arguments, "name"),
@@ -501,7 +524,7 @@ final class AgentAutomationTools {
                             activators,
                             condition != null ? condition : "",
                             expression,
-                            new BindingTarget(targetVariable, optionalString(arguments, "targetField"))
+                            target
                     );
                     BindingRule saved = bindingRulesService.upsertRule(path, rule);
                     bindingDependencyIndex.rebuild(path);
@@ -518,7 +541,45 @@ final class AgentAutomationTools {
                 if (remotePath != null && remoteVar != null) {
                     return BindingActivators.onRemoteChange(remotePath, remoteVar);
                 }
+                if (boolArg(arguments, "onContextChange", false)) {
+                    return new BindingActivators(
+                            boolArg(arguments, "onStartup", false),
+                            List.of(com.ispf.core.binding.BindingVariableRef.local("@dashboardContext")),
+                            null,
+                            0,
+                            false,
+                            true
+                    );
+                }
                 return BindingRulesService.defaultActivators(path, stringArg(arguments, "expression"));
+            }
+
+            private com.ispf.core.binding.BindingTarget buildTarget(
+                    Map<String, Object> arguments,
+                    String targetKind,
+                    String targetVariable
+            ) {
+                String field = optionalString(arguments, "targetField");
+                if (field == null || field.isBlank()) {
+                    field = "value";
+                }
+                return switch (targetKind) {
+                    case com.ispf.core.binding.BindingTargetKind.CONTEXT -> new com.ispf.core.binding.BindingTarget(
+                            com.ispf.core.binding.BindingTargetKind.CONTEXT,
+                            null,
+                            field,
+                            stringArg(arguments, "contextPath"),
+                            null
+                    );
+                    case com.ispf.core.binding.BindingTargetKind.EVENT -> new com.ispf.core.binding.BindingTarget(
+                            com.ispf.core.binding.BindingTargetKind.EVENT,
+                            null,
+                            field,
+                            null,
+                            stringArg(arguments, "eventName")
+                    );
+                    default -> new com.ispf.core.binding.BindingTarget(targetVariable, field);
+                };
             }
         };
     }

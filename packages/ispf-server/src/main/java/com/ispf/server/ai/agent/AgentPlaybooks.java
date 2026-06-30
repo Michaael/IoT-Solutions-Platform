@@ -417,10 +417,22 @@ public final class AgentPlaybooks {
                 + """
                 
                 ### Agent workflow: new mimic on tree
-                1. create_object parentPath=root.platform.mimics type=MIMIC templateId=mimic-v1
-                2. Edit diagramJson via Explorer mimic editor or PUT /api/v1/mimics/by-path/diagram
-                3. create_object DASHBOARD → add_dashboard_widget type=scada-mimic mimicPath=<path>
-                4. Bind symbols to device variables (list_variables first)
+                1. list_mimic_symbols — pick symbolId values (tank.vertical, valve.gate, label, pipe.segment, …)
+                2. create_object parentPath=root.platform.mimics type=MIMIC templateId=mimic-v1 name=<id>
+                3. **save_mimic_diagram** path=<mimic> elements=[...] — REQUIRED; must include at least one symbol.
+                   Shorthand element: {id, symbolId, layerId:"layer-default", x, y, bindings:{slot:{objectPath,variableName,valueField,transform}}}
+                   Or full diagramJson v2 document. Use add_mimic_elements to append more symbols later.
+                   NEVER set_variable name=diagram — diagram variable stores JSON string; use save_mimic_diagram only.
+                4. get_mimic_diagram path=<mimic> — verify elementCount > 0 before finish
+                5. create_object parentPath=root.platform.dashboards type=DASHBOARD → add_dashboard_widget type=scada-mimic mimicPath=<path>
+                6. Bind symbols to device variables (list_variables first)
+                
+                Minimal example (one tank + label):
+                  save_mimic_diagram path=root.platform.mimics.demo-tank elements=[
+                    {"id":"lbl","symbolId":"label","layerId":"layer-default","x":80,"y":40,"props":{"text":"Резервуар 1"}},
+                    {"id":"t1","symbolId":"tank.vertical","layerId":"layer-default","x":100,"y":80,
+                     "bindings":{"fillLevel":{"objectPath":"root.platform.devices.demo-sensor","variableName":"level","valueField":"value","transform":"number"}}}
+                  ]
                 """;
     }
 
@@ -500,6 +512,195 @@ public final class AgentPlaybooks {
                 2. configure_report reportType=tree-variables ...
                 3. run_report preview
                 4. optional: add_dashboard_widget or configure_operator_ui
+                """;
+    }
+
+    public static String platformMasterGuide() {
+        return """
+                ## Platform master index (agent tools by area)
+                
+                **Discovery:** search_context, list_drivers, get_driver_help, list_examples, get_example_bundle, list_object_models
+                
+                **Object tree:** list_objects, get_object, create_object, delete_object, search_objects, search_by_haystack_tags
+                list_variables, describe_variables, set_variable, create_variable
+                
+                **Devices/drivers:** configure_driver, driver_control, configure_variable_history
+                
+                **Bindings/rules:** create_binding_rule, list_binding_rules, configure_platform_context_rule, create_binding_rule refAt/CEL
+                
+                **Dashboards/HMI:** get_dashboard_layout, set_dashboard_layout template=, add_dashboard_widget, get_widget_catalog
+                configure_operator_ui, configure_platform_context_rule (drill-down, visibility)
+                
+                **SCADA mimic:** list_mimic_symbols → create_object MIMIC → save_mimic_diagram elements[] → get_mimic_diagram
+                → add_dashboard_widget type=scada-mimic mimicPath=...
+                
+                **Reports:** list_reports, get_report_schema, run_report, configure_report, add_dashboard_widget type=report
+                
+                **Automation:** configure_alert, configure_correlator, list_automation, get_automation_schema
+                
+                **Workflows:** create_object WORKFLOW → save_workflow_bpmn → update_workflow_status ACTIVE → run_workflow
+                list_workflow_instances, signal_workflow_instance, cancel_workflow_instance
+                
+                **Applications (REST D):** register_application → application_data_migrate → deploy_app_binding / deploy_app_function
+                validate_bundle → dry_run_deploy → import_package; export_application_bundle, rollback_application_deploy
+                
+                **Schedules:** list_platform_schedules, configure_platform_schedule (intervalMs + invoke function)
+                
+                **Functions/events:** list_functions, get_function, invoke_bff, invoke_tree_function, fire_event, list_events
+                
+                **Tree functions (script + Java):** get_function_template → deploy_tree_function → invoke_tree_function
+                Application BFF: deploy_app_function sourceType=script only
+                
+                **Semantic/timezone:** export_haystack, resolve_timezone, search_by_haystack_tags
+                
+                Always finish end-to-end with tools — never defer to manual UI when a tool exists.
+                get_automation_schema topic=<area> for detailed field reference.
+                """;
+    }
+
+    public static String workflowGuide() {
+        return """
+                ## Workflows (BPMN on tree)
+                
+                ### Tools
+                - create_object parentPath=root.platform.workflows type=WORKFLOW templateId=workflow-v1
+                - get_workflow path=... — bpmnXml, status, instanceState
+                - save_workflow_bpmn path=... bpmnXml=<BPMN 2.0 XML>
+                - update_workflow_status path=... status=ACTIVE|INACTIVE|DRAFT
+                - run_workflow path=... triggerObjectPath=... (optional)
+                - list_workflow_instances path=...
+                - signal_workflow_instance instanceId=... signal=...
+                - cancel_workflow_instance instanceId=... reason=...
+                - list_work_queue — operator open user tasks
+                
+                ### Agent workflow
+                1. create_object WORKFLOW
+                2. save_workflow_bpmn with start → serviceTask/userTask → end
+                3. update_workflow_status ACTIVE
+                4. run_workflow to test; list_workflow_instances for instanceId
+                5. configure_correlator action=RUN_WORKFLOW for event-driven start (optional)
+                6. add_dashboard_widget type=work-queue for operator tasks (optional)
+                
+                BPMN service tasks can invoke tree functions (see WORKFLOWS.md in search_context topic=workflows).
+                """;
+    }
+
+    public static String applicationLifecycleGuide() {
+        return """
+                ## Application lifecycle (bundle + REST D)
+                
+                ### Full bundle path (production)
+                1. get_example_bundle appId=mes-reference sections=[manifest,migrations,functions]
+                2. validate_bundle appId=... manifest={...}
+                3. dry_run_deploy appId=... manifest={...}
+                4. import_package appId=... manifest={...}
+                5. configure_operator_ui from manifest operatorUi
+                
+                ### Incremental REST D tools
+                - register_application appId displayName tablePrefix schemaName
+                - application_data_status appId
+                - application_data_migrate appId version scripts=[{id,sql}]
+                - application_data_seed appId profile=...
+                - deploy_app_binding appId objectPath variable query refreshIntervalMs
+                - deploy_app_function appId objectPath functionName sourceType sourceBody
+                - list_app_bindings appId
+                - export_application_bundle appId
+                - rollback_application_deploy appId version
+                - pull_application_from_tree appId sections=[dashboards,workflows,...]
+                - list_applications
+                
+                After any deploy: list_variables / invoke_bff to verify tree paths.
+                """;
+    }
+
+    public static String platformRuleGuide() {
+        return """
+                ## Platform rules (dashboard context + events, ADR-0019)
+                
+                ### Dashboard visibility / drill-down
+                - configure_platform_context_rule on DASHBOARD object
+                - targetKind=context contextPath=params.mode (or selection.*)
+                - expression: CEL string result; condition uses context.selection.* and refAt(path,var)
+                - onContextChange=true (default)
+                
+                ### Variable binding (devices, CUSTOM hubs)
+                - create_binding_rule path=... targetKind=variable targetVariable=... expression=...
+                - Cross-device: remoteObjectPath + remoteVariableName activators
+                - refAt(otherPath, varName) in expression for computed values
+                
+                ### Event side-effects
+                - create_binding_rule targetKind=event eventName=... expression=...
+                
+                ### Inspect
+                - list_binding_rules path=...
+                - get_automation_schema topic=platform-rule
+                
+                Pair with object-table rowTargetDashboard + selectionKey for drill-down dashboards.
+                """;
+    }
+
+    public static String scheduleGuide() {
+        return """
+                ## Platform schedules (root.platform.schedules)
+                
+                ### Tools
+                - list_platform_schedules
+                - configure_platform_schedule scheduleId intervalMs objectPath functionName
+                  (create) OR path=... (update)
+                
+                ### Agent workflow
+                1. list_functions on target object — pick functionName
+                2. configure_platform_schedule scheduleId=my-poll intervalMs=60000 objectPath=... functionName=...
+                3. list_platform_schedules to verify enabled=true
+                
+                Schedules invoke tree functions periodically. Prefer bundle schedules[] for repeatable deploys.
+                """;
+    }
+
+    public static String functionsGuide() {
+        return """
+                ## Object-tree functions (script + Java)
+                
+                ### Tools
+                - get_function_template topic=java|script|comparison — skeleton and rules
+                - deploy_tree_function path functionName sourceType sourceBody inputSchema outputSchema
+                - invoke_tree_function path functionName inputRows={} — test after deploy
+                - list_functions / get_function — inspect existing
+                - deploy_app_function — application BFF **script only** (SQL steps, app schema)
+                
+                ### When to use Java vs script
+                | sourceType | Use for |
+                |------------|---------|
+                | **java** | Typed logic, math, conditions; compiles on save (ObjectJavaFunction) |
+                | **script** | SQL (selectOne/exec), readVariable, invoke_function, workflow-style steps |
+                | **(none)** | Built-in platform handlers by name (acknowledgeAlarm, calculate, …) |
+                
+                ### Java deploy example
+                get_function_template topic=java
+                deploy_tree_function path=root.platform.devices.demo-sensor-01 functionName=checkThreshold
+                  sourceType=java
+                  inputSchema={fields:[{name:value,type:DOUBLE}]}
+                  outputSchema={fields:[{name:alarm,type:BOOLEAN}]}
+                  sourceBody=\"\"\"
+                  import com.ispf.core.function.ObjectJavaFunction;
+                  import com.ispf.core.function.JavaFunctionContext;
+                  import com.ispf.core.model.*;
+                  import java.util.Map;
+                  public class CheckThresholdFn implements ObjectJavaFunction {
+                    public DataRecord invoke(DataRecord input, JavaFunctionContext ctx) {
+                      double v = ((Number)input.firstRow().get("value")).doubleValue();
+                      return DataRecord.single(
+                        DataSchema.builder("out").field("alarm", FieldType.BOOLEAN).build(),
+                        Map.of("alarm", v > 80));
+                    }
+                  }
+                  \"\"\"
+                invoke_tree_function path=... functionName=checkThreshold inputRows=[{value:90}]
+                
+                ### Script deploy example
+                deploy_tree_function sourceType=script sourceBody={"steps":[{"type":"return","fields":{"ok":true}}]}
+                
+                search_context topic=functions for full OBJECT_FUNCTIONS.md (Java security limits, script steps).
                 """;
     }
 }

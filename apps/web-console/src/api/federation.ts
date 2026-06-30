@@ -453,6 +453,52 @@ export function probeFederationBind(peerId: string, remotePath: string): Promise
   });
 }
 
+export function proxyFederationVariablePatch(
+  peerId: string,
+  objectPath: string,
+  variableName: string,
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const params = new URLSearchParams({
+    peerId,
+    path: objectPath,
+    name: variableName,
+  });
+  return fetch(`/api/v1/federation/proxy/objects/by-path/variables/value?${params.toString()}`, {
+    method: "PATCH",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(parseApiError(await response.text(), `Proxy variable patch failed: ${response.status}`));
+    }
+    return response.json();
+  });
+}
+
+export function proxyFederationFunctionInvoke(
+  peerId: string,
+  objectPath: string,
+  functionName: string,
+  input?: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const params = new URLSearchParams({
+    peerId,
+    path: objectPath,
+    name: functionName,
+  });
+  return fetch(`/api/v1/federation/proxy/objects/by-path/functions/invoke?${params.toString()}`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(input ?? {}),
+  }).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(parseApiError(await response.text(), `Proxy function invoke failed: ${response.status}`));
+    }
+    return response.json();
+  });
+}
+
 export function formatTokenExpiry(expiresAt: string | null | undefined): string {
   if (!expiresAt) {
     return "—";

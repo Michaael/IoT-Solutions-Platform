@@ -40,10 +40,6 @@ import {
 } from "../utils/agentChatStorage";
 import i18n from "../i18n";
 
-export function getWelcomeText(): string {
-  return i18n.t("agent.welcomeExtended", { ns: "ai" });
-}
-
 export interface ChatMessage {
   id: string;
   role: "user" | "agent";
@@ -128,9 +124,7 @@ export function AgentChatProvider({
   const initialPrefs = useMemo(() => loadAiStudioPrefs(), []);
   const [chatIndex, setChatIndex] = useState<AgentChatIndex>(() => loadAgentChatIndex());
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "agent", text: getWelcomeText() },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loadingSession, setLoadingSession] = useState(enabled);
   const [isPending, setIsPending] = useState(false);
@@ -196,11 +190,7 @@ export function AgentChatProvider({
       turnCountRef.current = session.turns.length;
       const turnMessages = turnsToMessages(session.turns);
       setLiveSteps([]);
-      setMessages(
-        turnMessages.length > 0
-          ? turnMessages
-          : [{ id: "welcome", role: "agent", text: getWelcomeText() }]
-      );
+      setMessages(turnMessages);
     },
     [registerSession]
   );
@@ -265,7 +255,7 @@ export function AgentChatProvider({
               setActiveSessionId(null);
               activeSessionIdRef.current = null;
               setLiveSteps([]);
-              setMessages([{ id: "welcome", role: "agent", text: getWelcomeText() }]);
+              setMessages([]);
             }
           }
         } else {
@@ -332,7 +322,7 @@ export function AgentChatProvider({
     const session = await createAgentSession(resolveRootPath());
     registerSession(session, loadAgentChatIndex(), session.sessionId);
     turnCountRef.current = 0;
-    setMessages([{ id: "welcome", role: "agent", text: getWelcomeText() }]);
+    setMessages([]);
     setInput("");
   }, [registerSession]);
 
@@ -369,7 +359,7 @@ export function AgentChatProvider({
           activeSessionIdRef.current = null;
           turnCountRef.current = 0;
           setLiveSteps([]);
-          setMessages([{ id: "welcome", role: "agent", text: getWelcomeText() }]);
+          setMessages([]);
         }
       }
     },
@@ -434,7 +424,7 @@ export function AgentChatProvider({
     setActiveSessionId(null);
     activeSessionIdRef.current = null;
     turnCountRef.current = 0;
-    setMessages([{ id: "welcome", role: "agent", text: getWelcomeText() }]);
+    setMessages([]);
   }, []);
 
   const pendingUserMessage = isPending ? pendingMessageRef.current : null;

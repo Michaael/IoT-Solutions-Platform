@@ -81,5 +81,10 @@
   "table.enabled": "启用",
   "table.id": "身份证号",
   "table.name": "名称",
-  "table.type": "类型"
+  "table.type": "类型",
+  "objectPath.placeholder": "root.platform...",
+  "objectPath.filterHint": "显示类型：{{types}}",
+  "objectPath.browseTree": "浏览树",
+  "modal.select": "选择",
+  "modal.advancedSettings": "高级设置"
 }

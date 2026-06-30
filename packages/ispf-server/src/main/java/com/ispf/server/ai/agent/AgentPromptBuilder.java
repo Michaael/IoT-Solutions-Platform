@@ -26,13 +26,29 @@ public final class AgentPromptBuilder {
             For drivers/docs: list_drivers, get_driver_help, list_examples, get_example_bundle, search_context (topic=...).
             For reports: get_automation_schema topic=report; list_reports; get_report_schema; run_report preview;
             configure_report to create/update; template upload is UI-only (Report Builder → Шаблон YARG).
-            For SCADA mimics: search_context topic=scada; follow SCADA guide in Playbooks; anonymize demo labels.
+            For SCADA mimics: list_mimic_symbols → create_object type=MIMIC → save_mimic_diagram with non-empty elements[];
+            never finish with empty mimic; do NOT use set_variable name=diagram; follow SCADA guide in Playbooks.
+            For complex tasks: get_automation_schema topic=platformMaster first; then area-specific tools (workflow, lifecycle, dashboard, scada).
+            Complete end-to-end — dashboards, SCADA panels, workflows, apps, alerts — using tools only.
             Do not call search_context more than 3 times in a row with the same query; prefer specific tools.
             
             Reply with ONLY one JSON object per turn — no markdown fences, no prose before or after:
             {"type":"tool","name":"<tool>","arguments":{...}}
             or when done:
             {"type":"finish","summary":"Human-readable result for the user","result":{"devicePath":"...","dashboardPath":"..."}}
+            
+            CONVERSATION STYLE — prefer dialogue over blind execution:
+            - If the request is vague, ambiguous, or missing key details (device name, path, driver type, report name), \
+            ask a short clarifying question BEFORE creating or changing objects.
+            - When several valid approaches exist (SNMP vs Modbus, which dashboard template, which report), \
+            propose 2–4 concrete options instead of guessing.
+            - Use result.suggestions for clickable follow-ups: each item needs "label" (button text) and \
+            "message" (exact user message to send next). Set result.interactive=true when asking.
+            - Example when report name is unclear:
+            {"type":"finish","summary":"Есть несколько отчётов. Какой запустить или сначала показать список?","result":{"interactive":true,"suggestions":[{"label":"Список отчётов","message":"Покажи доступные отчёты и кратко опиши каждый","primary":true},{"label":"SNMP demo dashboard","message":"Открой демо SNMP dashboard и опиши текущие метрики"}]}}
+            - After list_reports: if needsClarification in tool result — finish with question + result.suggestions, do NOT run_report yet.
+            - When the user picks a suggestion (same text as message field), treat it as confirmation and proceed.
+            - Still complete end-to-end when intent is clear; do not over-ask on obvious tasks.
             
             """;
 
@@ -76,6 +92,17 @@ public final class AgentPromptBuilder {
             - Variables: describe_variables for schema before set_variable; list_variables for current values
             - Object templates: list_object_models before create_object
             - Never invent REST paths; use tools only
+            - SCADA mimic workflow: list_mimic_symbols → create_object type=MIMIC templateId=mimic-v1
+              → save_mimic_diagram path=... elements=[{id,symbolId,layerId,x,y,bindings}] (or full diagramJson)
+              → get_mimic_diagram to verify elementCount>0 → create_object DASHBOARD → add_dashboard_widget type=scada-mimic mimicPath=...
+              → list_variables on devices before bindings; NEVER set_variable name=diagram; NEVER finish with empty elements[]
+            - Workflows: create_object WORKFLOW → save_workflow_bpmn → update_workflow_status ACTIVE → run_workflow
+            - Application: validate_bundle → dry_run_deploy → import_package OR register_application + application_data_migrate
+            - Platform rules on dashboard: configure_platform_context_rule; list_binding_rules to inspect
+            - Schedules: configure_platform_schedule; list_platform_schedules
+            - Functions: get_function_template topic=java|script → deploy_tree_function (java|script on tree);
+              deploy_app_function sourceType=script for app BFF; invoke_tree_function to test
+            - Master tool index: get_automation_schema topic=platformMaster (embedded in Playbooks platformMasterGuide)
             """;
 
     private AgentPromptBuilder() {
@@ -122,6 +149,18 @@ public final class AgentPromptBuilder {
         prompt.append(AgentPlaybooks.widgetCatalogGuide());
         prompt.append("\n\n");
         prompt.append(AgentPlaybooks.reportsGuide());
+        prompt.append("\n\n");
+        prompt.append(AgentPlaybooks.platformMasterGuide());
+        prompt.append("\n\n");
+        prompt.append(AgentPlaybooks.workflowGuide());
+        prompt.append("\n\n");
+        prompt.append(AgentPlaybooks.applicationLifecycleGuide());
+        prompt.append("\n\n");
+        prompt.append(AgentPlaybooks.platformRuleGuide());
+        prompt.append("\n\n");
+        prompt.append(AgentPlaybooks.scheduleGuide());
+        prompt.append("\n\n");
+        prompt.append(AgentPlaybooks.functionsGuide());
         prompt.append(RULES);
         prompt.append("- Reuse existing demo paths when present: ")
                 .append(AgentPlaybooks.SNMP_DEVICE_PATH)
