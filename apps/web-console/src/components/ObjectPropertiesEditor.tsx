@@ -757,41 +757,38 @@ export default function ObjectPropertiesEditor({
         </section>
       )}
 
-      {tab === "access" && (
-        <section className="panel">
-          <ObjectAclPanel objectPath={path} canManage={canManage} />
-        </section>
-      )}
-
-      {tab === "bindings" && (
-        <section className="panel">
-          <BindingRulesPanel
-            path={path}
-            canManage={canManage}
-            eventNames={editorData.events.map((event) => event.name)}
-            variableNames={editorData.variables.map((variable) => variable.name)}
-            functionNames={editorData.functions.map((fn) => fn.name)}
-          />
-          {canManage && !ctx.federated && (
-            <label className="binding-audit-toggle panel-toolbar">
-              <input
-                type="checkbox"
-                checked={editorData.object.bindingAuditEnabled ?? false}
-                onChange={async (e) => {
-                  const enabled = e.target.checked;
-                  await updateObject(path, { bindingAuditEnabled: enabled }, { revision });
-                  const fresh = await fetchObjectEditor(path);
-                  setRevision(fresh.object.revision ?? revision);
-                  await reloadFromEditor();
-                  await queryClient.invalidateQueries({ queryKey: ["binding-audit-status", path] });
-                }}
-              />
-              {t("bindings.auditEnabled")}
-            </label>
-          )}
-          <BindingInvokeJournalPanel objectPath={path} compact scrollMaxHeight={360} />
-        </section>
-      )}
+      <>
+          <section className="panel" hidden={tab !== "access"}>
+            <ObjectAclPanel objectPath={path} canManage={canManage} />
+          </section>
+          <section className="panel" hidden={tab !== "bindings"}>
+            <BindingRulesPanel
+              path={path}
+              canManage={canManage}
+              eventNames={editorData.events.map((event) => event.name)}
+              variableNames={editorData.variables.map((variable) => variable.name)}
+              functionNames={editorData.functions.map((fn) => fn.name)}
+            />
+            {canManage && !ctx.federated && (
+              <label className="binding-audit-toggle panel-toolbar">
+                <input
+                  type="checkbox"
+                  checked={editorData.object.bindingAuditEnabled ?? false}
+                  onChange={async (e) => {
+                    const enabled = e.target.checked;
+                    await updateObject(path, { bindingAuditEnabled: enabled }, { revision });
+                    const fresh = await fetchObjectEditor(path);
+                    setRevision(fresh.object.revision ?? revision);
+                    await reloadFromEditor();
+                    await queryClient.invalidateQueries({ queryKey: ["binding-audit-status", path] });
+                  }}
+                />
+                {t("bindings.auditEnabled")}
+              </label>
+            )}
+            <BindingInvokeJournalPanel objectPath={path} compact scrollMaxHeight={360} />
+          </section>
+      </>
 
       {tab === "variables" && (
         <section className="panel property-list">

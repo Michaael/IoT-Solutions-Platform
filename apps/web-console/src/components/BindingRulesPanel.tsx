@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteBindingRule, fetchBindingRules, saveBindingRules } from "../api";
@@ -46,6 +46,7 @@ export default function BindingRulesPanel({
   const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<BindingRule | null>(null);
+  const targetDrafts = useRef<Partial<Record<BindingTargetKind, BindingRule["target"]>>>({});
 
   const rulesQuery = useQuery({
     queryKey: ["binding-rules", path],
@@ -75,10 +76,12 @@ export default function BindingRulesPanel({
   });
 
   const startNewRule = () => {
+    targetDrafts.current = {};
     setEditing(dashboardMode ? emptyDashboardContextRule() : emptyBindingRule());
   };
 
   const applyTemplate = (template: RuleTemplate) => {
+    targetDrafts.current = {};
     const suffix = Date.now().toString(36).slice(-4);
     setEditing({
       ...template.rule,
@@ -89,12 +92,15 @@ export default function BindingRulesPanel({
 
   const setTargetKind = (kind: BindingTargetKind) => {
     if (!editing) return;
+    const currentKind = targetKind(editing);
+    targetDrafts.current[currentKind] = editing.target;
     const nextTarget =
-      kind === "context"
+      targetDrafts.current[kind] ??
+      (kind === "context"
         ? { kind, path: "params.mode" as const }
         : kind === "event"
           ? { kind, eventName: "" as const }
-          : { kind, variableName: "", field: "value" as const };
+          : { kind, variableName: "", field: "value" as const });
     setEditing({ ...editing, target: nextTarget });
   };
 
@@ -150,7 +156,7 @@ export default function BindingRulesPanel({
                   <td>{rule.enabled ? t("common:action.yes") : t("common:action.no")}</td>
                   {canManage && (
                     <td>
-                      <button type="button" className="btn small" onClick={() => setEditing(rule)}>{t("inspector:bindings.edit")}</button>
+                      <button type="button" className="btn small" onClick={() => { targetDrafts.current = {}; setEditing(rule); }}>{t("inspector:bindings.edit")}</button>
                       <button
                         type="button"
                         className="btn small danger"

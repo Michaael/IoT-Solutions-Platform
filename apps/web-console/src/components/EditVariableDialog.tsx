@@ -69,7 +69,8 @@ export default function EditVariableDialog({
   const canEditValue = variable.writable;
   const definitionDirty = canEditDefinition && (readable !== variable.readable || writable !== variable.writable);
   const historyDirty = canManageHistory && !historyEqual(history, initialHistory);
-  const valueDirty = canEditValue && !recordsEqual(record, initialRecord);
+  const jsonDirty = showJson && jsonText !== JSON.stringify(initialRecord, null, 2);
+  const valueDirty = canEditValue && (!recordsEqual(record, initialRecord) || jsonDirty);
 
   useEffect(() => {
     const next = variable.value
@@ -87,6 +88,22 @@ export default function EditVariableDialog({
       setJsonText(JSON.stringify(record, null, 2));
     }
   }, [record, showJson]);
+
+  function toggleJsonMode() {
+    if (!showJson) {
+      setJsonText(JSON.stringify(record, null, 2));
+      setParseError(null);
+      setShowJson(true);
+      return;
+    }
+    try {
+      setRecord(JSON.parse(jsonText) as DataRecord);
+      setParseError(null);
+      setShowJson(false);
+    } catch {
+      setParseError(t("common:error.invalidJson"));
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -188,7 +205,7 @@ export default function EditVariableDialog({
               <button
                 type="button"
                 className="btn tiny"
-                onClick={() => setShowJson((v) => !v)}
+                onClick={toggleJsonMode}
               >
                 JSON
               </button>

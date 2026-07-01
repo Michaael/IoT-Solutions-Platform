@@ -781,7 +781,10 @@ export default function FunctionScriptStepsEditor({ value, onChange }: FunctionS
             className="json-editor"
             rows={14}
             value={jsonText}
-            onChange={(e) => setJsonText(e.target.value)}
+            onChange={(e) => {
+              setJsonText(e.target.value);
+              onChange(e.target.value);
+            }}
             spellCheck={false}
           />
           <div className="script-step-list-actions">

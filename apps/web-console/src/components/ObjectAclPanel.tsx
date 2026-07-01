@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchObjectAcl, saveObjectAcl, type ObjectAclEntry } from "../api/objectAcl";
 
@@ -18,6 +18,8 @@ export default function ObjectAclPanel({ objectPath, canManage }: ObjectAclPanel
   const { t } = useTranslation(["security", "common"]);
   const queryClient = useQueryClient();
   const [entries, setEntries] = useState<ObjectAclEntry[]>([]);
+  const dirtyRef = useRef(false);
+  const loadedPathRef = useRef<string | null>(null);
 
   const aclQuery = useQuery({
     queryKey: ["object-acl", objectPath],
@@ -25,25 +27,30 @@ export default function ObjectAclPanel({ objectPath, canManage }: ObjectAclPanel
   });
 
   useEffect(() => {
-    if (aclQuery.data) {
+    if (aclQuery.data && (!dirtyRef.current || loadedPathRef.current !== objectPath)) {
       setEntries(aclQuery.data);
+      dirtyRef.current = false;
+      loadedPathRef.current = objectPath;
     }
-  }, [aclQuery.data]);
+  }, [aclQuery.data, objectPath]);
 
   const saveMutation = useMutation({
     mutationFn: () => saveObjectAcl(objectPath, entries),
     onSuccess: () => {
+      dirtyRef.current = false;
       queryClient.invalidateQueries({ queryKey: ["object-acl", objectPath] });
     },
   });
 
   const updateEntry = (index: number, patch: Partial<ObjectAclEntry>) => {
+    dirtyRef.current = true;
     setEntries((current) =>
       current.map((entry, entryIndex) => (entryIndex === index ? { ...entry, ...patch } : entry))
     );
   };
 
   const removeEntry = (index: number) => {
+    dirtyRef.current = true;
     setEntries((current) => current.filter((_, entryIndex) => entryIndex !== index));
   };
 
@@ -55,7 +62,7 @@ export default function ObjectAclPanel({ objectPath, canManage }: ObjectAclPanel
           <p className="op-muted">{t("acl.subtitle", { path: objectPath })}</p>
         </div>
         {canManage && (
-          <button type="button" className="btn" onClick={() => setEntries((current) => [...current, { ...EMPTY_ENTRY }])}>
+          <button type="button" className="btn" onClick={() => { dirtyRef.current = true; setEntries((current) => [...current, { ...EMPTY_ENTRY }]); }}>
             {t("acl.addRule")}
           </button>
         )}

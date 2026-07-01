@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { upsertEvent, upsertFunction } from "../api";
@@ -74,16 +74,30 @@ export default function EditDescriptorDialog({
   const [showAdvancedJson, setShowAdvancedJson] = useState(false);
   const [schemaJson, setSchemaJson] = useState("{}");
   const [parseError, setParseError] = useState<string | null>(null);
+  const sourceDrafts = useRef<Record<string, string>>({ handler: "", script: "", java: "" });
+  const initializedRef = useRef(false);
 
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    setName(initial?.name ?? "");
+    setDescription(initial?.description ?? "");
+    setLevel(!isFunction && initial ? (initial as EventDescriptor).level : "INFO");
+    setShowAdvancedJson(false);
+    setParseError(null);
     if (isFunction) {
-      const fn = (initial as FunctionDescriptor | undefined) ?? defaultFunction(name);
+      const fn = (initial as FunctionDescriptor | undefined) ?? defaultFunction();
       setInputSchema(cloneSchema(fn.inputSchema));
       setOutputSchema(cloneSchema(fn.outputSchema));
       setSourceType(fn.sourceType ?? "");
       setSourceBody(fn.sourceBody ?? "");
       setDataSourcePath(fn.dataSourcePath ?? "");
       setVersion(fn.version ?? "");
+      sourceDrafts.current = {
+        handler: fn.sourceType ? "" : (fn.sourceBody ?? ""),
+        script: fn.sourceType === "script" ? (fn.sourceBody ?? "") : "",
+        java: fn.sourceType === "java" ? (fn.sourceBody ?? "") : "",
+      };
       setSchemaJson(
         JSON.stringify(
           {
@@ -99,11 +113,68 @@ export default function EditDescriptorDialog({
         )
       );
     } else {
-      const ev = (initial as EventDescriptor | undefined) ?? defaultEvent(name);
+      const ev = (initial as EventDescriptor | undefined) ?? defaultEvent();
       setPayloadSchema(cloneSchema(ev.payloadSchema));
       setSchemaJson(JSON.stringify(ev.payloadSchema, null, 2));
     }
-  }, [initial, isFunction, name]);
+  }, [initial, isFunction]);
+
+  function structuredJson(): string {
+    if (!isFunction) return JSON.stringify(payloadSchema, null, 2);
+    return JSON.stringify({
+      inputSchema,
+      outputSchema,
+      sourceType: sourceType || null,
+      sourceBody: sourceBody || null,
+      dataSourcePath: dataSourcePath || null,
+      version: version || null,
+    }, null, 2);
+  }
+
+  function applyAdvancedJson(): boolean {
+    try {
+      if (isFunction) {
+        const parsed = JSON.parse(schemaJson) as FunctionDescriptor;
+        setInputSchema(cloneSchema(parsed.inputSchema));
+        setOutputSchema(cloneSchema(parsed.outputSchema));
+        const nextType = parsed.sourceType ?? "";
+        const nextBody = parsed.sourceBody ?? "";
+        setSourceType(nextType);
+        setSourceBody(nextBody);
+        sourceDrafts.current[nextType || "handler"] = nextBody;
+        setDataSourcePath(parsed.dataSourcePath ?? "");
+        setVersion(parsed.version ?? "");
+      } else {
+        setPayloadSchema(cloneSchema(JSON.parse(schemaJson) as DataSchema));
+      }
+      setParseError(null);
+      return true;
+    } catch {
+      setParseError(t("descriptor.invalidSchemaJson"));
+      return false;
+    }
+  }
+
+  function setAdvancedMode(next: boolean) {
+    if (next) {
+      setSchemaJson(structuredJson());
+      setParseError(null);
+      setShowAdvancedJson(true);
+      return;
+    }
+    if (applyAdvancedJson()) setShowAdvancedJson(false);
+  }
+
+  function changeSourceType(next: string) {
+    sourceDrafts.current[sourceType || "handler"] = sourceBody;
+    const draftKey = next || "handler";
+    let nextBody = sourceDrafts.current[draftKey] ?? "";
+    if (!nextBody && next === "java") nextBody = DEFAULT_JAVA_FUNCTION_TEMPLATE;
+    if (!nextBody && next === "script") nextBody = defaultScriptBody();
+    sourceDrafts.current[draftKey] = nextBody;
+    setSourceType(next);
+    setSourceBody(nextBody);
+  }
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -160,6 +231,7 @@ export default function EditDescriptorDialog({
           setParseError(t("descriptor.sourceBodyRequired"));
           return;
         }
+        if (st === "script") JSON.parse(sourceBody);
       }
       setParseError(null);
       mutation.mutate();
@@ -237,16 +309,7 @@ export default function EditDescriptorDialog({
                 {t("descriptor.sourceType")}
                 <select
                   value={sourceType}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setSourceType(next);
-                    if (next === "java" && !sourceBody.trim()) {
-                      setSourceBody(DEFAULT_JAVA_FUNCTION_TEMPLATE);
-                    }
-                    if (next === "script" && !sourceBody.trim()) {
-                      setSourceBody(defaultScriptBody());
-                    }
-                  }}
+                  onChange={(e) => changeSourceType(e.target.value)}
                 >
                   <option value="">{t("descriptor.sourceTypeHandler")}</option>
                   <option value="script">{t("descriptor.sourceTypeScript")}</option>
@@ -334,7 +397,7 @@ export default function EditDescriptorDialog({
             <input
               type="checkbox"
               checked={showAdvancedJson}
-              onChange={(e) => setShowAdvancedJson(e.target.checked)}
+              onChange={(e) => setAdvancedMode(e.target.checked)}
             />
             {t("descriptor.advancedJson")}
           </label>
