@@ -75,6 +75,21 @@ public final class AgentObjectTreeGuide {
                 Paths, modelName, profile, variableName must come from tool results in the current turn.
                 Playbooks and recipes show patterns only; never copy example paths literally.
                 
+                ### Canonical order (every object type)
+                
+                1. `list_objects parent=<exact folder>` — e.g. root.platform.workflows (NOT parent=root for deep paths)
+                2. `create_object parentPath=<folder> name=… type=…` — use path from step 1
+                3. Configure/save on returned path — never before create_object succeeds
+                
+                | Type | Parent folder | After create_object |
+                |------|---------------|---------------------|
+                | WORKFLOW | root.platform.workflows | save_workflow_bpmn → update_workflow_status ACTIVE → run_workflow |
+                | MIMIC | root.platform.mimics | save_mimic_diagram / add_mimic_elements |
+                | DASHBOARD | root.platform.dashboards | set_dashboard_layout or add_dashboard_widget |
+                | DEVICE | root.platform.devices | configure_driver, set_variable, list_variables |
+                | ALERT | root.platform.alert-rules | configure_alert |
+                | REPORT | root.platform.reports | configure_report |
+                
                 - list_objects parentPath=… — children of folder
                 - get_object path=… — single node metadata
                 - search_objects query=… — find by name/path fragment

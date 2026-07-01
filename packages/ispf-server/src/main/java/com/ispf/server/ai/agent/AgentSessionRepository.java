@@ -10,6 +10,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,7 +78,7 @@ public class AgentSessionRepository {
                 turn.assistantSummary(),
                 turn.status(),
                 writeJson(turn.steps()),
-                writeJson(turn.result()),
+                writeJson(turnResultPayload(turn)),
                 Timestamp.from(turn.createdAt()),
                 sortOrder
         );
@@ -155,15 +157,51 @@ public class AgentSessionRepository {
     }
 
     private AgentTurn mapTurn(ResultSet rs) throws SQLException {
+        Map<String, Object> resultPayload = readStringMap(rs.getString("result_json"));
+        List<Map<String, Object>> attachments = readAttachments(resultPayload);
+        Map<String, Object> result = stripAttachments(resultPayload);
         return new AgentTurn(
                 rs.getString("turn_id"),
                 rs.getString("user_message"),
                 rs.getString("assistant_summary"),
                 rs.getString("status"),
                 readListMap(rs.getString("steps_json")),
-                readStringMap(rs.getString("result_json")),
+                result,
+                attachments,
                 rs.getTimestamp("created_at").toInstant()
         );
+    }
+
+    private static Map<String, Object> turnResultPayload(AgentTurn turn) {
+        Map<String, Object> payload = new LinkedHashMap<>(turn.result());
+        if (!turn.attachments().isEmpty()) {
+            payload.put("_attachments", turn.attachments());
+        }
+        return payload;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> readAttachments(Map<String, Object> resultPayload) {
+        Object raw = resultPayload.get("_attachments");
+        if (!(raw instanceof List<?> list)) {
+            return List.of();
+        }
+        List<Map<String, Object>> attachments = new ArrayList<>();
+        for (Object item : list) {
+            if (item instanceof Map<?, ?> map) {
+                attachments.add((Map<String, Object>) map);
+            }
+        }
+        return List.copyOf(attachments);
+    }
+
+    private static Map<String, Object> stripAttachments(Map<String, Object> resultPayload) {
+        if (resultPayload == null || resultPayload.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Object> result = new LinkedHashMap<>(resultPayload);
+        result.remove("_attachments");
+        return result;
     }
 
     private String writeRunState(AgentRunState runState) {

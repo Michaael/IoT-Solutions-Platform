@@ -79,12 +79,29 @@ public final class DashboardWidgetNormalizer {
         throw new IllegalArgumentException("layout must be a JSON string or object");
     }
 
+    public static String normalizeLayoutJson(String layoutJson, ObjectMapper objectMapper) {
+        if (layoutJson == null || layoutJson.isBlank()) {
+            return layoutJson;
+        }
+        try {
+            var root = objectMapper.readValue(layoutJson, Map.class);
+            if (!(root instanceof Map<?, ?> map)) {
+                return layoutJson;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> normalized = normalizeLayoutMap((Map<String, Object>) map, objectMapper);
+            return objectMapper.writeValueAsString(normalized);
+        } catch (JacksonException ex) {
+            return layoutJson;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, Object> normalizeLayoutMap(Map<String, Object> layout, ObjectMapper objectMapper) {
-        Map<String, Object> copy = new LinkedHashMap<>(layout);
-        Object widgetsRaw = copy.get("widgets");
+        Map<String, Object> placed = DashboardWidgetPlacement.normalizeLayoutMap(layout);
+        Object widgetsRaw = placed.get("widgets");
         if (widgetsRaw instanceof List<?> list) {
-            copy.put(
+            placed.put(
                     "widgets",
                     list.stream()
                             .filter(Map.class::isInstance)
@@ -92,6 +109,6 @@ public final class DashboardWidgetNormalizer {
                             .toList()
             );
         }
-        return copy;
+        return placed;
     }
 }

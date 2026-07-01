@@ -19,16 +19,28 @@ public class AgentRunCancellationRegistry {
     private static final class RunState {
         final AtomicBoolean cancelled = new AtomicBoolean(false);
         volatile String userMessage;
+        volatile Map<String, Object> planState = Map.of();
         final List<Map<String, Object>> steps = Collections.synchronizedList(new ArrayList<>());
     }
 
     private final ConcurrentHashMap<String, RunState> runsBySession = new ConcurrentHashMap<>();
 
-    public RunHandle start(String sessionId, String userMessage) {
+    public RunHandle start(String sessionId, String userMessage, Map<String, Object> planState) {
         RunState state = new RunState();
         state.userMessage = userMessage != null ? userMessage : "";
+        state.planState = planState != null ? new LinkedHashMap<>(planState) : Map.of();
         runsBySession.put(sessionId, state);
         return () -> runsBySession.remove(sessionId);
+    }
+
+    public void syncPlanState(String sessionId, Map<String, Object> planState) {
+        if (sessionId == null) {
+            return;
+        }
+        RunState state = runsBySession.get(sessionId);
+        if (state != null) {
+            state.planState = planState != null ? new LinkedHashMap<>(planState) : Map.of();
+        }
     }
 
     public void cancel(String sessionId) {
@@ -77,6 +89,9 @@ public class AgentRunCancellationRegistry {
         map.put("userMessage", state.userMessage);
         map.put("steps", List.copyOf(state.steps));
         map.put("stepsCompleted", state.steps.size());
+        if (state.planState != null && !state.planState.isEmpty()) {
+            map.put("planState", state.planState);
+        }
         return map;
     }
 

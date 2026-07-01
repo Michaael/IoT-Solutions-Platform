@@ -16,8 +16,9 @@ export interface AgentChatIndex {
 export interface AiStudioPrefs {
   defaultRootPath: string;
   defaultAppId: string;
-  lastTab: "agent" | "bundle" | "settings";
+  lastTab: "agent" | "bundle" | "status" | "prefs";
   restoreLastChat: boolean;
+  interactionMode: "auto" | "plan" | "execute" | "ask";
 }
 
 const DEFAULT_INDEX: AgentChatIndex = {
@@ -30,6 +31,7 @@ const DEFAULT_PREFS: AiStudioPrefs = {
   defaultAppId: "ai-generated",
   lastTab: "agent",
   restoreLastChat: true,
+  interactionMode: "auto",
 };
 
 export function loadAgentChatIndex(): AgentChatIndex {
@@ -88,12 +90,23 @@ export function loadAiStudioPrefs(): AiStudioPrefs {
     if (!raw) {
       return { ...DEFAULT_PREFS };
     }
-    const parsed = JSON.parse(raw) as Partial<AiStudioPrefs>;
+    const parsed = JSON.parse(raw) as Partial<AiStudioPrefs> & { lastTab?: string };
+    const lastTabRaw = parsed.lastTab as string | undefined;
+    const lastTab: AiStudioPrefs["lastTab"] =
+      lastTabRaw === "settings"
+        ? "status"
+        : lastTabRaw === "agent" ||
+            lastTabRaw === "bundle" ||
+            lastTabRaw === "status" ||
+            lastTabRaw === "prefs"
+          ? lastTabRaw
+          : DEFAULT_PREFS.lastTab;
     return {
       defaultRootPath: parsed.defaultRootPath?.trim() || DEFAULT_PREFS.defaultRootPath,
       defaultAppId: parsed.defaultAppId?.trim() || DEFAULT_PREFS.defaultAppId,
-      lastTab: parsed.lastTab ?? DEFAULT_PREFS.lastTab,
+      lastTab,
       restoreLastChat: parsed.restoreLastChat ?? DEFAULT_PREFS.restoreLastChat,
+      interactionMode: parsed.interactionMode ?? DEFAULT_PREFS.interactionMode,
     };
   } catch {
     return { ...DEFAULT_PREFS };

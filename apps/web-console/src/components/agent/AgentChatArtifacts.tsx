@@ -7,6 +7,7 @@ import {
   type AgentArtifactLink,
   type AgentArtifactTablePreview,
 } from "../../utils/agentArtifacts";
+import type { AgentPlanQuestion, OperatorAgentSuggestion } from "../../utils/operatorAgentArtifacts";
 
 export interface AgentChatArtifactsProps {
   result?: Record<string, unknown>;
@@ -31,6 +32,11 @@ function openLink(link: AgentArtifactLink, handlers: AgentChatArtifactsProps) {
   } else if (link.path) {
     window.location.assign(`/?path=${encodeURIComponent(link.path)}`);
   }
+}
+
+/** Strip leading "1." / "1)" so `<ol>` counters do not double-number agent steps. */
+function normalizePlanStepText(step: string): string {
+  return step.replace(/^\s*\d+[\.)]\s*/, "").trim() || step;
 }
 
 function TablePreviewModal({
@@ -69,6 +75,121 @@ function TablePreviewModal({
   );
 }
 
+function PlanPanel({
+  planGoal,
+  planLayers,
+  planSteps,
+  questions,
+  suggestions,
+  onSuggestMessage,
+  t,
+}: {
+  planGoal?: string;
+  planLayers: string[];
+  planSteps: string[];
+  questions: AgentPlanQuestion[];
+  suggestions: OperatorAgentSuggestion[];
+  onSuggestMessage?: (message: string) => void;
+  t: (key: string) => string;
+}) {
+  const primarySuggestions = suggestions.filter((item) => item.primary);
+  const secondarySuggestions = suggestions.filter((item) => !item.primary);
+  const hasActions =
+    questions.length > 0 || primarySuggestions.length > 0 || secondarySuggestions.length > 0;
+
+  return (
+    <div className="agent-plan-panel">
+      <header className="agent-plan-panel-head">
+        <span className="agent-plan-panel-label">{t("agent.plan.title")}</span>
+        {planGoal && <h3 className="agent-plan-panel-goal">{planGoal}</h3>}
+      </header>
+
+      {planLayers.length > 0 && (
+        <div className="agent-plan-panel-layers" aria-label={t("agent.plan.layers")}>
+          {planLayers.map((layer) => (
+            <span key={layer} className="agent-plan-layer-tag">
+              {layer}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {planSteps.length > 0 && (
+        <ol className="agent-plan-panel-steps">
+        {planSteps.map((step, index) => {
+            const text = normalizePlanStepText(step);
+            return (
+              <li key={`${index}:${text}`} className="agent-plan-panel-step">
+                <span className="agent-plan-panel-step-text">{text}</span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      {hasActions && (
+        <footer className="agent-plan-panel-actions">
+          {questions.map((question) => (
+            <div key={question.id ?? question.text} className="agent-plan-panel-question">
+              {question.text && <p className="agent-plan-panel-question-text">{question.text}</p>}
+              {question.options && question.options.length > 0 && (
+                <div className="agent-plan-option-row" role="group" aria-label={question.text}>
+                  {question.options.map((option) => (
+                    <button
+                      key={`${option.label}:${option.value}`}
+                      type="button"
+                      className="agent-plan-option-btn"
+                      onClick={() =>
+                        onSuggestMessage?.(
+                          option.value?.trim() || option.label?.trim() || question.text || ""
+                        )
+                      }
+                    >
+                      {option.label ?? option.value}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {(primarySuggestions.length > 0 || secondarySuggestions.length > 0) && (
+            <div className="agent-plan-suggest-block">
+              {questions.length > 0 && primarySuggestions.length > 0 && (
+                <span className="agent-plan-suggest-divider" aria-hidden="true" />
+              )}
+              {primarySuggestions.map((item) => (
+                <button
+                  key={`${item.path ?? item.label}:${item.message}`}
+                  type="button"
+                  className="agent-plan-primary-btn"
+                  onClick={() => onSuggestMessage?.(item.message)}
+                >
+                  {item.label}
+                </button>
+              ))}
+              {secondarySuggestions.length > 0 && (
+                <div className="agent-plan-secondary-row">
+                  {secondarySuggestions.map((item) => (
+                    <button
+                      key={`${item.path ?? item.label}:${item.message}`}
+                      type="button"
+                      className="agent-plan-secondary-btn"
+                      onClick={() => onSuggestMessage?.(item.message)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </footer>
+      )}
+    </div>
+  );
+}
+
 export default function AgentChatArtifacts({
   result,
   i18nNs = "ai",
@@ -81,16 +202,61 @@ export default function AgentChatArtifacts({
   const links = parsed.links ?? [];
   const tables = parsed.tables ?? [];
   const suggestions = parsed.suggestions ?? [];
+  const plan = parsed.plan;
+  const questions = parsed.questions ?? [];
+  const isPlan = parsed.phase === "plan" || Boolean(plan);
   const [activeTable, setActiveTable] = useState<AgentArtifactTablePreview | null>(null);
 
-  if (links.length === 0 && tables.length === 0 && suggestions.length === 0) {
+  const planGoal = typeof plan?.goal === "string" ? plan.goal : undefined;
+  const planSteps = Array.isArray(plan?.steps) ? (plan.steps as string[]) : [];
+  const planLayers = Array.isArray(plan?.layers) ? (plan.layers as string[]) : [];
+
+  if (links.length === 0 && tables.length === 0 && suggestions.length === 0 && !isPlan && questions.length === 0) {
     return null;
   }
 
   return (
     <>
-      <div className="operator-agent-artifacts">
-        {suggestions.length > 0 && (
+      <div className={`operator-agent-artifacts${isPlan ? " operator-agent-artifacts--plan" : ""}`}>
+        {isPlan && (
+          <PlanPanel
+            planGoal={planGoal}
+            planLayers={planLayers}
+            planSteps={planSteps}
+            questions={questions}
+            suggestions={suggestions}
+            onSuggestMessage={onSuggestMessage}
+            t={t}
+          />
+        )}
+        {!isPlan && questions.length > 0 && (
+          <div className="agent-plan-questions">
+            {questions.map((question) => (
+              <div key={question.id ?? question.text} className="agent-plan-question">
+                <p>{question.text}</p>
+                {question.options && question.options.length > 0 && (
+                  <div className="agent-plan-option-row">
+                    {question.options.map((option) => (
+                      <button
+                        key={`${option.label}:${option.value}`}
+                        type="button"
+                        className="agent-plan-option-btn"
+                        onClick={() =>
+                          onSuggestMessage?.(
+                            option.value?.trim() || option.label?.trim() || question.text || ""
+                          )
+                        }
+                      >
+                        {option.label ?? option.value}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {!isPlan && suggestions.length > 0 && (
           <div className="operator-agent-suggestions-inline">
             <p className="hint">{t("agent.pickOption")}</p>
             <ul>

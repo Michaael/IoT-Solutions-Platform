@@ -33,6 +33,15 @@ export interface OperatorAgentArtifacts {
   table?: OperatorAgentTablePreview;
   suggestions?: OperatorAgentSuggestion[];
   interactive?: boolean;
+  phase?: string;
+  plan?: Record<string, unknown>;
+  questions?: AgentPlanQuestion[];
+}
+
+export interface AgentPlanQuestion {
+  id?: string;
+  text?: string;
+  options?: Array<{ label?: string; value?: string }>;
 }
 
 export function parseOperatorAgentArtifacts(result: Record<string, unknown> | undefined): OperatorAgentArtifacts {
@@ -54,11 +63,19 @@ export function parseOperatorAgentArtifacts(result: Record<string, unknown> | un
   const suggestions = Array.isArray(result.suggestions)
     ? (result.suggestions as OperatorAgentSuggestion[]).filter((item) => item?.message?.trim())
     : [];
+  const questions = Array.isArray(result.questions)
+    ? (result.questions as AgentPlanQuestion[]).filter((item) => item?.text?.trim())
+    : [];
+  const plan =
+    result.plan && typeof result.plan === "object" ? (result.plan as Record<string, unknown>) : undefined;
   return {
     links,
     tables,
     suggestions,
     interactive: Boolean(result.interactive),
+    phase: typeof result.phase === "string" ? result.phase : undefined,
+    plan,
+    questions,
   };
 }
 

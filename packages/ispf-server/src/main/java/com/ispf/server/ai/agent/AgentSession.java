@@ -130,6 +130,7 @@ public final class AgentSession {
         map.put("updatedAt", updatedAt.toString());
         map.put("turns", turns().stream().map(AgentTurn::toMap).toList());
         map.put("hasPendingRun", runState.hasPending());
+        map.put("planState", runState.planStateSummary());
         return map;
     }
 

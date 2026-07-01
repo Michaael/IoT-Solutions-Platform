@@ -127,6 +127,7 @@ public class DashboardService {
 
     @Transactional
     public DashboardView saveLayout(String path, String layoutJson) {
+        layoutJson = DashboardWidgetNormalizer.normalizeLayoutJson(layoutJson, objectMapper);
         validateLayoutJson(layoutJson);
         PlatformObject node = objectManager.require(path);
         if (node.type() != ObjectType.DASHBOARD) {
@@ -197,17 +198,29 @@ public class DashboardService {
             if (!root.isObject() || !root.has("widgets") || !root.get("widgets").isArray()) {
                 throw new IllegalArgumentException("Dashboard layout must contain a widgets array");
             }
+            int columns = root.path("columns").asInt(DashboardWidgetPlacement.DEFAULT_COLUMNS);
+            int rowHeight = root.path("rowHeight").asInt(DashboardWidgetPlacement.DEFAULT_ROW_HEIGHT);
+            List<Map<String, Object>> existingWidgets = new java.util.ArrayList<>();
             var widgets = (tools.jackson.databind.node.ArrayNode) root.get("widgets");
             String widgetId = widget.containsKey("id") ? String.valueOf(widget.get("id")) : null;
-            if (widgetId != null && !widgetId.isBlank()) {
-                for (int i = widgets.size() - 1; i >= 0; i--) {
-                    var existing = widgets.get(i);
-                    if (existing.isObject() && widgetId.equals(existing.path("id").asString(null))) {
-                        widgets.remove(i);
-                    }
+            for (int i = widgets.size() - 1; i >= 0; i--) {
+                var existing = widgets.get(i);
+                if (!existing.isObject()) {
+                    continue;
                 }
+                if (widgetId != null && !widgetId.isBlank() && widgetId.equals(existing.path("id").asString(null))) {
+                    widgets.remove(i);
+                    continue;
+                }
+                existingWidgets.add(objectMapper.convertValue(existing, Map.class));
             }
-            widgets.add(objectMapper.valueToTree(normalized));
+            Map<String, Object> placed = DashboardWidgetPlacement.prepareNewWidget(
+                    normalized,
+                    existingWidgets,
+                    columns,
+                    rowHeight
+            );
+            widgets.add(objectMapper.valueToTree(placed));
             return saveLayout(path, objectMapper.writeValueAsString(root));
         } catch (JacksonException e) {
             throw new IllegalArgumentException("Invalid layout JSON", e);
@@ -236,7 +249,11 @@ public class DashboardService {
         try {
             return objectMapper.readValue(layoutJson, Object.class);
         } catch (JacksonException e) {
-            return Map.of("columns", 12, "rowHeight", 72, "widgets", java.util.List.of());
+            return Map.of(
+                    "columns", DashboardWidgetPlacement.DEFAULT_COLUMNS,
+                    "rowHeight", DashboardWidgetPlacement.DEFAULT_ROW_HEIGHT,
+                    "widgets", java.util.List.of()
+            );
         }
     }
 

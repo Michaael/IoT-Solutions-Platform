@@ -1,6 +1,7 @@
 package com.ispf.server.ai.agent;
 
 import com.ispf.server.dashboard.DashboardService;
+import com.ispf.server.dashboard.DashboardWidgetPlacement;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -88,19 +89,24 @@ public final class AgentDashboardGuide {
                 ### Минимальные примеры widget (add_dashboard_widget)
                 
                 Статический value:
-                {"id":"temp","type":"value","title":"Температура","x":0,"y":0,"w":4,"h":2,
+                {"id":"temp","type":"value","title":"Температура","x":0,"y":0,"w":28,"h":14,
                  "objectPath":"root.platform.devices.demo-sensor-01","variableName":"temperature","valueField":"value","decimals":1}
                 
                 Таблица устройств + выбор:
-                {"id":"dev-table","type":"object-table","title":"Устройства","x":0,"y":0,"w":12,"h":4,
+                {"id":"dev-table","type":"object-table","title":"Устройства","x":0,"y":0,"w":84,"h":28,
                  "parentPath":"root.platform.devices","selectionKey":"device",
                  "columnsJson":"[{\\"variable\\":\\"sysName\\",\\"label\\":\\"Имя\\"}]"}
                 
                 Потребитель выбора (после клика в таблице):
-                {"id":"cpu","type":"value","title":"CPU","x":0,"y":4,"w":3,"h":2,
+                {"id":"cpu","type":"value","title":"CPU","x":0,"y":28,"w":21,"h":14,
                  "selectionKey":"device","variableName":"hrProcessorLoad","valueField":"value","unit":"%"}
                 
-                Grid: columns=12, позиция x,y, размер w,h в ячейках сетки. У каждого виджета уникальный id.
+                SCADA mimic (полный экран):
+                {"id":"mimic","type":"scada-mimic","title":"Мнемосхема","x":0,"y":0,"w":84,"h":63,
+                 "mimicPath":"root.platform.mimics.tank-farm","panEnabled":true}
+                
+                Grid: columns=84, rowHeight=8. Позиция x,y и размер w,h — в ячейках fine grid (1/4 ширины ≈ w=21, 2 строки ≈ h=14).
+                НЕ используй старую сетку 12×72 — виджеты с w=4,h=2 будут крошечными. У каждого виджета уникальный id.
                 """;
     }
 
@@ -109,7 +115,11 @@ public final class AgentDashboardGuide {
         summary.put("dashboardRoot", "root.platform.dashboards");
         summary.put("model", "dashboard-v1");
         summary.put("layoutVariable", "layout");
-        summary.put("layoutShape", Map.of("columns", 12, "rowHeight", 72, "widgets", "array"));
+        summary.put("layoutShape", Map.of(
+                "columns", DashboardWidgetPlacement.DEFAULT_COLUMNS,
+                "rowHeight", DashboardWidgetPlacement.DEFAULT_ROW_HEIGHT,
+                "widgets", "array"
+        ));
         summary.put("templates", DashboardService.layoutTemplateNames());
         summary.put("tools", List.of(
                 "get_widget_catalog",

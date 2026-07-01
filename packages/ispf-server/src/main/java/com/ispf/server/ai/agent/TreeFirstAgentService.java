@@ -1,5 +1,6 @@
 package com.ispf.server.ai.agent;
 
+import com.ispf.ai.LlmContentPart;
 import com.ispf.ai.LlmMessage;
 import com.ispf.ai.LlmRequest;
 import com.ispf.ai.LlmResponse;
@@ -43,6 +44,7 @@ public class TreeFirstAgentService {
     private final OperatorAppDocumentService operatorDocumentService;
     private final OperatorAppUiService operatorAppUiService;
     private final OperatorAgentResultEnricher operatorResultEnricher;
+    private final AgentAttachmentValidator attachmentValidator;
 
     public TreeFirstAgentService(
             LlmProviderRegistry llmProviderRegistry,
@@ -59,7 +61,8 @@ public class TreeFirstAgentService {
             OperatorAgentMemoryLearner operatorMemoryLearner,
             OperatorAppDocumentService operatorDocumentService,
             OperatorAppUiService operatorAppUiService,
-            OperatorAgentResultEnricher operatorResultEnricher
+            OperatorAgentResultEnricher operatorResultEnricher,
+            AgentAttachmentValidator attachmentValidator
     ) {
         this.llmProviderRegistry = llmProviderRegistry;
         this.toolRegistry = toolRegistry;
@@ -76,6 +79,7 @@ public class TreeFirstAgentService {
         this.operatorDocumentService = operatorDocumentService;
         this.operatorAppUiService = operatorAppUiService;
         this.operatorResultEnricher = operatorResultEnricher;
+        this.attachmentValidator = attachmentValidator;
     }
 
     public Map<String, Object> run(String goal, String rootPath, Authentication authentication, String actor)
@@ -90,18 +94,53 @@ public class TreeFirstAgentService {
             Authentication authentication,
             String actor
     ) throws Exception {
+        return runTurn(session, message, authentication, actor, null);
+    }
+
+    public Map<String, Object> runTurn(
+            AgentSession session,
+            String message,
+            Authentication authentication,
+            String actor,
+            String interactionMode
+    ) throws Exception {
+        return runTurn(session, message, List.of(), authentication, actor, interactionMode);
+    }
+
+    public Map<String, Object> runTurn(
+            AgentSession session,
+            String message,
+            List<AgentAttachmentValidator.AttachmentInput> attachments,
+            Authentication authentication,
+            String actor,
+            String interactionMode
+    ) throws Exception {
         ensureLlmAvailable();
-        if (message == null || message.isBlank()) {
+        AgentAttachmentValidator.PreparedUserMessage prepared =
+                attachmentValidator.prepare(message, attachments);
+        if (prepared.llmText().isBlank() && prepared.imageParts().isEmpty()) {
             throw new IllegalArgumentException("message is required");
         }
         session.runState().clearPending();
 
-        String userMessage = message.trim();
+        String userMessage = prepared.displayMessage();
+        String llmUserText = prepared.llmText();
+        if (interactionMode != null && !interactionMode.isBlank()) {
+            session.runState().setInteractionMode(AgentInteractionMode.fromString(interactionMode));
+        }
         AgentProfile profile = session.runState().agentProfile();
+        AgentPlanGuard.beginTurn(session.runState(), llmUserText, profile);
         OperatorAgentScope operatorScope = resolveOperatorScope(session, profile);
         AgentContext context = new AgentContext(actor, authentication, session.runState(), profile, operatorScope);
         List<Map<String, Object>> steps = new ArrayList<>();
-        List<LlmMessage> messages = buildMessagesWithHistory(session, userMessage, profile, operatorScope);
+        List<LlmMessage> messages = buildMessagesWithHistory(
+                session,
+                prepared,
+                profile,
+                operatorScope
+        );
+
+        List<Map<String, Object>> attachmentMetadata = prepared.attachmentMetadata();
 
         int maxStepsTotal = Math.max(1, aiProperties.getAgentMaxSteps());
 
@@ -111,7 +150,8 @@ public class TreeFirstAgentService {
 
         try (AgentRunCancellationRegistry.RunHandle run = cancellationRegistry.start(
                 session.sessionId(),
-                userMessage
+                userMessage,
+                session.runState().planStateSummary()
         )) {
             while (steps.size() < maxStepsTotal) {
                 if (cancellationRegistry.isCancelled(session.sessionId())) {
@@ -162,31 +202,73 @@ public class TreeFirstAgentService {
 
                 AgentJsonProtocol.AgentAction agentAction = parsed.action();
                 if ("finish".equals(agentAction.type())) {
+                    Map<String, Object> candidateResult = agentAction.result() != null
+                            ? new LinkedHashMap<>(agentAction.result())
+                            : new LinkedHashMap<>();
                     if (profile != AgentProfile.OPERATOR) {
-                        var block = AgentPlatformTurnGuard.checkBeforeFinish(steps, userMessage);
-                        if (block.isPresent()) {
-                            AgentPlatformTurnGuard.BlockDecision decision = block.get();
+                        AgentPlanGuard.FinishOutcome planOutcome = AgentPlanGuard.evaluateFinish(
+                                session.runState(),
+                                candidateResult,
+                                steps,
+                                llmUserText,
+                                profile
+                        );
+                        if (planOutcome == AgentPlanGuard.FinishOutcome.BLOCK_NEEDS_PLAN
+                                || planOutcome == AgentPlanGuard.FinishOutcome.BLOCK_NEEDS_APPROVAL) {
                             Map<String, Object> guardStep = Map.of(
                                     "step", stepNumber,
                                     "type", "guard",
-                                    "label", "Проверка перед завершением",
-                                    "error", decision.error(),
-                                    "hint", decision.hint() != null ? decision.hint() : ""
+                                    "label", "Требуется план",
+                                    "error", planOutcome == AgentPlanGuard.FinishOutcome.BLOCK_NEEDS_APPROVAL
+                                            ? "Execution finish blocked: plan not approved yet."
+                                            : "Execution finish blocked: produce a plan before mutating the platform.",
+                                    "hint", "Run discovery tools, then finish with result.phase=plan, "
+                                            + "result.plan, result.questions, result.suggestions "
+                                            + "(include primary: «Утвердить и начать»)."
                             );
                             steps.add(guardStep);
                             publishStep(session.sessionId(), guardStep);
                             messages.add(new LlmMessage("assistant", response.content()));
                             messages.add(new LlmMessage(
                                     "user",
-                                    "Finish blocked:\n" + decision.error()
-                                            + (decision.hint() != null ? "\n\n" + decision.hint() : "")
-                                            + "\n\nContinue with tools until devices have telemetry, then finish."
+                                    "Finish blocked during planning phase. "
+                                            + "Do NOT claim objects were created. "
+                                            + "Use read-only tools if needed, then finish with phase=plan + questions + suggestions."
                             ));
                             continue;
                         }
+                        if (planOutcome == AgentPlanGuard.FinishOutcome.ALLOW_PLAN
+                                && AgentPlanGuard.isPlanFinish(candidateResult)) {
+                            AgentPlanGuard.capturePlan(session.runState(), candidateResult);
+                            syncRunPlanState(session);
+                        }
+                        if (planOutcome == AgentPlanGuard.FinishOutcome.ALLOW_EXECUTION) {
+                            var block = AgentPlatformTurnGuard.checkBeforeFinish(steps, userMessage);
+                            if (block.isPresent()) {
+                                AgentPlatformTurnGuard.BlockDecision decision = block.get();
+                                Map<String, Object> guardStep = Map.of(
+                                        "step", stepNumber,
+                                        "type", "guard",
+                                        "label", "Проверка перед завершением",
+                                        "error", decision.error(),
+                                        "hint", decision.hint() != null ? decision.hint() : ""
+                                );
+                                steps.add(guardStep);
+                                publishStep(session.sessionId(), guardStep);
+                                messages.add(new LlmMessage("assistant", response.content()));
+                                messages.add(new LlmMessage(
+                                        "user",
+                                        "Finish blocked:\n" + decision.error()
+                                                + (decision.hint() != null ? "\n\n" + decision.hint() : "")
+                                                + "\n\nContinue with tools until devices have telemetry, then finish."
+                                ));
+                                continue;
+                            }
+                            AgentPlanGuard.completeExecution(session.runState());
+                        }
                     }
                     finishSummary = agentAction.summary();
-                    finishResult = agentAction.result() != null ? agentAction.result() : Map.of();
+                    finishResult = candidateResult;
                     finalStatus = AgentTurnStatus.OK;
                     Map<String, Object> finishStep = Map.of(
                             "step", stepNumber,
@@ -256,28 +338,8 @@ public class TreeFirstAgentService {
                             toolResult.put("hint", block.hint());
                         }
                         executedTool = toolName;
-                    } else {
-                        try {
-                            toolResult = toolRegistry.execute(toolName, toolArgs, context);
-                        } catch (Exception ex) {
-                            toolResult = Map.of("status", "ERROR", "error", ex.getMessage());
-                        }
-                        if ("list_reports".equals(toolName)) {
-                            toolResult = OperatorAgentTurnGuard.enrichListReportsResult(toolResult, userMessage);
-                        }
-                        executedTool = toolName;
-                    }
-                } else {
-                    Optional<AgentGroundTruthGuard.BlockDecision> groundBlock =
-                            AgentGroundTruthGuard.checkBeforeTool(toolName, toolArgs, steps);
-                    if (groundBlock.isPresent() && groundBlock.get().blocked()) {
-                        AgentGroundTruthGuard.BlockDecision decision = groundBlock.get();
-                        toolResult = new LinkedHashMap<>();
-                        toolResult.put("status", "ERROR");
-                        toolResult.put("error", decision.error());
-                        if (decision.hint() != null) {
-                            toolResult.put("hint", decision.hint());
-                        }
+                    } else if (!toolRegistry.isKnownTool(toolName)) {
+                        toolResult = new LinkedHashMap<>(toolRegistry.unknownToolResult(toolName));
                         executedTool = toolName;
                     } else {
                         try {
@@ -290,7 +352,48 @@ public class TreeFirstAgentService {
                         }
                         executedTool = toolName;
                     }
-                }
+                    } else {
+                        if (!toolRegistry.isKnownTool(toolName)) {
+                            toolResult = new LinkedHashMap<>(toolRegistry.unknownToolResult(toolName));
+                            executedTool = toolName;
+                        } else {
+                        Optional<AgentGroundTruthGuard.BlockDecision> groundBlock =
+                                AgentGroundTruthGuard.checkBeforeTool(toolName, toolArgs, steps);
+                        if (groundBlock.isPresent() && groundBlock.get().blocked()) {
+                            AgentGroundTruthGuard.BlockDecision decision = groundBlock.get();
+                            toolResult = new LinkedHashMap<>();
+                            toolResult.put("status", "ERROR");
+                            toolResult.put("error", decision.error());
+                            if (decision.hint() != null) {
+                                toolResult.put("hint", decision.hint());
+                            }
+                            executedTool = toolName;
+                        } else {
+                            Optional<AgentPlanGuard.BlockDecision> planBlock =
+                                    AgentPlanGuard.checkBeforeTool(session.runState(), toolName, profile);
+                            if (planBlock.isPresent() && planBlock.get().blocked()) {
+                                AgentPlanGuard.BlockDecision decision = planBlock.get();
+                                toolResult = new LinkedHashMap<>();
+                                toolResult.put("status", "ERROR");
+                                toolResult.put("error", decision.error());
+                                if (decision.hint() != null) {
+                                    toolResult.put("hint", decision.hint());
+                                }
+                                executedTool = toolName;
+                            } else {
+                                try {
+                                    toolResult = toolRegistry.execute(toolName, toolArgs, context);
+                                } catch (Exception ex) {
+                                    toolResult = Map.of("status", "ERROR", "error", ex.getMessage());
+                                }
+                                if ("list_reports".equals(toolName)) {
+                                    toolResult = OperatorAgentTurnGuard.enrichListReportsResult(toolResult, userMessage);
+                                }
+                                executedTool = toolName;
+                            }
+                        }
+                        }
+                    }
 
                 Map<String, Object> toolStep = Map.of(
                         "step", stepNumber,
@@ -302,6 +405,7 @@ public class TreeFirstAgentService {
                 );
                 steps.add(toolStep);
                 publishStep(session.sessionId(), toolStep);
+                syncRunPlanState(session);
 
                 if ("list_reports".equals(executedTool)
                         && "OK".equals(String.valueOf(toolResult.get("status")))) {
@@ -339,7 +443,10 @@ public class TreeFirstAgentService {
                 }
                 String continuation = profile == AgentProfile.OPERATOR
                         ? OperatorAgentTurnGuard.continuationHint(executedTool, steps, maxStepsTotal, userMessage)
-                        : AgentLoopGuard.continuationHint(executedTool, steps, maxStepsTotal);
+                        : firstNonBlank(
+                                AgentPlanGuard.planningContinuationHint(session.runState(), steps, executedTool),
+                                AgentLoopGuard.continuationHint(executedTool, steps, maxStepsTotal)
+                        );
                 messages.add(new LlmMessage(
                         "user",
                         "Tool result for " + executedTool + ":\n" + toolResultJson
@@ -354,7 +461,17 @@ public class TreeFirstAgentService {
                     + " шагов без завершения задачи.";
         }
 
-        return persistCompletedTurn(session, userMessage, finishSummary, finalStatus, steps, finishResult, actor, profile);
+        return persistCompletedTurn(
+                session,
+                userMessage,
+                finishSummary,
+                finalStatus,
+                steps,
+                finishResult,
+                attachmentMetadata,
+                actor,
+                profile
+        );
     }
 
     public Map<String, Object> cancelRun(String sessionId) {
@@ -366,8 +483,19 @@ public class TreeFirstAgentService {
         return cancellationRegistry.progress(sessionId);
     }
 
+    private static String firstNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred;
+        }
+        return fallback;
+    }
+
     private void publishStep(String sessionId, Map<String, Object> step) {
         cancellationRegistry.recordStep(sessionId, step);
+    }
+
+    private void syncRunPlanState(AgentSession session) {
+        cancellationRegistry.syncPlanState(session.sessionId(), session.runState().planStateSummary());
     }
 
     private Map<String, Object> persistCompletedTurn(
@@ -377,6 +505,7 @@ public class TreeFirstAgentService {
             String finalStatus,
             List<Map<String, Object>> steps,
             Map<String, Object> finishResult,
+            List<Map<String, Object>> attachments,
             String actor,
             AgentProfile profile
     ) {
@@ -395,7 +524,7 @@ public class TreeFirstAgentService {
                 // keep original finish result
             }
         }
-        AgentTurn turn = AgentTurn.create(userMessage, finishSummary, finalStatus, steps, finishResult);
+        AgentTurn turn = AgentTurn.create(userMessage, finishSummary, finalStatus, steps, finishResult, attachments);
         session.addTurn(turn);
         sessionStore.persistAfterTurn(session, turn);
         if (profile == AgentProfile.OPERATOR
@@ -419,7 +548,8 @@ public class TreeFirstAgentService {
                 turn.turnId(),
                 steps.size(),
                 aiProperties.getAgentMaxSteps(),
-                profile
+                profile,
+                attachments
         );
     }
 
@@ -470,7 +600,8 @@ public class TreeFirstAgentService {
             String turnId,
             int stepsCompleted,
             int maxStepsTotal,
-            AgentProfile profile
+            AgentProfile profile,
+            List<Map<String, Object>> attachments
     ) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", finalStatus);
@@ -482,12 +613,18 @@ public class TreeFirstAgentService {
         result.put("steps", steps);
         result.put("summary", finishSummary);
         result.put("result", finishResult);
+        if (attachments != null && !attachments.isEmpty()) {
+            result.put("attachments", attachments);
+        }
         result.put("tools", toolRegistry.toolCatalog(profile));
         result.put("provider", llmProviderRegistry.status());
         result.put("contextPackVersion", contextPackService.contextPackVersion());
         result.put("stepsCompleted", stepsCompleted);
         result.put("maxSteps", maxStepsTotal);
         result.put("running", cancellationRegistry.isRunning(session.sessionId()));
+        if (profile != AgentProfile.OPERATOR) {
+            result.put("planState", session.runState().planStateSummary());
+        }
         if (profile == AgentProfile.OPERATOR) {
             result.put("agentProfile", profile.storageValue());
             result.put("operatorAppId", session.runState().operatorAppId());
@@ -510,10 +647,11 @@ public class TreeFirstAgentService {
 
     private List<LlmMessage> buildMessagesWithHistory(
             AgentSession session,
-            String userMessage,
+            AgentAttachmentValidator.PreparedUserMessage prepared,
             AgentProfile profile,
             OperatorAgentScope operatorScope
     ) throws Exception {
+        String llmUserText = prepared.llmText();
         List<LlmMessage> messages = new ArrayList<>();
         boolean includeStatic = aiProperties.isBriefingEveryTurn() || session.turns().isEmpty();
         String briefing = platformBriefingService.buildBriefing(session.rootPath(), includeStatic);
@@ -521,11 +659,11 @@ public class TreeFirstAgentService {
         if (profile == AgentProfile.OPERATOR && operatorScope != null) {
             String memorySection = operatorMemoryService.formatPromptSection(
                     operatorScope.appId(),
-                    userMessage
+                    llmUserText
             );
             String knowledgeSection = operatorDocumentService.formatPromptSection(
                     operatorScope.appId(),
-                    userMessage,
+                    llmUserText,
                     operatorAppUiService.getAgentInstructions(operatorScope.appId())
             );
             systemPrompt = AgentOperatorPromptBuilder.build(
@@ -541,6 +679,10 @@ public class TreeFirstAgentService {
                     toolRegistry.toolCatalog(profile),
                     briefing
             );
+            systemPrompt += AgentPlanPromptSection.forRunState(session.runState());
+            if (prepared.hasImages()) {
+                systemPrompt += AgentPlanPromptSection.forImageAttachments();
+            }
         }
         messages.add(new LlmMessage("system", systemPrompt));
 
@@ -552,8 +694,20 @@ public class TreeFirstAgentService {
             messages.add(new LlmMessage("user", turn.userMessage()));
             messages.add(new LlmMessage("assistant", truncateForHistory(turn.assistantSummary())));
         }
-        messages.add(new LlmMessage("user", userMessage));
+        messages.add(buildCurrentUserMessage(prepared));
         return messages;
+    }
+
+    private static LlmMessage buildCurrentUserMessage(AgentAttachmentValidator.PreparedUserMessage prepared) {
+        if (prepared.imageParts().isEmpty()) {
+            return new LlmMessage("user", prepared.llmText());
+        }
+        List<LlmContentPart> parts = new ArrayList<>();
+        if (prepared.llmText() != null && !prepared.llmText().isBlank()) {
+            parts.add(LlmContentPart.text(prepared.llmText()));
+        }
+        parts.addAll(prepared.imageParts());
+        return new LlmMessage("user", prepared.llmText(), List.copyOf(parts));
     }
 
     private void ensureLlmAvailable() {

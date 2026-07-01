@@ -27,6 +27,9 @@ import {
   type AiAgentTool,
   type AiAgentTurn,
   type AiProviderStatus,
+  type AgentInteractionMode,
+  type AgentMessageAttachmentMeta,
+  type AgentPlanState,
 } from "../api/ai";
 import {
   clearAgentChatIndex,
@@ -35,15 +38,22 @@ import {
   purgeLegacyAgentPending,
   removeChatEntry,
   saveAgentChatIndex,
+  saveAiStudioPrefs,
   upsertChatEntry,
   type AgentChatIndex,
 } from "../utils/agentChatStorage";
 import i18n from "../i18n";
+import {
+  buildAttachmentApiPayload,
+  revokeAttachmentPreviews,
+  type AgentChatAttachment,
+} from "../utils/agentChatAttachments";
 
 export interface ChatMessage {
   id: string;
   role: "user" | "agent";
   text: string;
+  attachments?: AgentMessageAttachmentMeta[];
   steps?: AiAgentStep[];
   result?: Record<string, unknown>;
   status?: string;
@@ -62,9 +72,15 @@ interface AgentChatContextValue {
   messages: ChatMessage[];
   input: string;
   setInput: (value: string) => void;
+  pendingAttachments: AgentChatAttachment[];
+  setPendingAttachments: (value: AgentChatAttachment[]) => void;
+  attachmentRejectHint: string | null;
+  clearAttachmentRejectHint: () => void;
+  rejectAttachment: (reason: "unsupported" | "vision-not-supported") => void;
   loadingSession: boolean;
   isPending: boolean;
   liveSteps: AiAgentStep[];
+  livePlanPhase?: AgentPlanState["planPhase"];
   pendingUserMessage: string | null;
   defaultRootPath: string;
   startNewChat: () => Promise<void>;
@@ -73,6 +89,8 @@ interface AgentChatContextValue {
   sendMessage: (text: string) => Promise<void>;
   cancelRun: () => Promise<void>;
   clearLocalChatIndex: () => void;
+  interactionMode: AgentInteractionMode;
+  setInteractionMode: (mode: AgentInteractionMode) => void;
 }
 
 const AgentChatContext = createContext<AgentChatContextValue | null>(null);
@@ -84,7 +102,12 @@ function newId(): string {
 function turnsToMessages(turns: AiAgentTurn[]): ChatMessage[] {
   const messages: ChatMessage[] = [];
   for (const turn of turns) {
-    messages.push({ id: turn.turnId + "-u", role: "user", text: turn.userMessage });
+    messages.push({
+      id: turn.turnId + "-u",
+      role: "user",
+      text: turn.userMessage,
+      attachments: turn.attachments,
+    });
     messages.push({
       id: turn.turnId + "-a",
       role: "agent",
@@ -126,9 +149,15 @@ export function AgentChatProvider({
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState<AgentChatAttachment[]>([]);
+  const [attachmentRejectHint, setAttachmentRejectHint] = useState<string | null>(null);
   const [loadingSession, setLoadingSession] = useState(enabled);
   const [isPending, setIsPending] = useState(false);
   const [liveSteps, setLiveSteps] = useState<AiAgentStep[]>([]);
+  const [livePlanPhase, setLivePlanPhase] = useState<AgentPlanState["planPhase"]>();
+  const [interactionMode, setInteractionModeState] = useState<AgentInteractionMode>(
+    () => loadAiStudioPrefs().interactionMode
+  );
   const turnCountRef = useRef(0);
   const pendingMessageRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
@@ -169,6 +198,11 @@ export function AgentChatProvider({
     saveAgentChatIndex(index);
   }, []);
 
+  const setInteractionMode = useCallback((mode: AgentInteractionMode) => {
+    setInteractionModeState(mode);
+    saveAiStudioPrefs({ ...loadAiStudioPrefs(), interactionMode: mode });
+  }, []);
+
   const registerSession = useCallback(
     (session: AiAgentSessionSummary, index: AgentChatIndex, activeId: string) => {
       const entry = {
@@ -199,6 +233,7 @@ export function AgentChatProvider({
     (data: AiAgentChatResponse) => {
       queryClient.invalidateQueries({ queryKey: ["objects"] });
       setLiveSteps([]);
+      setLivePlanPhase(undefined);
       setMessages((prev) => [...prev, responseToAgentMessage(data)]);
       turnCountRef.current += 1;
 
@@ -220,6 +255,7 @@ export function AgentChatProvider({
 
   const handleAgentError = useCallback((error: unknown, prefix: string) => {
     setLiveSteps([]);
+    setLivePlanPhase(undefined);
     setMessages((prev) => [
       ...prev,
       {
@@ -281,7 +317,11 @@ export function AgentChatProvider({
     let pollTimer: number | undefined;
     let unsubscribe: (() => void) | undefined;
 
-    const applyProgress = (progress: { running: boolean; steps?: AiAgentStep[] }) => {
+    const applyProgress = (progress: {
+      running: boolean;
+      steps?: AiAgentStep[];
+      planState?: AgentPlanState;
+    }) => {
       if (cancelled) {
         return;
       }
@@ -289,6 +329,9 @@ export function AgentChatProvider({
       // registers the run and must not tear down the subscription.
       if (progress.steps) {
         setLiveSteps(progress.steps);
+      }
+      if (progress.planState?.planPhase) {
+        setLivePlanPhase(progress.planState.planPhase);
       }
     };
 
@@ -319,12 +362,12 @@ export function AgentChatProvider({
     pendingMessageRef.current = null;
     setIsPending(false);
     setLiveSteps([]);
-    const session = await createAgentSession(resolveRootPath());
+    const session = await createAgentSession(resolveRootPath(), interactionMode);
     registerSession(session, loadAgentChatIndex(), session.sessionId);
     turnCountRef.current = 0;
     setMessages([]);
     setInput("");
-  }, [registerSession]);
+  }, [registerSession, interactionMode]);
 
   const switchSession = useCallback(
     async (sessionId: string) => {
@@ -369,28 +412,51 @@ export function AgentChatProvider({
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || isPending) {
+      const attachmentsToSend = pendingAttachments;
+      if ((!trimmed && attachmentsToSend.length === 0) || isPending) {
         return;
       }
 
       pendingMessageRef.current = trimmed;
       setInput("");
       setLiveSteps([]);
-      setMessages((prev) => [...prev, { id: newId(), role: "user", text: trimmed }]);
+      setLivePlanPhase(
+        interactionMode === "plan" || interactionMode === "ask" ? "planning" : undefined
+      );
+      const attachmentMeta = attachmentsToSend.map((item) => ({
+        name: item.name,
+        mimeType: item.mimeType,
+        kind: item.kind,
+        byteSize: item.file.size,
+      }));
+      setMessages((prev) => [
+        ...prev,
+        { id: newId(), role: "user", text: trimmed, attachments: attachmentMeta },
+      ]);
+      setPendingAttachments([]);
+      revokeAttachmentPreviews(attachmentsToSend);
 
       try {
         let sessionId = activeSessionIdRef.current;
         const rootPath = resolveRootPath();
+        const apiAttachments =
+          attachmentsToSend.length > 0 ? await buildAttachmentApiPayload(attachmentsToSend) : undefined;
 
         if (!sessionId) {
-          const session = await createAgentSession(rootPath);
+          const session = await createAgentSession(rootPath, interactionMode);
           sessionId = session.sessionId;
           registerSession(session, loadAgentChatIndex(), sessionId);
           turnCountRef.current = 0;
         }
 
         setIsPending(true);
-        const data = await sendAgentMessage(sessionId, trimmed, rootPath);
+        const data = await sendAgentMessage(
+          sessionId,
+          trimmed,
+          rootPath,
+          interactionMode,
+          apiAttachments
+        );
         pendingMessageRef.current = null;
         handleAgentResponse(data);
       } catch (error) {
@@ -398,10 +464,30 @@ export function AgentChatProvider({
         handleAgentError(error, i18n.t("agent.sendFailed", { ns: "ai" }));
       } finally {
         setIsPending(false);
+        setLivePlanPhase(undefined);
       }
     },
-    [handleAgentError, handleAgentResponse, isPending, registerSession]
+    [
+      handleAgentError,
+      handleAgentResponse,
+      interactionMode,
+      isPending,
+      pendingAttachments,
+      registerSession,
+    ]
   );
+
+  const clearAttachmentRejectHint = useCallback(() => {
+    setAttachmentRejectHint(null);
+  }, []);
+
+  const rejectAttachment = useCallback((reason: "unsupported" | "vision-not-supported") => {
+    setAttachmentRejectHint(
+      reason === "vision-not-supported"
+        ? i18n.t("agent.attachments.visionNotSupported", { ns: "ai" })
+        : i18n.t("agent.attachments.unsupported", { ns: "ai" })
+    );
+  }, []);
 
   const cancelRun = useCallback(async () => {
     const sessionId = activeSessionIdRef.current;
@@ -419,6 +505,7 @@ export function AgentChatProvider({
     pendingMessageRef.current = null;
     setIsPending(false);
     setLiveSteps([]);
+    setLivePlanPhase(undefined);
     const cleared = clearAgentChatIndex();
     setChatIndex(cleared);
     setActiveSessionId(null);
@@ -443,9 +530,15 @@ export function AgentChatProvider({
       messages,
       input,
       setInput,
+      pendingAttachments,
+      setPendingAttachments,
+      attachmentRejectHint,
+      clearAttachmentRejectHint,
+      rejectAttachment,
       loadingSession,
       isPending,
       liveSteps,
+      livePlanPhase,
       pendingUserMessage,
       defaultRootPath: resolveRootPath(),
       startNewChat,
@@ -454,6 +547,8 @@ export function AgentChatProvider({
       sendMessage,
       cancelRun,
       clearLocalChatIndex,
+      interactionMode,
+      setInteractionMode,
     }),
     [
       providerQuery.data,
@@ -467,9 +562,14 @@ export function AgentChatProvider({
       activeSessionId,
       messages,
       input,
+      pendingAttachments,
+      attachmentRejectHint,
+      clearAttachmentRejectHint,
+      rejectAttachment,
       loadingSession,
       isPending,
       liveSteps,
+      livePlanPhase,
       pendingUserMessage,
       startNewChat,
       switchSession,
@@ -477,6 +577,8 @@ export function AgentChatProvider({
       sendMessage,
       cancelRun,
       clearLocalChatIndex,
+      interactionMode,
+      setInteractionMode,
     ]
   );
 

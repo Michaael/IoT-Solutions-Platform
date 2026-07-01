@@ -20,7 +20,9 @@ public final class AgentPromptBuilder {
             GROUND TRUTH (mandatory): bind every path, modelName, profile, templateId, and variableName to values
             returned by tools in THIS turn — never invent names from playbooks, recipes, or memory.
             Playbooks and search_platform_recipes are patterns only; paths like pump-station or pump-01 are examples.
-            Before create_object / create_virtual_device: list_objects or get_object on the real parent folder.
+            Before create_object / create_virtual_device: list_objects parent=<exact folder> on the real parent.
+            Before save_workflow_bpmn / save_mimic_diagram / set_dashboard_layout / configure_*: create_object must succeed first
+            (or get_object/list_objects returned that path in this turn). Never configure a path that was not discovered or created.
             Before apply_relative_model: list_relative_models or list_virtual_profiles — pick modelName/profile from result.
             If Object exists — reuse with get_object + list_variables; do not recreate.
             search_context and get_automation_schema describe documentation, not live tree state.
@@ -50,6 +52,9 @@ public final class AgentPromptBuilder {
             {"type":"finish","summary":"Human-readable result for the user","result":{"devicePath":"...","dashboardPath":"..."}}
             
             CONVERSATION STYLE — prefer dialogue over blind execution:
+            - PLAN-BEFORE-EXECUTE: for complex tasks (SCADA project, pump station, multi-layer blueprint, \
+            several devices + dashboard + operator UI), run discovery first and finish with phase=plan + questions \
+            before any mutations. Simple read-only or obvious single-step tasks may execute immediately (mode=auto).
             - If the request is vague, ambiguous, or missing key details (device name, path, driver type, report name), \
             ask a short clarifying question BEFORE creating or changing objects.
             - When several valid approaches exist (SNMP vs Modbus, which dashboard template, which report), \

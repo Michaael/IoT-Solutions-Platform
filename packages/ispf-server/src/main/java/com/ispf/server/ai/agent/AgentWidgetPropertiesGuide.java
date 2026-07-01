@@ -26,8 +26,8 @@ public final class AgentWidgetPropertiesGuide {
                 
                 | Поле | Тип | По умолчанию | Описание |
                 |------|-----|--------------|----------|
-                | columns | int | 12 | Ширина сетки в колонках |
-                | rowHeight | int | 72 | Высота одной строки сетки (px) |
+                | columns | int | 84 | Ширина сетки в колонках (fine grid: 12×7) |
+                | rowHeight | int | 8 | Высота одной строки сетки (px) |
                 | theme | string | — | Визуальная тема, напр. "btop" (компактный SNMP-стиль) |
                 | widgets | array | [] | Массив объектов виджетов |
                 

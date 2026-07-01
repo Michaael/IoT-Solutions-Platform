@@ -11,6 +11,9 @@ import java.util.Set;
 /**
  * Blocks tree mutations until the agent has discovered real paths and catalog entries via tools —
  * not from playbooks, recipes, or invented names.
+ * <p>
+ * Universal order for every object type:
+ * {@code list_objects parent=<folder>} → {@code create_object parentPath=<folder>} → configure/save tools on returned path.
  */
 final class AgentGroundTruthGuard {
 
@@ -21,6 +24,15 @@ final class AgentGroundTruthGuard {
             "search_by_haystack_tags"
     );
 
+    private static final Set<String> OBJECT_READ_TOOLS = Set.of(
+            "get_object",
+            "get_workflow",
+            "get_mimic_diagram",
+            "get_dashboard_layout",
+            "list_variables",
+            "describe_variables"
+    );
+
     private static final Set<String> MODEL_DISCOVERY_TOOLS = Set.of(
             "list_relative_models",
             "list_instance_types",
@@ -28,6 +40,30 @@ final class AgentGroundTruthGuard {
             "list_object_models",
             "get_object_model",
             "list_virtual_profiles"
+    );
+
+    /** Mutations on an existing object path — object must be discovered or created in this turn. */
+    private static final Set<String> OBJECT_PATH_MUTATION_TOOLS = Set.of(
+            "delete_object",
+            "set_variable",
+            "configure_driver",
+            "driver_control",
+            "save_mimic_diagram",
+            "add_mimic_elements",
+            "set_dashboard_layout",
+            "add_dashboard_widget",
+            "save_workflow_bpmn",
+            "update_workflow_status",
+            "run_workflow",
+            "configure_alert",
+            "configure_correlator",
+            "configure_report",
+            "run_report",
+            "create_variable",
+            "create_binding_rule",
+            "configure_variable_history",
+            "configure_operator_ui",
+            "deploy_tree_function"
     );
 
     private AgentGroundTruthGuard() {
@@ -47,23 +83,46 @@ final class AgentGroundTruthGuard {
         if (toolName == null || toolName.isBlank()) {
             return Optional.empty();
         }
-        return switch (toolName.toLowerCase(Locale.ROOT)) {
-            case "create_object", "create_virtual_device" -> checkParentDiscovered(arguments, steps);
-            case "apply_relative_model" -> checkModelDiscovered(arguments, steps, "modelName", "modelId");
-            case "instantiate_instance_type" -> checkModelDiscovered(arguments, steps, "instanceType", "modelName", "modelId");
-            case "ensure_absolute_instance" -> checkModelDiscovered(arguments, steps, "modelName", "modelId");
-            default -> Optional.empty();
-        };
+        String tool = toolName.toLowerCase(Locale.ROOT);
+        if ("create_object".equals(tool) || "create_virtual_device".equals(tool)) {
+            return checkParentDiscovered(arguments, steps, tool);
+        }
+        if ("instantiate_instance_type".equals(tool)) {
+            Optional<BlockDecision> parentBlock = checkParentDiscovered(arguments, steps, tool);
+            if (parentBlock.isPresent()) {
+                return parentBlock;
+            }
+            return checkModelDiscovered(arguments, steps, "instanceType", "modelName", "modelId");
+        }
+        if ("apply_relative_model".equals(tool)) {
+            String objectPath = resolveObjectPath(arguments);
+            if (!objectPath.isBlank()) {
+                Optional<BlockDecision> pathBlock = checkObjectPathDiscovered(objectPath, tool, steps);
+                if (pathBlock.isPresent()) {
+                    return pathBlock;
+                }
+            }
+            return checkModelDiscovered(arguments, steps, "modelName", "modelId");
+        }
+        if (OBJECT_PATH_MUTATION_TOOLS.contains(tool)) {
+            String objectPath = resolveObjectPath(arguments);
+            if (objectPath.isBlank()) {
+                return Optional.empty();
+            }
+            return checkObjectPathDiscovered(objectPath, tool, steps);
+        }
+        if ("ensure_absolute_instance".equals(tool)) {
+            return checkModelDiscovered(arguments, steps, "modelName", "modelId");
+        }
+        return Optional.empty();
     }
 
     private static Optional<BlockDecision> checkParentDiscovered(
             Map<String, Object> arguments,
-            List<Map<String, Object>> steps
+            List<Map<String, Object>> steps,
+            String toolName
     ) {
-        String parentPath = stringArg(arguments, "parentPath");
-        if (parentPath.isBlank()) {
-            parentPath = stringArg(arguments, "parent");
-        }
+        String parentPath = resolveParentPath(arguments);
         if (parentPath.isBlank()) {
             return Optional.empty();
         }
@@ -71,15 +130,48 @@ final class AgentGroundTruthGuard {
             return Optional.empty();
         }
         return Optional.of(new BlockDecision(
-                "Cannot " + mutationLabel(arguments) + ": parent path was not discovered in this turn: " + parentPath,
-                "Call list_objects parent=" + parentPath
-                        + " (lists that exact folder) or list_objects parent=" + parentOf(parentPath)
-                        + " and confirm the folder appears in objects[].path — then create_object with that parentPath."
+                "Cannot " + mutationLabel(arguments, toolName) + ": parent path was not discovered in this turn: " + parentPath,
+                treeFirstOrderHint(parentPath, null, "create_object")
         ));
     }
 
-    private static String mutationLabel(Map<String, Object> arguments) {
-        return stringArg(arguments, "name").isBlank() ? "create" : "create under " + stringArg(arguments, "name");
+    private static Optional<BlockDecision> checkObjectPathDiscovered(
+            String objectPath,
+            String toolName,
+            List<Map<String, Object>> steps
+    ) {
+        if (isObjectPathGrounded(steps, objectPath)) {
+            return Optional.empty();
+        }
+        String parent = parentOf(objectPath);
+        return Optional.of(new BlockDecision(
+                "Cannot " + toolName + ": object path was not created or discovered in this turn: " + objectPath,
+                treeFirstOrderHint(parent.isBlank() ? objectPath : parent, objectPath, toolName)
+        ));
+    }
+
+    private static String mutationLabel(Map<String, Object> arguments, String toolName) {
+        String name = stringArg(arguments, "name");
+        if (!name.isBlank()) {
+            return "create under " + name;
+        }
+        return toolName.replace('_', ' ');
+    }
+
+    static String treeFirstOrderHint(String parentFolder, String objectPath, String configureTool) {
+        String step3 = configureTool != null && !configureTool.isBlank()
+                ? configureTool + " path=<path from create_object result>"
+                : "configure/save tool path=<path from create_object result>";
+        if (objectPath != null && !objectPath.isBlank()) {
+            step3 = configureTool + " path=" + objectPath + " (only after create_object returns this path)";
+        }
+        return """
+                Tree-first order (ALL object types — WORKFLOW, MIMIC, DASHBOARD, DEVICE, ALERT, …):
+                1. list_objects parent=%s — exact target folder (NOT parent=root for root.platform.* paths)
+                2. create_object parentPath=%s name=<name> type=<TYPE> [templateId=…]
+                3. %s
+                Reuse existing objects: get_object or list_objects must return the path in this turn before mutating.
+                """.formatted(parentFolder, parentFolder, step3);
     }
 
     private static Optional<BlockDecision> checkModelDiscovered(
@@ -143,6 +235,40 @@ final class AgentGroundTruthGuard {
         return false;
     }
 
+    static boolean isObjectPathGrounded(List<Map<String, Object>> steps, String objectPath) {
+        if (steps == null || steps.isEmpty() || objectPath == null || objectPath.isBlank()) {
+            return false;
+        }
+        String normalized = normalizePath(objectPath);
+        for (Map<String, Object> step : steps) {
+            if (!isOkToolStep(step)) {
+                continue;
+            }
+            String tool = toolName(step);
+            Map<String, Object> args = stepMap(step, "arguments");
+            Map<String, Object> result = stepMap(step, "result");
+
+            if ("create_object".equals(tool) || "create_virtual_device".equals(tool)) {
+                String createdPath = normalizePath(String.valueOf(result.get("path")));
+                if (normalized.equals(createdPath)) {
+                    return true;
+                }
+            }
+            if (OBJECT_READ_TOOLS.contains(tool)) {
+                String queriedPath = normalizePath(resolveObjectPath(args));
+                if (normalized.equals(queriedPath)) {
+                    return true;
+                }
+            }
+            if (TREE_DISCOVERY_TOOLS.contains(tool)) {
+                if (objectListContainsPath(result, normalized)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     static boolean isModelGrounded(List<Map<String, Object>> steps, String modelRef) {
         if (steps == null || steps.isEmpty() || modelRef == null || modelRef.isBlank()) {
             return false;
@@ -162,6 +288,30 @@ final class AgentGroundTruthGuard {
             }
         }
         return false;
+    }
+
+    static String resolveObjectPath(Map<String, Object> arguments) {
+        if (arguments == null) {
+            return "";
+        }
+        for (String key : List.of("path", "objectPath", "dashboardPath", "mimicPath", "workflowPath")) {
+            String value = stringArg(arguments, key);
+            if (!value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    static String resolveParentPath(Map<String, Object> arguments) {
+        if (arguments == null) {
+            return "";
+        }
+        String parentPath = stringArg(arguments, "parentPath");
+        if (parentPath.isBlank()) {
+            parentPath = stringArg(arguments, "parent");
+        }
+        return parentPath;
     }
 
     private static boolean parentMatchesDiscovery(
@@ -191,7 +341,6 @@ final class AgentGroundTruthGuard {
                 if (!objectListContainsSegment(result, listedParent, firstSegment)) {
                     return false;
                 }
-                // Ancestor folder visible — not enough for deeper parent; need list_objects on intermediate path
                 return objectListContainsPath(result, parentPath);
             }
         }
@@ -289,7 +438,6 @@ final class AgentGroundTruthGuard {
         return Optional.empty();
     }
 
-    @SuppressWarnings("unchecked")
     private static boolean objectListContainsSegment(
             Map<String, Object> result,
             String listedParent,
@@ -307,22 +455,6 @@ final class AgentGroundTruthGuard {
             }
             Optional<String> nameOpt = rowName(item);
             if (nameOpt.isPresent() && needle.equals(nameOpt.get().trim().toLowerCase(Locale.ROOT))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static boolean objectListContainsName(Map<String, Object> result, String name) {
-        String needle = name.trim().toLowerCase(Locale.ROOT);
-        for (Object item : objectsList(result)) {
-            Optional<String> nameOpt = rowName(item);
-            if (nameOpt.isPresent() && needle.equals(nameOpt.get().trim().toLowerCase(Locale.ROOT))) {
-                return true;
-            }
-            Optional<String> pathOpt = rowPath(item);
-            if (pathOpt.isPresent() && normalizePath(pathOpt.get()).endsWith("." + name)) {
                 return true;
             }
         }
