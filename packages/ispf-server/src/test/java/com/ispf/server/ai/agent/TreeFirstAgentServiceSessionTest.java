@@ -224,8 +224,12 @@ class TreeFirstAgentServiceSessionTest {
         var auth = new UsernamePasswordAuthenticationToken("admin", "secret");
 
         Map<String, Object> result = agentService.runTurn(session, "long task", auth, "admin");
-        assertEquals(AgentTurnStatus.ERROR, result.get("status"));
+        assertEquals(AgentTurnStatus.OK, result.get("status"));
         assertEquals(8, result.get("stepsCompleted"));
+        assertTrue(String.valueOf(result.get("summary")).contains("мягкий лимит"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> finishResult = (Map<String, Object>) result.get("result");
+        assertEquals(Boolean.TRUE, finishResult.get("stepLimitReached"));
         assertEquals(1, session.turns().size());
         assertFalse(session.runState().hasPending());
     }

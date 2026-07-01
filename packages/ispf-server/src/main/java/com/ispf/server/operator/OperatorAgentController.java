@@ -11,12 +11,14 @@ import com.ispf.server.ai.llm.LlmProviderRegistry;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -37,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequestMapping("/api/v1/operator-apps/{appId}/agent")
 public class OperatorAgentController {
 
-    private static final long AGENT_PROGRESS_SSE_TIMEOUT_MS = 5 * 60 * 1000L;
+    private static final long AGENT_PROGRESS_SSE_TIMEOUT_MS = 2 * 60 * 60 * 1000L;
     private static final long AGENT_PROGRESS_SSE_POLL_MS = 500L;
 
     private final ScheduledExecutorService progressStreamScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -164,25 +166,43 @@ public class OperatorAgentController {
     }
 
     @PostMapping("/sessions/{sessionId}/messages")
-    public Map<String, Object> sendMessage(
+    public ResponseEntity<Map<String, Object>> sendMessage(
             Authentication authentication,
             @PathVariable String appId,
             @PathVariable String sessionId,
-            @RequestBody OperatorAgentMessageRequest request
+            @RequestBody OperatorAgentMessageRequest request,
+            @RequestParam(name = "async", defaultValue = "false") boolean async
     ) {
         AgentSession session = requireOperatorSession(sessionId, appId, actor(authentication));
         if (request == null || request.message() == null || request.message().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message is required");
         }
         try {
-            return agentService.runOperatorTurn(
+            if (async) {
+                agentService.submitOperatorTurn(
+                        session,
+                        appId,
+                        request.message(),
+                        authentication,
+                        actor(authentication)
+                );
+                return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
+                        "status", "ACCEPTED",
+                        "sessionId", sessionId,
+                        "running", true
+                ));
+            }
+            return ResponseEntity.ok(agentService.runOperatorTurn(
                     session,
                     appId,
                     request.message(),
                     authentication,
                     actor(authentication)
-            );
+            ));
         } catch (IllegalStateException ex) {
+            if (async && ex.getMessage() != null && ex.getMessage().contains("already in progress")) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getMessage(), ex);
+            }
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), ex);
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);

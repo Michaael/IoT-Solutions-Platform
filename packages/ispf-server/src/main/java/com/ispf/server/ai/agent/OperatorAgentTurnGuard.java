@@ -160,27 +160,13 @@ final class OperatorAgentTurnGuard {
                     + gentlePaceSuffix(steps, maxStepsTotal);
         }
         String base = AgentLoopGuard.continuationHint(lastTool, steps, maxStepsTotal);
-        String pace = gentlePaceSuffix(steps, maxStepsTotal);
+        String pace = AgentTurnPaceHints.gentlePaceSuffix(steps, maxStepsTotal);
         return pace.isEmpty() ? base : base + pace;
     }
 
     /** Soft reminders as the turn grows — no hard step cap for operator. */
     static String gentlePaceSuffix(List<Map<String, Object>> steps, int maxStepsTotal) {
-        int stepCount = steps != null ? steps.size() : 0;
-        int remaining = Math.max(0, maxStepsTotal - stepCount);
-        if (stepCount >= 30) {
-            return " Шагов уже " + stepCount + " — если цель достигнута, лучше finish; иначе только нужный следующий инструмент.";
-        }
-        if (stepCount >= 18) {
-            return " Шагов " + stepCount + " — проверьте, хватает ли данных для ответа оператору.";
-        }
-        if (stepCount >= 10) {
-            return " Старайтесь не повторять одни и те же catalog-инструменты; двигайтесь к finish.";
-        }
-        if (remaining <= 5 && remaining > 0) {
-            return " Осталось ~" + remaining + " шагов до лимита (" + maxStepsTotal + ").";
-        }
-        return "";
+        return AgentTurnPaceHints.gentlePaceSuffix(steps, maxStepsTotal);
     }
 
     static boolean isReportRunIntent(String userMessage) {

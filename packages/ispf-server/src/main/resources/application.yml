@@ -222,13 +222,17 @@ ispf:
     model: ${ISPF_AI_MODEL:gpt-4o-mini}
     api-key: ${ISPF_AI_API_KEY:}
     api-key-env: ${ISPF_AI_API_KEY_ENV:OPENAI_API_KEY}
-    timeout-seconds: ${ISPF_AI_TIMEOUT_SECONDS:60}
-    max-tokens: ${ISPF_AI_MAX_TOKENS:16384}
-    temperature: ${ISPF_AI_TEMPERATURE:0.2}
+    timeout-seconds: ${ISPF_AI_TIMEOUT_SECONDS:600}
+    max-tokens: ${ISPF_AI_MAX_TOKENS:65536}
+    agent-max-tokens: ${ISPF_AI_AGENT_MAX_TOKENS:131072}
+    temperature: ${ISPF_AI_TEMPERATURE:0}
     context-pack-classpath: classpath:ai/context-pack.json
-    agent-max-steps: ${ISPF_AI_AGENT_MAX_STEPS:96}
+    agent-max-steps: ${ISPF_AI_AGENT_MAX_STEPS:256}
+    agent-parse-retries: ${ISPF_AI_AGENT_PARSE_RETRIES:5}
+    agent-max-text-inject-chars: ${ISPF_AI_AGENT_MAX_TEXT_INJECT_CHARS:524288}
+    agent-max-attachment-bytes: ${ISPF_AI_AGENT_MAX_ATTACHMENT_BYTES:33554432}
     agent-session-ttl-hours: ${ISPF_AI_AGENT_SESSION_TTL_HOURS:24}
-    agent-max-history-turns: ${ISPF_AI_AGENT_MAX_HISTORY_TURNS:50}
+    agent-max-history-turns: ${ISPF_AI_AGENT_MAX_HISTORY_TURNS:128}
     agent-eviction-interval-ms: ${ISPF_AI_AGENT_EVICTION_INTERVAL_MS:3600000}
     agent-disable-thinking: ${ISPF_AI_AGENT_DISABLE_THINKING:true}
   reports:

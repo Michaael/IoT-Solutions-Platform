@@ -15,4 +15,9 @@ public interface LlmProvider {
     List<LlmModelInfo> listModels() throws LlmException;
 
     LlmResponse complete(LlmRequest request) throws LlmException;
+
+    /**
+     * Checks whether {@code model} accepts image input (provider metadata or live probe).
+     */
+    boolean supportsVision(String model) throws LlmException;
 }

@@ -189,30 +189,39 @@ LLM replies with one JSON object per turn: `{"type":"tool","name":"...","argumen
 
 | Failure | Mitigation |
 |---------|------------|
-| Model returns prose / markdown | `AgentLlmActionResolver` retries with JSON-only nudge (`ispf.ai.agent-parse-retries`, default **3**) |
+| Model returns prose / markdown | `AgentLlmActionResolver` retries with JSON-only nudge (`ispf.ai.agent-parse-retries`, default **5**) |
 | `type:function` / missing `type` / nested `function` | `AgentJsonProtocol` normalizes common LLM variants |
 | Widget JSON picked instead of action | Parser scores only `tool`/`finish` (and aliases); ignores `type:DASHBOARD` in arguments |
 | Playbook `%s` crash (`Format specifier`) | Playbooks use concatenation only; `AgentPromptStartupValidator` fails boot if `%s` remains |
 | `search_context` loop | `AgentLoopGuard` injects stop hints after 3 repeats; dashboard tools documented in prompt |
-| Step cap reached | Turn ends with `ERROR` summary (`agent-max-steps`, default 96) |
+| Step cap reached | Turn ends with `OK` + `stepLimitReached` + suggestion «Продолжить» (`agent-max-steps`, default 256) |
 | Unparseable response after retries | Turn returns `status: ERROR` + human summary (session kept); audit `agent_parse_error` |
 
 Session history replays compact assistant summaries (800 chars max per turn).
 
-Configure step limit:
+Configure step limit and output tokens:
 
 ```yaml
 ispf:
   ai:
-    agent-max-steps: 96
-    agent-parse-retries: 3
+    timeout-seconds: 600
+    agent-max-steps: 256
+    agent-max-tokens: 131072   # ~50% of 256k context for completion; prompt uses the rest
+    agent-parse-retries: 5
+    agent-max-text-inject-chars: 524288   # ~512 KB TZ/spec inline
+    agent-max-attachment-bytes: 33554432  # 32 MB upload
     agent-session-ttl-hours: 24
-    agent-max-history-turns: 50
+    agent-max-history-turns: 128
+    max-tokens: 65536   # bundle generation completion cap
 ```
 
-Env: `ISPF_AI_AGENT_MAX_STEPS`.
+Env: `ISPF_AI_TIMEOUT_SECONDS`, `ISPF_AI_AGENT_MAX_STEPS`, `ISPF_AI_AGENT_MAX_TOKENS`, `ISPF_AI_AGENT_MAX_TEXT_INJECT_CHARS`, `ISPF_AI_AGENT_MAX_ATTACHMENT_BYTES`, `ISPF_AI_AGENT_MAX_HISTORY_TURNS`.
 
-`max-tokens` (default **16384**, env `ISPF_AI_MAX_TOKENS`) — лимит **ответа** на один вызов (`max_tokens` в API), не размер всего окна. У Qwen/vLLM окно **~256k** суммарно (промпт + ответ); не ставьте `max_tokens` равным 262144 — иначе под промпт не останется места.
+`max-tokens` (default **65536**, env `ISPF_AI_MAX_TOKENS`) — лимит **ответа** для bundle generation.
+
+`agent-max-tokens` (default **131072**, env `ISPF_AI_AGENT_MAX_TOKENS`) — лимит **ответа** на один ход агента.
+
+256k у Qwen/vLLM — **окно контекста** (prompt + completion). Defaults выше рассчитаны под `max-model-len=262144`: до ~512 KB ТЗ + system/tools/history в prompt, до 128k tokens на completion. Не ставьте `agent-max-tokens=262144` — под prompt не останется места. vLLM на inference-хосте должен разрешать `max_tokens` ≥ 131072.
 
 Sessions are **persisted in PostgreSQL** (`agent_sessions`, `agent_turns`) with TTL eviction (default 24h, `ispf.ai.agent-session-ttl-hours`). JVM restart keeps chat history until TTL; the Web Console keeps a chat index in `localStorage` and refetches turns via `GET session`.
 

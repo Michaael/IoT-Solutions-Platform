@@ -95,10 +95,10 @@ class OperatorAgentTurnGuardTest {
     @Test
     void gentlePaceSuffixAppearsAfterManySteps() {
         List<Map<String, Object>> steps = new java.util.ArrayList<>();
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 22; i++) {
             steps.add(Map.of("type", "tool", "tool", "list_variables"));
         }
-        String hint = OperatorAgentTurnGuard.gentlePaceSuffix(steps, 96);
+        String hint = OperatorAgentTurnGuard.gentlePaceSuffix(steps, 256);
         assertTrue(hint.contains("catalog"));
     }
 }

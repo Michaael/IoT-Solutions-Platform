@@ -51,7 +51,7 @@ public final class AgentInputCapabilities {
     private AgentInputCapabilities() {
     }
 
-    public static boolean visionEnabled(AiProperties properties, String providerId) {
+    public static boolean visionEnabled(AiProperties properties, String providerId, boolean probedVision) {
         if (properties == null || !properties.isEnabled()) {
             return false;
         }
@@ -62,7 +62,7 @@ public final class AgentInputCapabilities {
         if (override != null) {
             return override;
         }
-        return modelSupportsVision(properties.getModel());
+        return probedVision;
     }
 
     public static boolean textAttachmentsEnabled(AiProperties properties, String providerId) {
@@ -79,22 +79,34 @@ public final class AgentInputCapabilities {
         return VISION_MODEL_PATTERN.matcher(model.trim()).find();
     }
 
-    public static Map<String, Object> capabilitiesMap(AiProperties properties, String providerId) {
+    public static Map<String, Object> capabilitiesMap(AiProperties properties, String providerId, boolean vision) {
         Map<String, Object> caps = new LinkedHashMap<>();
-        caps.put("vision", visionEnabled(properties, providerId));
+        caps.put("vision", visionEnabled(properties, providerId, vision));
         caps.put("textAttachments", textAttachmentsEnabled(properties, providerId));
         return caps;
     }
 
-    public static List<Map<String, Object>> supportedAttachmentTypes(AiProperties properties, String providerId) {
+    public static Map<String, Object> capabilitiesMap(AiProperties properties, String providerId) {
+        return capabilitiesMap(properties, providerId, modelSupportsVision(properties.getModel()));
+    }
+
+    public static List<Map<String, Object>> supportedAttachmentTypes(
+            AiProperties properties,
+            String providerId,
+            boolean vision
+    ) {
         List<Map<String, Object>> types = new ArrayList<>();
         if (textAttachmentsEnabled(properties, providerId)) {
             types.add(attachmentType("text", TEXT_MIME_TYPES, TEXT_EXTENSIONS));
         }
-        if (visionEnabled(properties, providerId)) {
+        if (visionEnabled(properties, providerId, vision)) {
             types.add(attachmentType("image", IMAGE_MIME_TYPES, IMAGE_EXTENSIONS));
         }
         return types;
+    }
+
+    public static List<Map<String, Object>> supportedAttachmentTypes(AiProperties properties, String providerId) {
+        return supportedAttachmentTypes(properties, providerId, modelSupportsVision(properties.getModel()));
     }
 
     public static boolean isImageMime(String mimeType) {

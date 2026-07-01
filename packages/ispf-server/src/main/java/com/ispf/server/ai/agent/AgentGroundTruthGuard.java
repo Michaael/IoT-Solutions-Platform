@@ -204,9 +204,9 @@ final class AgentGroundTruthGuard {
         if (steps == null || steps.isEmpty() || parentPath == null || parentPath.isBlank()) {
             return false;
         }
-        String normalized = normalizePath(parentPath);
+        String normalized = normalizePathForCompare(parentPath);
         for (Map<String, Object> step : steps) {
-            if (!isOkToolStep(step)) {
+            if (!"tool".equals(String.valueOf(step.get("type")))) {
                 continue;
             }
             String tool = toolName(step);
@@ -214,17 +214,25 @@ final class AgentGroundTruthGuard {
             Map<String, Object> result = stepMap(step, "result");
 
             if ("create_object".equals(tool)) {
-                String createdPath = normalizePath(String.valueOf(result.get("path")));
-                if (!createdPath.isBlank() && (normalized.equals(createdPath) || normalized.startsWith(createdPath + "."))) {
-                    return true;
+                String createdPath = pathFromCreateResult(result);
+                if (!createdPath.isBlank()) {
+                    String existingParent = parentOf(createdPath);
+                    if (pathsEqual(parentPath, createdPath)
+                            || pathsEqual(parentPath, existingParent)
+                            || normalized.startsWith(normalizePathForCompare(createdPath) + ".")) {
+                        return true;
+                    }
                 }
             }
             if ("create_virtual_device".equals(tool)) {
-                String createdPath = normalizePath(String.valueOf(result.get("path")));
+                String createdPath = pathFromCreateResult(result);
                 String createdParent = parentOf(createdPath);
-                if (normalized.equals(createdParent)) {
+                if (pathsEqual(parentPath, createdParent)) {
                     return true;
                 }
+            }
+            if (!isOkToolStep(step)) {
+                continue;
             }
             if (TREE_DISCOVERY_TOOLS.contains(tool)) {
                 if (parentMatchesDiscovery(normalized, tool, args, result)) {
@@ -239,9 +247,8 @@ final class AgentGroundTruthGuard {
         if (steps == null || steps.isEmpty() || objectPath == null || objectPath.isBlank()) {
             return false;
         }
-        String normalized = normalizePath(objectPath);
         for (Map<String, Object> step : steps) {
-            if (!isOkToolStep(step)) {
+            if (!"tool".equals(String.valueOf(step.get("type")))) {
                 continue;
             }
             String tool = toolName(step);
@@ -249,19 +256,24 @@ final class AgentGroundTruthGuard {
             Map<String, Object> result = stepMap(step, "result");
 
             if ("create_object".equals(tool) || "create_virtual_device".equals(tool)) {
-                String createdPath = normalizePath(String.valueOf(result.get("path")));
-                if (normalized.equals(createdPath)) {
+                if (pathsEqual(objectPath, pathFromCreateResult(result))) {
+                    return true;
+                }
+                if (!isOkToolStep(step) && existingObjectPath(result, objectPath)) {
                     return true;
                 }
             }
+            if (!isOkToolStep(step)) {
+                continue;
+            }
             if (OBJECT_READ_TOOLS.contains(tool)) {
                 String queriedPath = normalizePath(resolveObjectPath(args));
-                if (normalized.equals(queriedPath)) {
+                if (pathsEqual(objectPath, queriedPath)) {
                     return true;
                 }
             }
             if (TREE_DISCOVERY_TOOLS.contains(tool)) {
-                if (objectListContainsPath(result, normalized)) {
+                if (objectListContainsPath(result, objectPath)) {
                     return true;
                 }
             }
@@ -315,37 +327,38 @@ final class AgentGroundTruthGuard {
     }
 
     private static boolean parentMatchesDiscovery(
-            String parentPath,
+            String parentPathNormalized,
             String tool,
             Map<String, Object> args,
             Map<String, Object> result
     ) {
         if ("get_object".equals(tool)) {
             String path = normalizePath(stringArg(args, "path"));
-            return parentPath.equals(path) || parentPath.startsWith(path + ".");
+            return parentPathNormalized.equals(normalizePathForCompare(path))
+                    || parentPathNormalized.startsWith(normalizePathForCompare(path) + ".");
         }
         if ("list_objects".equals(tool)) {
-            String listedParent = listedParentFromArgs(args);
-            if (parentPath.equals(listedParent)) {
+            String listedParent = normalizePathForCompare(listedParentFromArgs(args));
+            if (parentPathNormalized.equals(listedParent)) {
                 return true;
             }
-            if (parentPath.startsWith(listedParent + ".")) {
-                if (objectListContainsPath(result, parentPath)) {
+            if (parentPathNormalized.startsWith(listedParent + ".")) {
+                if (objectListContainsPath(result, parentPathNormalized)) {
                     return true;
                 }
-                String remainder = parentPath.substring(listedParent.length() + 1);
+                String remainder = parentPathNormalized.substring(listedParent.length() + 1);
                 if (!remainder.contains(".")) {
-                    return objectListContainsSegment(result, listedParent, remainder);
+                    return objectListContainsSegment(result, listedParentFromArgs(args), remainder);
                 }
                 String firstSegment = remainder.substring(0, remainder.indexOf('.'));
-                if (!objectListContainsSegment(result, listedParent, firstSegment)) {
+                if (!objectListContainsSegment(result, listedParentFromArgs(args), firstSegment)) {
                     return false;
                 }
-                return objectListContainsPath(result, parentPath);
+                return objectListContainsPath(result, parentPathNormalized);
             }
         }
         if ("search_objects".equals(tool) || "search_by_haystack_tags".equals(tool)) {
-            return objectListContainsPath(result, parentPath);
+            return objectListContainsPath(result, parentPathNormalized);
         }
         return false;
     }
@@ -462,10 +475,10 @@ final class AgentGroundTruthGuard {
     }
 
     private static boolean objectListContainsPath(Map<String, Object> result, String path) {
-        String needle = normalizePath(path);
+        String needle = normalizePathForCompare(path);
         for (Object item : objectsList(result)) {
             Optional<String> pathOpt = rowPath(item);
-            if (pathOpt.isPresent() && needle.equals(normalizePath(pathOpt.get()))) {
+            if (pathOpt.isPresent() && needle.equals(normalizePathForCompare(pathOpt.get()))) {
                 return true;
             }
         }
@@ -483,11 +496,95 @@ final class AgentGroundTruthGuard {
         return path.substring(0, lastDot);
     }
 
+    static String resolveCanonicalPath(List<Map<String, Object>> steps, String requestedPath) {
+        if (requestedPath == null || requestedPath.isBlank()) {
+            return "";
+        }
+        String normalizedNeedle = normalizePathForCompare(requestedPath);
+        if (steps != null) {
+            for (Map<String, Object> step : steps) {
+                if (!"tool".equals(String.valueOf(step.get("type")))) {
+                    continue;
+                }
+                String tool = toolName(step);
+                Map<String, Object> args = stepMap(step, "arguments");
+                Map<String, Object> result = stepMap(step, "result");
+                if ("create_object".equals(tool) || "create_virtual_device".equals(tool)) {
+                    String created = pathFromCreateResult(result);
+                    if (pathsEqual(created, requestedPath)) {
+                        return normalizePath(created);
+                    }
+                }
+                if (!isOkToolStep(step)) {
+                    continue;
+                }
+                if (TREE_DISCOVERY_TOOLS.contains(tool)) {
+                    String discovered = findPathInDiscoveryResult(result, normalizedNeedle);
+                    if (!discovered.isBlank()) {
+                        return discovered;
+                    }
+                }
+                if (OBJECT_READ_TOOLS.contains(tool)) {
+                    String queried = normalizePath(resolveObjectPath(args));
+                    if (pathsEqual(queried, requestedPath)) {
+                        return queried;
+                    }
+                }
+            }
+        }
+        return normalizePath(requestedPath);
+    }
+
+    private static String findPathInDiscoveryResult(Map<String, Object> result, String normalizedNeedle) {
+        for (Object item : objectsList(result)) {
+            Optional<String> pathOpt = rowPath(item);
+            if (pathOpt.isPresent() && normalizePathForCompare(pathOpt.get()).equals(normalizedNeedle)) {
+                return normalizePath(pathOpt.get());
+            }
+        }
+        return "";
+    }
+
+    private static boolean pathsEqual(String a, String b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        return normalizePathForCompare(a).equals(normalizePathForCompare(b));
+    }
+
+    private static String normalizePathForCompare(String path) {
+        return normalizePath(path).toLowerCase(Locale.ROOT);
+    }
+
     private static String normalizePath(String path) {
         if (path == null) {
             return "";
         }
         return path.trim().replaceAll("\\.+", ".").replaceAll("\\.$", "");
+    }
+
+    private static String pathFromCreateResult(Map<String, Object> result) {
+        if (result == null || result.isEmpty()) {
+            return "";
+        }
+        String path = normalizePath(String.valueOf(result.get("path")));
+        if (!path.isBlank() && !"null".equalsIgnoreCase(path)) {
+            return path;
+        }
+        String existing = normalizePath(String.valueOf(result.get("existingPath")));
+        if (!existing.isBlank() && !"null".equalsIgnoreCase(existing)) {
+            return existing;
+        }
+        String error = String.valueOf(result.get("error"));
+        if (error.startsWith("Object exists:")) {
+            return normalizePath(error.substring("Object exists:".length()));
+        }
+        return "";
+    }
+
+    private static boolean existingObjectPath(Map<String, Object> result, String objectPath) {
+        String existing = pathFromCreateResult(result);
+        return !existing.isBlank() && pathsEqual(objectPath, existing);
     }
 
     private static boolean isOkToolStep(Map<String, Object> step) {

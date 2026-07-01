@@ -41,6 +41,18 @@ function dashboardLink(path: string | undefined): string | null {
   return `/?path=${encodeURIComponent(path)}`;
 }
 
+function AgentModeBadge({ mode }: { mode: AgentInteractionMode }) {
+  const { t } = useTranslation("ai");
+  return (
+    <span
+      className={`ai-agent-mode-badge ai-agent-mode-badge--${mode}`}
+      title={t(`agent.mode.hint.${mode}`)}
+    >
+      {t(`agent.mode.${mode}`)}
+    </span>
+  );
+}
+
 export default function AiAgentChat() {
   const { t } = useTranslation("ai");
   const {
@@ -76,6 +88,22 @@ export default function AiAgentChat() {
     resizeChatInput(inputRef.current);
   }, []);
 
+  const appendToInput = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        return;
+      }
+      const base = input.trimEnd();
+      setInput(base ? `${base}\n${trimmed}` : trimmed);
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        resizeChatInput(inputRef.current);
+      });
+    },
+    [input, setInput]
+  );
+
   useEffect(() => {
     syncInputHeight();
   }, [input, syncInputHeight]);
@@ -96,7 +124,7 @@ export default function AiAgentChat() {
   const toolStepCount = liveSteps.filter((s) => s.type === "tool").length;
   const hasUserTurns = messages.some((message) => message.role === "user");
 
-  const modeOptions: AgentInteractionMode[] = ["auto", "plan", "execute", "ask"];
+  const modeOptions: AgentInteractionMode[] = ["auto", "execute", "plan", "ask"];
 
   return (
     <div className="ai-agent-chat">
@@ -203,6 +231,9 @@ export default function AiAgentChat() {
                 message.role === "user" ? "ai-agent-bubble user" : "ai-agent-bubble agent"
               }
             >
+              {message.role === "user" && message.interactionMode && (
+                <AgentModeBadge mode={message.interactionMode} />
+              )}
               <div className="ai-agent-bubble-text">{message.text}</div>
               {message.role === "user" && (
                 <AgentMessageAttachmentPreview attachments={message.attachments} />
@@ -212,6 +243,7 @@ export default function AiAgentChat() {
                   result={message.result}
                   i18nNs="ai"
                   onSuggestMessage={(text) => void sendMessage(text)}
+                  onAppendToInput={appendToInput}
                 />
               )}
               {message.steps && message.steps.length > 0 && (
@@ -258,16 +290,17 @@ export default function AiAgentChat() {
             void sendMessage(input);
           }}
         >
-          <label className="ai-agent-mode-select ai-agent-mode-select--compose">
+          <label className={`ai-agent-mode-select ai-agent-mode-select--compose ai-agent-mode-select--${interactionMode}`}>
             <span className="ai-agent-mode-label">{t("agent.mode.label")}</span>
             <select
+              className={`ai-agent-mode-select-input ai-agent-mode-select-input--${interactionMode}`}
               value={interactionMode}
               disabled={sending || !chatEnabled}
               aria-label={t("agent.mode.label")}
               onChange={(event) => setInteractionMode(event.target.value as AgentInteractionMode)}
             >
               {modeOptions.map((mode) => (
-                <option key={mode} value={mode}>
+                <option key={mode} value={mode} title={t(`agent.mode.hint.${mode}`)}>
                   {t(`agent.mode.${mode}`)}
                 </option>
               ))}
@@ -350,7 +383,9 @@ export function AgentRunDetails({
   const dashboardPath =
     typeof result?.dashboardPath === "string" ? result.dashboardPath : undefined;
   const toolSteps = steps.filter((s) => s.type === "tool");
+  const diagnosticSteps = steps.filter((s) => s.type === "error" || s.type === "guard");
   const isRunning = status === "RUNNING";
+  const detailCount = toolSteps.length + diagnosticSteps.length;
 
   return (
     <details className="ai-agent-run-details" open={open || undefined}>
@@ -360,10 +395,33 @@ export function AgentRunDetails({
           : status === "OK"
             ? t("agent.details.ok")
             : t("agent.details.error")}
-        {toolSteps.length > 0 ? ` (${toolSteps.length})` : ""}
+        {detailCount > 0 ? ` (${detailCount})` : ""}
       </summary>
-      {placeholder && toolSteps.length === 0 && (
+      {placeholder && toolSteps.length === 0 && diagnosticSteps.length === 0 && (
         <p className="op-muted ai-agent-step-placeholder">{t("agent.details.waiting")}</p>
+      )}
+      {diagnosticSteps.length > 0 && (
+        <ul className="ai-agent-diagnostic-list">
+          {diagnosticSteps.map((step) => (
+            <li key={step.step} className="ai-agent-diagnostic-item">
+              <strong>
+                {step.label
+                  ?? (step.type === "guard" ? t("agent.details.guard") : t("agent.details.parseError"))}
+              </strong>
+              {step.truncated && (
+                <span className="badge danger"> {t("agent.details.truncated")}</span>
+              )}
+              {step.error && <p className="ai-agent-step-error">{step.error}</p>}
+              {step.hint && <p className="hint">{step.hint}</p>}
+              {step.rawPreview && (
+                <details className="ai-agent-raw-preview">
+                  <summary>{t("agent.details.rawPreview")}</summary>
+                  <pre>{step.rawPreview}</pre>
+                </details>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
       {toolSteps.length > 0 && (
         <ol className="ai-agent-step-list">

@@ -54,7 +54,10 @@ public final class AgentPromptBuilder {
             CONVERSATION STYLE — prefer dialogue over blind execution:
             - PLAN-BEFORE-EXECUTE: for complex tasks (SCADA project, pump station, multi-layer blueprint, \
             several devices + dashboard + operator UI), run discovery first and finish with phase=plan + questions \
-            before any mutations. Simple read-only or obvious single-step tasks may execute immediately (mode=auto).
+            before any mutations. Default scope = full TZ / 8-layer blueprint — never auto-shrink to MVP unless user asks. \
+            Simple read-only or obvious single-step tasks may execute immediately (mode=auto).
+            - Plan UI: result.plan renders in a dedicated plan panel — use plan.sections[] for MAXIMUM detail by layer; \
+            summary stays 1–3 sentences; each section: title, summary (2–4 sentences), steps (concrete tools), deliverables.
             - If the request is vague, ambiguous, or missing key details (device name, path, driver type, report name), \
             ask a short clarifying question BEFORE creating or changing objects.
             - When several valid approaches exist (SNMP vs Modbus, which dashboard template, which report), \
@@ -65,7 +68,10 @@ public final class AgentPromptBuilder {
             {"type":"finish","summary":"Есть несколько отчётов. Какой запустить или сначала показать список?","result":{"interactive":true,"suggestions":[{"label":"Список отчётов","message":"Покажи доступные отчёты и кратко опиши каждый","primary":true},{"label":"SNMP demo dashboard","message":"Открой демо SNMP dashboard и опиши текущие метрики"}]}}
             - After list_reports: if needsClarification in tool result — finish with question + result.suggestions, do NOT run_report yet.
             - When the user picks a suggestion (same text as message field), treat it as confirmation and proceed.
-            - Still complete end-to-end when intent is clear; do not over-ask on obvious tasks.
+            - Complex TZ / full project: analytical intake — decompose implicit user phrases into specBrief FR-* \
+            with sourcePhrase; plan.executiveSummary; sectional plan with deliverables per layer. \
+            ≤3 questions/turn; user may batch answers. Approval only when completeness gate passes.
+            - Simple obvious tasks (single SNMP poll, list_objects): execute immediately — do not over-ask.
             
             """;
 
@@ -93,9 +99,11 @@ public final class AgentPromptBuilder {
             - Cross-device logic: CUSTOM hub + create_variable refAt(...) + CEL clusterError + configure_alert on hub
             - Operator HMI: configure_operator_ui (defaultDashboard + dashboards[]) — do NOT defer to manual UI setup
             - create_variable for bindings; describe_variables before set_variable on existing vars
-            - Dashboard templates: snmp-host-monitoring, demo-sensor, virtual-cluster-overview, virtual-cluster-detail, empty
+            - Dashboard templates: snmp-host-monitoring, demo-sensor, virtual-cluster-overview, virtual-cluster-detail,
+              monitoring-overview, scada-facility-overview, empty
             - Drill-down: object-table rowTargetDashboard + selectionKey on detail widgets (see virtual-cluster playbook)
-            - Complete end-to-end projects with tools; never tell user to configure dashboards/alerts/operator in UI when tools exist
+            - Complete end-to-end projects with tools; create objects AND types (instantiate_instance_type, apply_relative_model) autonomously
+            - Never tell user to configure dashboards/alerts/operator/models manually in UI when agent tools exist
             - set_variable for driverConfigJson, driverPointMappingsJson, dashboard title
             - Dashboard workflow: create_object DASHBOARD → list_variables on device → set_dashboard_layout template=
               (snmp-host-monitoring|demo-sensor|virtual-cluster-*|empty) OR add_dashboard_widget for 1–2 widgets max.
@@ -154,6 +162,8 @@ public final class AgentPromptBuilder {
                     .append("\n");
         }
         prompt.append("\nPlaybooks:\n");
+        prompt.append(AgentPlaybooks.specIntakeGuide());
+        prompt.append("\n\n");
         prompt.append(AgentPlaybooks.groundTruthGuide());
         prompt.append("\n\n");
         prompt.append(AgentPlaybooks.snmpLocalhostMonitoring());

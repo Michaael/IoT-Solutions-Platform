@@ -79,6 +79,48 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
         return LlmHttpSupport.parseChatCompletion(json, model);
     }
 
+    @Override
+    public boolean supportsVision(String model) throws LlmException {
+        if (!isAvailable()) {
+            throw new LlmException("OpenAI-compatible provider is not configured");
+        }
+        String effectiveModel = model != null && !model.isBlank() ? model : defaultModel;
+        if (effectiveModel == null || effectiveModel.isBlank()) {
+            return false;
+        }
+        try {
+            String modelsJson = LlmHttpSupport.getJson(
+                    httpClient,
+                    timeout,
+                    baseUrl + "/models",
+                    authHeaders()
+            );
+            Boolean fromMetadata = LlmHttpSupport.visionFromOpenAiModelsList(modelsJson, effectiveModel);
+            if (fromMetadata != null) {
+                return fromMetadata;
+            }
+        } catch (LlmException ignored) {
+            // fall through to live probe
+        }
+        return probeVisionViaChatCompletion(effectiveModel);
+    }
+
+    private boolean probeVisionViaChatCompletion(String model) throws LlmException {
+        Duration probeTimeout = timeout.compareTo(Duration.ofSeconds(15)) <= 0
+                ? timeout
+                : Duration.ofSeconds(15);
+        LlmRequest probe = LlmHttpSupport.visionProbeRequest(model);
+        var body = LlmHttpSupport.chatCompletionBody(probe);
+        LlmHttpSupport.HttpResult result = LlmHttpSupport.postJsonWithStatus(
+                httpClient,
+                probeTimeout,
+                baseUrl + "/chat/completions",
+                authHeaders(),
+                body
+        );
+        return LlmHttpSupport.interpretVisionProbeResult(result.statusCode(), result.body());
+    }
+
     private Map<String, String> authHeaders() {
         if (apiKey == null || apiKey.isBlank()) {
             return Map.of();

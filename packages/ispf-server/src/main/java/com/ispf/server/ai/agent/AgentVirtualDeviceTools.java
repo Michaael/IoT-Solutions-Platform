@@ -111,7 +111,7 @@ final class AgentVirtualDeviceTools {
             @Override
             public String description() {
                 return "Create DEVICE with virtual driver profile, model template, driver config, and start driver. "
-                        + "Args: parentPath, name, displayName, profile (lab|meter|unified|demo), "
+                        + "Args: parentPath, name, displayName, profile (lab|meter|unified|demo|tank-farm-tank), "
                         + "pollIntervalMs?, autoStart? (default true). "
                         + "Returns path, variableCount, driverStatus. Call list_variables before finish.";
             }

@@ -38,6 +38,7 @@ class AgentAttachmentValidatorTest {
         validator = new AgentAttachmentValidator(properties, llmProviderRegistry);
         when(llmProviderRegistry.activeProvider()).thenReturn(llmProvider);
         when(llmProvider.providerId()).thenReturn("openai-compatible");
+        when(llmProviderRegistry.visionEnabled()).thenReturn(false);
     }
 
     @Test

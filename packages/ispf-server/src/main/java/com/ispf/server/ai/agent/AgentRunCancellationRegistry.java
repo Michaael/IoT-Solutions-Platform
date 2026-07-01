@@ -18,19 +18,48 @@ public class AgentRunCancellationRegistry {
 
     private static final class RunState {
         final AtomicBoolean cancelled = new AtomicBoolean(false);
+        volatile long startedAtMs = System.currentTimeMillis();
+        volatile long lastProgressAtMs = System.currentTimeMillis();
         volatile String userMessage;
         volatile Map<String, Object> planState = Map.of();
         final List<Map<String, Object>> steps = Collections.synchronizedList(new ArrayList<>());
     }
 
+    /** Runs with no step progress longer than this are treated as stale (orphaned async turn). */
+    private static final long STALE_IDLE_MS = 15 * 60 * 1000L;
+    /** Hard cap — never block a session longer than this. */
+    private static final long STALE_MAX_MS = 2 * 60 * 60 * 1000L;
+
     private final ConcurrentHashMap<String, RunState> runsBySession = new ConcurrentHashMap<>();
 
+    public void touch(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        RunState state = runsBySession.get(sessionId);
+        if (state != null) {
+            state.lastProgressAtMs = System.currentTimeMillis();
+        }
+    }
+
+    public void updateUserMessage(String sessionId, String userMessage) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        RunState state = runsBySession.get(sessionId);
+        if (state != null && userMessage != null && !userMessage.isBlank()) {
+            state.userMessage = userMessage;
+            state.lastProgressAtMs = System.currentTimeMillis();
+        }
+    }
+
     public RunHandle start(String sessionId, String userMessage, Map<String, Object> planState) {
+        clearStaleRun(sessionId);
         RunState state = new RunState();
         state.userMessage = userMessage != null ? userMessage : "";
         state.planState = planState != null ? new LinkedHashMap<>(planState) : Map.of();
         runsBySession.put(sessionId, state);
-        return () -> runsBySession.remove(sessionId);
+        return () -> runsBySession.remove(sessionId, state);
     }
 
     public void syncPlanState(String sessionId, Map<String, Object> planState) {
@@ -40,6 +69,7 @@ public class AgentRunCancellationRegistry {
         RunState state = runsBySession.get(sessionId);
         if (state != null) {
             state.planState = planState != null ? new LinkedHashMap<>(planState) : Map.of();
+            state.lastProgressAtMs = System.currentTimeMillis();
         }
     }
 
@@ -62,7 +92,45 @@ public class AgentRunCancellationRegistry {
     }
 
     public boolean isRunning(String sessionId) {
-        return sessionId != null && runsBySession.containsKey(sessionId);
+        if (sessionId == null || sessionId.isBlank()) {
+            return false;
+        }
+        RunState state = runsBySession.get(sessionId);
+        if (state == null) {
+            return false;
+        }
+        if (isStale(state)) {
+            runsBySession.remove(sessionId, state);
+            return false;
+        }
+        return true;
+    }
+
+    /** Drop orphaned in-memory run so a new turn can start (page refresh during async turn). */
+    public boolean clearStaleRun(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return false;
+        }
+        RunState state = runsBySession.get(sessionId);
+        if (state != null && isStale(state)) {
+            runsBySession.remove(sessionId, state);
+            return true;
+        }
+        return false;
+    }
+
+    public void forceClear(String sessionId) {
+        if (sessionId != null && !sessionId.isBlank()) {
+            runsBySession.remove(sessionId);
+        }
+    }
+
+    private static boolean isStale(RunState state) {
+        long now = System.currentTimeMillis();
+        if (now - state.startedAtMs > STALE_MAX_MS) {
+            return true;
+        }
+        return now - state.lastProgressAtMs > STALE_IDLE_MS;
     }
 
     public void recordStep(String sessionId, Map<String, Object> step) {
@@ -72,6 +140,7 @@ public class AgentRunCancellationRegistry {
         RunState state = runsBySession.get(sessionId);
         if (state != null) {
             state.steps.add(step);
+            state.lastProgressAtMs = System.currentTimeMillis();
         }
     }
 

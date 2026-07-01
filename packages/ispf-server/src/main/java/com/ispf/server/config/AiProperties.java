@@ -13,21 +13,24 @@ public class AiProperties {
     private String model = "gpt-4o-mini";
     private String apiKey = "";
     private String apiKeyEnv = "OPENAI_API_KEY";
-    private int timeoutSeconds = 60;
-    private int maxTokens = 16384;
-    private double temperature = 0.2;
+    private int timeoutSeconds = 600;
+    private int maxTokens = 65536;
+    /** Max completion tokens per agent turn (~half of a 256k context window; prompt uses the rest). */
+    private int agentMaxTokens = 131_072;
+    private double temperature = 0.0;
     private String contextPackClasspath = "classpath:ai/context-pack.json";
-    private int agentMaxSteps = 96;
+    private int agentMaxSteps = 256;
     private int agentSessionTtlHours = 24;
-    private int agentMaxHistoryTurns = 50;
+    private int agentMaxHistoryTurns = 128;
     private boolean agentDisableThinking = true;
-    private int agentParseRetries = 3;
-    private int briefingMaxChars = 12_000;
+    private int agentParseRetries = 5;
+    private int briefingMaxChars = 32_768;
     private boolean briefingEveryTurn = false;
     /** When set, overrides vision capability detection from model name. */
     private Boolean agentVisionEnabled;
-    private int agentMaxAttachmentBytes = 4 * 1024 * 1024;
-    private int agentMaxTextInjectChars = 32_768;
+    private int agentMaxAttachmentBytes = 32 * 1024 * 1024;
+    /** ~512 KB of spec/TZ text inlined into the user message (chars, not tokens). */
+    private int agentMaxTextInjectChars = 524_288;
 
     public boolean isEnabled() {
         return enabled;
@@ -91,6 +94,14 @@ public class AiProperties {
 
     public void setMaxTokens(int maxTokens) {
         this.maxTokens = maxTokens;
+    }
+
+    public int getAgentMaxTokens() {
+        return agentMaxTokens > 0 ? agentMaxTokens : maxTokens;
+    }
+
+    public void setAgentMaxTokens(int agentMaxTokens) {
+        this.agentMaxTokens = agentMaxTokens;
     }
 
     public double getTemperature() {

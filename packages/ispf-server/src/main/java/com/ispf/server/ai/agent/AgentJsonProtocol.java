@@ -3,6 +3,9 @@ package com.ispf.server.ai.agent;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +28,181 @@ public final class AgentJsonProtocol {
         String normalized = normalizeModelContent(content);
         JsonNode root = readActionRoot(objectMapper, normalized);
         return parseActionNode(objectMapper, root);
+    }
+
+    /**
+     * Heuristic: model output was likely cut off mid-JSON (max_tokens / length stop).
+     */
+    public static boolean looksLikeTruncatedContent(String content) {
+        String normalized = normalizeModelContent(content);
+        if (normalized == null || normalized.isBlank()) {
+            return false;
+        }
+        String trimmed = normalized.trim();
+        if (!trimmed.startsWith("{") && !trimmed.contains("{\"type\"")) {
+            return false;
+        }
+        int start = trimmed.indexOf('{');
+        if (start < 0) {
+            return false;
+        }
+        if (findJsonObjectEnd(trimmed, start) < 0) {
+            return true;
+        }
+        if (trimmed.endsWith(",") || trimmed.endsWith(":") || trimmed.endsWith("\"")) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Best-effort recovery when the model started a finish action but output was cut off mid-JSON.
+     */
+    @SuppressWarnings("unchecked")
+    public static Optional<AgentAction> trySalvageTruncatedFinish(ObjectMapper objectMapper, String content) {
+        if (!looksLikeTruncatedContent(content)) {
+            return Optional.empty();
+        }
+        String normalized = normalizeModelContent(content);
+        if (normalized == null || normalized.isBlank()) {
+            return Optional.empty();
+        }
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (!lower.contains("\"type\":\"finish\"") && !lower.contains("\"type\": \"finish\"")) {
+            return Optional.empty();
+        }
+        String summary = extractJsonStringField(normalized, "summary");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("phase", "plan");
+        result.put("interactive", true);
+        result.put("planPartial", true);
+
+        Map<String, Object> plan = new LinkedHashMap<>();
+        String goal = extractNestedJsonStringField(normalized, "plan", "goal");
+        if (goal == null) {
+            goal = extractJsonStringField(normalized, "goal");
+        }
+        if (goal != null && !goal.isBlank()) {
+            plan.put("goal", goal);
+        }
+        List<Map<String, Object>> sections = extractCompleteJsonObjectsInArray(objectMapper, normalized, "sections");
+        if (!sections.isEmpty()) {
+            plan.put("sections", sections);
+        }
+        if (!plan.isEmpty()) {
+            result.put("plan", plan);
+        }
+        List<Map<String, Object>> questions = extractCompleteJsonObjectsInArray(objectMapper, normalized, "questions");
+        if (!questions.isEmpty()) {
+            result.put("questions", questions);
+        }
+        if (summary == null && plan.isEmpty() && questions.isEmpty()) {
+            return Optional.empty();
+        }
+        String effectiveSummary = summary != null && !summary.isBlank()
+                ? summary
+                : "Частичный план сохранён (ответ модели был обрезан). Продолжите расширение плана на следующем сообщении.";
+        return Optional.of(new AgentAction("finish", null, null, effectiveSummary, result));
+    }
+
+    private static String extractJsonStringField(String content, String field) {
+        return extractNestedJsonStringField(content, null, field);
+    }
+
+    private static String extractNestedJsonStringField(String content, String parentField, String field) {
+        if (content == null || field == null || field.isBlank()) {
+            return null;
+        }
+        String searchIn = content;
+        if (parentField != null && !parentField.isBlank()) {
+            int parentIdx = content.indexOf("\"" + parentField + "\"");
+            if (parentIdx < 0) {
+                return null;
+            }
+            int brace = content.indexOf('{', parentIdx);
+            if (brace < 0) {
+                return null;
+            }
+            searchIn = content.substring(brace);
+        }
+        int keyIdx = searchIn.indexOf("\"" + field + "\"");
+        if (keyIdx < 0) {
+            return null;
+        }
+        int colon = searchIn.indexOf(':', keyIdx + field.length());
+        if (colon < 0) {
+            return null;
+        }
+        int quote = searchIn.indexOf('"', colon + 1);
+        if (quote < 0) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        boolean escaped = false;
+        for (int i = quote + 1; i < searchIn.length(); i++) {
+            char ch = searchIn.charAt(i);
+            if (escaped) {
+                sb.append(ch);
+                escaped = false;
+                continue;
+            }
+            if (ch == '\\') {
+                escaped = true;
+                continue;
+            }
+            if (ch == '"') {
+                return sb.toString().trim();
+            }
+            sb.append(ch);
+        }
+        return sb.isEmpty() ? null : sb.toString().trim();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> extractCompleteJsonObjectsInArray(
+            ObjectMapper objectMapper,
+            String content,
+            String arrayField
+    ) {
+        if (content == null || arrayField == null || arrayField.isBlank()) {
+            return List.of();
+        }
+        int fieldIdx = content.indexOf("\"" + arrayField + "\"");
+        if (fieldIdx < 0) {
+            return List.of();
+        }
+        int bracket = content.indexOf('[', fieldIdx);
+        if (bracket < 0) {
+            return List.of();
+        }
+        List<Map<String, Object>> parsed = new ArrayList<>();
+        for (int i = bracket + 1; i < content.length(); i++) {
+            char ch = content.charAt(i);
+            if (Character.isWhitespace(ch) || ch == ',') {
+                continue;
+            }
+            if (ch == ']') {
+                break;
+            }
+            if (ch != '{') {
+                break;
+            }
+            int end = findJsonObjectEnd(content, i);
+            if (end < 0) {
+                break;
+            }
+            String fragment = content.substring(i, end + 1);
+            try {
+                JsonNode node = objectMapper.readTree(fragment);
+                if (node.isObject()) {
+                    parsed.add(objectMapper.convertValue(node, Map.class));
+                }
+            } catch (Exception ignored) {
+                break;
+            }
+            i = end;
+        }
+        return parsed;
     }
 
     /**

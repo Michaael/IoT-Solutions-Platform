@@ -442,6 +442,70 @@ public final class DashboardLayouts {
             }
             """;
 
+    public static final String MONITORING_OVERVIEW = """
+            {
+              "columns": 84,
+              "rowHeight": 8,
+              "widgets": [
+                {
+                  "id": "devices-table",
+                  "type": "object-table",
+                  "title": "Devices overview",
+                  "x": 0,
+                  "y": 0,
+                  "w": 84,
+                  "h": 35,
+                  "parentPath": "root.platform.devices",
+                  "selectionKey": "device",
+                  "columnsJson": "[{\\"variable\\":\\"status\\",\\"label\\":\\"online\\",\\"field\\":\\"online\\"}]"
+                },
+                {
+                  "id": "primary-value",
+                  "type": "value",
+                  "title": "Primary metric",
+                  "x": 0,
+                  "y": 35,
+                  "w": 28,
+                  "h": 14,
+                  "selectionKey": "device",
+                  "variableName": "temperature",
+                  "valueField": "value"
+                }
+              ]
+            }
+            """;
+
+    public static final String SCADA_FACILITY_OVERVIEW = """
+            {
+              "columns": 84,
+              "rowHeight": 8,
+              "widgets": [
+                {
+                  "id": "facility-mimic",
+                  "type": "scada-mimic",
+                  "title": "Facility mimic",
+                  "x": 0,
+                  "y": 0,
+                  "w": 84,
+                  "h": 63,
+                  "mimicPath": "root.platform.mimics.facility-overview"
+                },
+                {
+                  "id": "facility-devices",
+                  "type": "object-table",
+                  "title": "Facility devices",
+                  "x": 0,
+                  "y": 63,
+                  "w": 84,
+                  "h": 28,
+                  "parentPath": "root.platform.devices",
+                  "selectionKey": "device",
+                  "columnsJson": "[{\\"variable\\":\\"status\\",\\"label\\":\\"online\\",\\"field\\":\\"online\\"}]"
+                }
+              ]
+            }
+            """;
+
     public static final String EMPTY_DASHBOARD = """
             {
               "columns": 84,

@@ -19,9 +19,14 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public final class LlmHttpSupport {
+
+    /** 1×1 PNG for vision capability probes (minimal valid image). */
+    public static final String VISION_PROBE_PNG_DATA_URI =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -61,7 +66,24 @@ public final class LlmHttpSupport {
         }
     }
 
+    public record HttpResult(int statusCode, String body) {
+    }
+
     public static String postJson(
+            HttpClient client,
+            Duration timeout,
+            String url,
+            Map<String, String> headers,
+            ObjectNode body
+    ) throws LlmException {
+        HttpResult result = postJsonWithStatus(client, timeout, url, headers, body);
+        if (result.statusCode() < 200 || result.statusCode() >= 300) {
+            throw new LlmException("HTTP " + result.statusCode() + ": " + truncate(result.body()));
+        }
+        return result.body();
+    }
+
+    public static HttpResult postJsonWithStatus(
             HttpClient client,
             Duration timeout,
             String url,
@@ -78,12 +100,7 @@ public final class LlmHttpSupport {
                 headers.forEach(builder::header);
             }
             HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new LlmException("HTTP " + response.statusCode() + ": " + truncate(response.body()));
-            }
-            return response.body();
-        } catch (LlmException ex) {
-            throw ex;
+            return new HttpResult(response.statusCode(), response.body());
         } catch (Exception ex) {
             throw new LlmException("LLM HTTP request failed: " + ex.getMessage(), ex);
         }
@@ -165,9 +182,14 @@ public final class LlmHttpSupport {
             if (!choices.isArray() || choices.isEmpty()) {
                 throw new LlmException("LLM response missing choices");
             }
-            String content = choices.get(0).path("message").path("content").asText("");
+            JsonNode firstChoice = choices.get(0);
+            String content = firstChoice.path("message").path("content").asText("");
             String model = root.path("model").asText(fallbackModel);
-            return new LlmResponse(content, model, parseUsage(root.path("usage")));
+            String finishReason = firstChoice.path("finish_reason").asText(null);
+            if (finishReason != null && finishReason.isBlank()) {
+                finishReason = null;
+            }
+            return new LlmResponse(content, model, parseUsage(root.path("usage")), finishReason);
         } catch (LlmException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -219,6 +241,136 @@ public final class LlmHttpSupport {
         } catch (Exception ex) {
             throw new LlmException("Failed to parse Ollama models: " + ex.getMessage(), ex);
         }
+    }
+
+    public static ObjectNode ollamaShowBody(String model) {
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("model", model != null ? model : "");
+        return root;
+    }
+
+    public static boolean parseOllamaShowVision(String json) throws LlmException {
+        try {
+            JsonNode capabilities = MAPPER.readTree(json).path("capabilities");
+            if (!capabilities.isArray()) {
+                return false;
+            }
+            for (JsonNode capability : capabilities) {
+                if ("vision".equalsIgnoreCase(capability.asText(""))) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception ex) {
+            throw new LlmException("Failed to parse Ollama show response: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Reads vision capability from OpenAI-compatible {@code GET /models} when present
+     * (e.g. OpenRouter {@code architecture.modality}, {@code input_modalities}).
+     *
+     * @return {@code null} when the model entry has no modality metadata
+     */
+    public static Boolean visionFromOpenAiModelsList(String json, String modelId) throws LlmException {
+        try {
+            JsonNode data = MAPPER.readTree(json).path("data");
+            if (!data.isArray() || modelId == null || modelId.isBlank()) {
+                return null;
+            }
+            for (JsonNode item : data) {
+                if (!modelId.equals(item.path("id").asText(""))) {
+                    continue;
+                }
+                Boolean fromModality = visionFromModalityText(item.path("architecture").path("modality").asText(null));
+                if (fromModality != null) {
+                    return fromModality;
+                }
+                JsonNode inputModalities = item.path("input_modalities");
+                if (inputModalities.isArray()) {
+                    for (JsonNode modality : inputModalities) {
+                        if ("image".equalsIgnoreCase(modality.asText(""))) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                JsonNode capabilities = item.path("capabilities");
+                if (capabilities.isObject()) {
+                    JsonNode vision = capabilities.path("vision");
+                    if (vision.isBoolean()) {
+                        return vision.asBoolean();
+                    }
+                }
+                return null;
+            }
+            return null;
+        } catch (Exception ex) {
+            throw new LlmException("Failed to parse models vision metadata: " + ex.getMessage(), ex);
+        }
+    }
+
+    public static LlmRequest visionProbeRequest(String model) {
+        return new LlmRequest(
+                model,
+                List.of(new LlmMessage(
+                        "user",
+                        "ping",
+                        List.of(
+                                LlmContentPart.text("ping"),
+                                LlmContentPart.imageUrl(VISION_PROBE_PNG_DATA_URI)
+                        )
+                )),
+                1,
+                0.0
+        );
+    }
+
+    /**
+     * Interprets a chat-completions probe response: 2xx = vision supported;
+     * 4xx with vision-related error text = not supported.
+     */
+    public static boolean interpretVisionProbeResult(int statusCode, String body) throws LlmException {
+        if (statusCode >= 200 && statusCode < 300) {
+            return true;
+        }
+        if (statusCode >= 400 && statusCode < 500) {
+            if (looksLikeVisionRejection(body)) {
+                return false;
+            }
+            throw new LlmException("Vision probe HTTP " + statusCode + ": " + truncate(body));
+        }
+        throw new LlmException("Vision probe HTTP " + statusCode + ": " + truncate(body));
+    }
+
+    private static Boolean visionFromModalityText(String modality) {
+        if (modality == null || modality.isBlank()) {
+            return null;
+        }
+        String normalized = modality.toLowerCase(Locale.ROOT);
+        if (normalized.contains("image")) {
+            return true;
+        }
+        if (normalized.contains("text") && !normalized.contains("image")) {
+            return false;
+        }
+        return null;
+    }
+
+    private static boolean looksLikeVisionRejection(String body) {
+        if (body == null || body.isBlank()) {
+            return true;
+        }
+        String lower = body.toLowerCase(Locale.ROOT);
+        return lower.contains("vision")
+                || lower.contains("image")
+                || lower.contains("multimodal")
+                || lower.contains("modality")
+                || lower.contains("does not support")
+                || lower.contains("not support")
+                || lower.contains("unsupported")
+                || lower.contains("invalid content")
+                || lower.contains("expected text");
     }
 
     private static LlmUsage parseUsage(JsonNode usageNode) {

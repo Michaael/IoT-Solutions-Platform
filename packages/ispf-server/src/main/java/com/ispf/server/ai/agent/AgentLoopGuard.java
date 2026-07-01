@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 final class AgentLoopGuard {
 
@@ -121,11 +122,53 @@ final class AgentLoopGuard {
     private static String defaultHint(List<Map<String, Object>> steps, int maxStepsTotal) {
         int stepCount = steps != null ? steps.size() : 0;
         int remainingTotal = Math.max(0, maxStepsTotal - stepCount);
-        if (remainingTotal <= 3) {
+        String pace = AgentTurnPaceHints.gentlePaceSuffix(steps, maxStepsTotal);
+        if (remainingTotal <= 8) {
             return "Step limit almost reached (" + stepCount + "/" + maxStepsTotal
-                    + ") — finish now with {\"type\":\"finish\",\"summary\":\"...\",\"result\":{...}}.";
+                    + ") — finish now with {\"type\":\"finish\",\"summary\":\"...\",\"result\":{...}}."
+                    + pace;
         }
-        return "Continue with another tool action or finish when the goal is complete.";
+        String base = "Continue with another tool action or finish when the goal is complete.";
+        return pace.isEmpty() ? base : base + pace;
+    }
+
+    static Optional<BlockDecision> checkHardBlock(String toolName, List<Map<String, Object>> steps) {
+        if (repeatGroundTruthError(toolName, steps) >= 2) {
+            String parent = blockedParentPath(steps);
+            return Optional.of(new BlockDecision(
+                    "Hard block: same ground-truth error repeated for " + toolName,
+                    "Mandatory: list_objects parent=" + parent
+                            + " — use exact paths from result, then retry. Problem Brief: do not replan — fix grounding."
+            ));
+        }
+        return Optional.empty();
+    }
+
+    record BlockDecision(String error, String hint) {
+        boolean blocked() {
+            return error != null && !error.isBlank();
+        }
+    }
+
+    private static int repeatGroundTruthError(String toolName, List<Map<String, Object>> steps) {
+        if (steps == null || toolName == null) {
+            return 0;
+        }
+        int count = 0;
+        int start = Math.max(0, steps.size() - 4);
+        for (int i = start; i < steps.size(); i++) {
+            Map<String, Object> step = steps.get(i);
+            if (!"tool".equals(String.valueOf(step.get("type")))) {
+                continue;
+            }
+            if (!toolName.equalsIgnoreCase(String.valueOf(step.get("tool")))) {
+                continue;
+            }
+            if (lastStepGroundTruthBlocked(List.of(step))) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static boolean isRepeatedTool(String lastTool, List<Map<String, Object>> steps) {

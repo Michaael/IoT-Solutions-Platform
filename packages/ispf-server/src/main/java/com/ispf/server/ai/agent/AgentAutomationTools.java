@@ -415,14 +415,17 @@ final class AgentAutomationTools {
                     case "dashboard" -> schema.put("dashboard", dashboardSchema());
                     case "widget", "widgets" -> schema.put("widgets", AgentWidgetCatalog.catalogResponse("", ""));
                     case "object", "objects" -> schema.put("objects", AgentObjectTreeGuide.summary());
-                    case "projectblueprint", "project-blueprint", "blueprint" ->
-                            schema.put("projectBlueprint", AgentPlaybooks.projectBlueprintGuide());
+                    case "projectblueprint", "project-blueprint", "blueprint" -> {
+                        schema.put("projectBlueprint", AgentPlaybooks.projectBlueprintGuide());
+                        schema.put("planSections", AgentPlanSections.guide());
+                    }
                     case "groundtruth", "ground-truth", "discovery" ->
                             schema.put("groundTruth", AgentPlaybooks.groundTruthGuide());
                     case "instancetypes", "instance-types", "instance-type", "instance" ->
                             schema.put("instanceTypes", AgentPlaybooks.instanceTypesGuide());
                     case "objecttypes", "object-types", "objecttype", "object-type" -> {
                         schema.put("objectTypes", AgentPlaybooks.objectTypesMatrixGuide());
+                        schema.put("objectTypeCoverage", AgentPlaybooks.objectTypeCoverageGuide());
                         schema.put("objectTypeTable", objectTypeGuide());
                     }
                     case "relativemodels", "relative-models", "relative-model" ->
@@ -463,6 +466,7 @@ final class AgentAutomationTools {
                         schema.put("platformRules", AgentPlaybooks.platformRuleGuide());
                         schema.put("platformMaster", AgentPlaybooks.platformMasterGuide());
                         schema.put("projectBlueprint", AgentPlaybooks.projectBlueprintGuide());
+                        schema.put("planSections", AgentPlanSections.guide());
                         schema.put("groundTruth", AgentPlaybooks.groundTruthGuide());
                         schema.put("instanceTypes", AgentPlaybooks.instanceTypesGuide());
                         schema.put("relativeModels", AgentPlaybooks.relativeModelsGuide());

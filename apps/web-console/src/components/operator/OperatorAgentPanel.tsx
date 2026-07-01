@@ -56,6 +56,7 @@ export default function OperatorAgentPanel({
   const [isPending, setIsPending] = useState(false);
   const [liveSteps, setLiveSteps] = useState<AiAgentStep[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -155,6 +156,18 @@ export default function OperatorAgentPanel({
     [appId, isPending, providerReady, t]
   );
 
+  const appendToInput = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
+    }
+    setInput((prev) => {
+      const base = prev.trimEnd();
+      return base ? `${base}\n${trimmed}` : trimmed;
+    });
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
+
   const handleCancel = useCallback(async () => {
     const activeSessionId = sessionIdRef.current;
     if (!activeSessionId || !isPending) {
@@ -219,6 +232,7 @@ export default function OperatorAgentPanel({
               <OperatorAgentArtifactsView
                 result={message.result}
                 onSuggestMessage={(text) => void sendMessage(text)}
+                onAppendToInput={appendToInput}
                 onOpenDashboard={(path) => {
                   onOpenDashboard?.(path);
                   onClose();
@@ -253,6 +267,7 @@ export default function OperatorAgentPanel({
         }}
       >
         <textarea
+          ref={inputRef}
           rows={2}
           value={input}
           placeholder={t("agent.placeholder")}

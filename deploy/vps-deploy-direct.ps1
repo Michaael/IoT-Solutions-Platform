@@ -429,6 +429,9 @@ try {
 
 Write-Host "Deploy complete: $Version -> $RemoteHost"
 
+Write-Host "==> Syncing nginx (agent API long timeouts)"
+& (Join-Path $PSScriptRoot "vps-nginx-sync.ps1") -RemoteHost $RemoteHost
+
 if ($VerifyClickHouse) {
     Write-Host "==> ClickHouse verification"
     $verifyScript = Join-Path $PSScriptRoot "vps-clickhouse-verify.sh"

@@ -75,6 +75,12 @@ public final class AgentObjectTreeGuide {
                 Paths, modelName, profile, variableName must come from tool results in the current turn.
                 Playbooks and recipes show patterns only; never copy example paths literally.
                 
+                ### Object-type sweep (complex TZ)
+                
+                Call get_automation_schema topic=objectTypes. For each layer in TZ, list_objects on catalog root, \
+                then create_object / configure_* / instantiate_instance_type / apply_relative_model as needed.
+                Include plan.objectTypesCoverage[] — never skip DEVICE, CUSTOM hub, alerts, HMI layers without explicit N/A.
+                
                 ### Canonical order (every object type)
                 
                 1. `list_objects parent=<exact folder>` — e.g. root.platform.workflows (NOT parent=root for deep paths)

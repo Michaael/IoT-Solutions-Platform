@@ -33,4 +33,9 @@ public class NoopLlmProvider implements LlmProvider {
     public LlmResponse complete(LlmRequest request) throws LlmException {
         throw new LlmException("LLM provider is not configured (noop)");
     }
+
+    @Override
+    public boolean supportsVision(String model) {
+        return false;
+    }
 }

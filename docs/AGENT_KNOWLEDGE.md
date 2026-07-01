@@ -54,6 +54,50 @@
 
 ---
 
+## SIF — Specification Intake Framework
+
+Универсальный intake для **любого** задания (полное ТЗ, короткий промпт, follow-up). Насосная станция — reference fixture, не special case.
+
+### Pipeline (complex assignments)
+
+1. **Classify** → `assignmentType`; **decompose implicit phrases** → `specBrief` (entities, FR-* с `sourcePhrase`)
+2. **Discover** → recipes, profiles, `list_objects`, `get_automation_schema`
+3. **Scope** → `intent_scope` связывает FR со слоями; `assumptions[]` для выведенного
+4. **Gap matrix** → FR → capability (`full` / `out_of_scope`)
+5. **Questions** → ≤3/ход; пользователь может набрать несколько ответов в чате
+6. **Plan** → `plan.sections[]` поэтапно (≤2/ход) → **SYNTHESIS** обогащает секции → approval когда analytical gate OK
+
+UI: `executiveSummary`, таблица FR в `specBrief`, `gapMatrix`, список `planCompletenessGaps` до «Утвердить полный план».
+
+**Fast path:** `monitoring_lab`, `explore_readonly`, `follow_up` — без 5-turn torture.
+
+### Domain adapters
+
+| Adapter | Playbook | Template |
+|---------|----------|----------|
+| `industrial_oil_gas` | `virtualPumpStation()` + abbrev lexicon | `scada-facility-overview` |
+| `snmp_lab` | SNMP playbooks | `snmp-host-monitoring` |
+| `mes_terminal` | `mesReferenceLifecycle()` | — |
+| `_default` | `projectBlueprintGuide()` | `monitoring-overview` |
+
+### Guards & preflight
+
+- **Approval:** «Да, начинаем», «Утверждаю», primary suggestion → execution без re-plan
+- **Preflight:** перед mutation — hint + `suggestedDiscovery` если parent/path не grounded
+- **Path casing:** case-insensitive match, hint «Use exact path: …»
+- **Finish:** block при ERROR в turn, пустой mimic, dashboard без widgets, chart без history
+- **Judge:** pre-finish verdict `approve | rework | gap_required | user_moderation_required`
+
+### Reference fixtures (tests)
+
+- Pump station TZ → `industrial_facility`
+- «SNMP localhost мониторинг» → `monitoring_lab` fast path
+- «Разверни MES demo» → `application_bundle`
+
+См. `AgentPlaybooks.specIntakeGuide()`, `SpecIntakeScenarioTest`.
+
+---
+
 ## A. Tree-first (инструменты агента)
 
 **Суть:** собрать решение **на живом дереве** без deploy ZIP. Подходит для «создай SNMP localhost и дашборд», virtual lab, alert на hub.

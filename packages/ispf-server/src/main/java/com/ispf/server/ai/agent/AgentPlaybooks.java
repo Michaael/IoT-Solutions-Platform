@@ -189,22 +189,148 @@ public final class AgentPlaybooks {
 
     public static String virtualPumpStation() {
         return """
-                ## Virtual pump station — насосная станция (SCADA + мониторинг)
+                ## Domain adapter: industrial_oil_gas (pump station / NPS reference)
                 
-                Цель: виртуальные устройства с телеметрией (вибрация, температура, расход, давление),
-                SCADA mimic с bindings, дашборд мониторинга.
+                Use ONLY after SIF intake: specBrief + gapMatrix + approved selectedPhase=full + domainAdapter=industrial_oil_gas.
                 
-                **RELATIVE модели:** mixin вливает variables/events/functions в существующий объект.
+                Entity lexicon (names from specBrief.entities — never invent slugs):
+                | Kind in TZ | profile | Signals (from list_variables) |
+                |------------|---------|-------------------------------|
+                | gate valve (ЗД) | unified | temperature, pressure, flowRate |
+                | pump (НМ, НПВ) | lab | sineWave (vibration proxy), sawtoothWave |
+                | flow meter (СИКН) | meter | meterLiters, flowRate |
+                | tank / reservoir | tank-farm-tank | fillLevelMm, rateMmPerHour, valveOpen |
                 
-                0. list_objects parentPath=root.platform.devices — найти или выбрать родительскую папку (имя из ответа, не выдумывать)
-                1. list_relative_models targetObjectType=DEVICE + list_virtual_profiles — modelName/profile только из ответа
-                2. Если нужна новая папка проекта: create_object parentPath=<из list_objects> name=<уникальное из контекста> type=CUSTOM
-                3. Устройства — **вариант A:** create_object parentPath=<существующий parent> … → apply_relative_model modelName=<из list_relative_models>
-                   **вариант B:** create_virtual_device parentPath=<существующий> profile=<из list_virtual_profiles>
-                4. list_variables на КАЖДОМ устройстве — variableName для SCADA/dashboard только из этого списка
-                5. SCADA: save_mimic_diagram bindings с objectPath/variableName из list_variables
-                6. Dashboard: set_dashboard_layout layoutJson= с columns=84, rowHeight=8;
-                   scada-mimic: w=84 h=63; value/chart: w=28 h=14; НЕ w=4 h=2 (устаревшая сетка 12×72)
+                Execution checklist (domainAdapter=industrial_oil_gas):
+                0. get_automation_schema topic=objectTypes + search_platform_recipes query="pump station" + list_objects parent=root.platform.devices
+                0b. objectTypesCoverage: DEVICE, CUSTOM, ALERT, MIMIC, DASHBOARD, REPORT/CORRELATOR/WORKFLOW if TZ requires
+                1. create_object CUSTOM folder — name from specBrief (not hardcoded pump-station)
+                2. For each entity in specBrief (full TZ): create_virtual_device profile from lexicon → list_variables (mandatory)
+                3. configure_variable_history on chart vars (from list_variables only)
+                4. create_object MIMIC → save_mimic_diagram bindings from list_variables → get_mimic_diagram verify elementCount>0
+                5. create_object DASHBOARD → set_dashboard_layout template=scada-facility-overview (replace mimicPath in template)
+                6. configure_alert on hub/device if monitoring scope includes alerts
+                7. configure_operator_ui defaultDashboard=<dashboardPath>
+                8. finish only after zero ERROR steps in turn
+                
+                NEVER: use meter profile for gate valves; use tank profile for pumps; bind chart without configure_variable_history.
+                """
+                + industrialAbbreviationsGuide();
+    }
+
+    public static String industrialAbbreviationsGuide() {
+        return """
+                
+                ### Oil & gas abbreviations (adapter industrial_oil_gas only)
+                ЗД — gate valve (unified, NOT meter). НМ/НПВ — pump motor (lab). СИКН — metering (meter).
+                РВС/резервуар — tank-farm-tank. LSTM/ML forecast — out_of_scope in gapMatrix (user gate), not in platform execution.
+                """;
+    }
+
+    public static String specIntakeGuide() {
+        return """
+                ## SIF — Specification Intake Framework (universal intake)
+                
+                For ANY complex assignment (TZ, long prompt, file): zero mutations until user approves a full-TZ plan.
+                Default delivery = complete TZ via 8-layer project blueprint — do NOT auto-shrink to MVP.
+                Simple prompts (SNMP localhost, list/show) — fast path, skip 5-turn intake.
+                
+                Pipeline (complex — analytical):
+                1. Classify → assignmentType; decompose implicit phrases → specBrief (entities, FR-* with sourcePhrase)
+                2. Discover → search_platform_recipes, list_virtual_profiles, list_objects, get_automation_schema
+                3. Scope → intent_scope section maps FR to layers; assumptions[] for inferred items
+                4. Gap matrix → each FR → capability (full / out_of_scope) with gapId
+                5. Questions → ≤3/turn with options[]; user may batch answers in one message
+                6. Plan → plan.sections[] поэтапно (≤2/turn) → SYNTHESIS enriches → approval when gate passes
+                
+                Finish (planning turn) JSON shape:
+                {"type":"finish","result":{
+                  "phase":"plan","interactive":true,
+                  "assignmentType":"industrial_facility",
+                  "specBrief":{"title":"...","entities":[...],"functionalRequirements":[...]},
+                  "gapMatrix":[{"requirementId":"FR-1","capabilityId":"CAP_SCADA_MIMIC","status":"full","gapId":"GAP-...","blocksDev":false}],
+                  "pitfalls":[{"code":"P_PATH_GROUND_TRUTH","text":"..."}],
+                  "handoffFrame":{"handoffId":"...","deliveryPhases":[{"phaseId":"full","steps":["..."]}],"blockingGaps":[]},
+                  "plan":{"goal":"Полная реализация по ТЗ","domainAdapter":"industrial_oil_gas","selectedPhase":"full",
+                          "objectTypesCoverage":[{"type":"DEVICE","action":"create_virtual_device","reason":"FR-telemetry"},…],
+                          "deliveryPhases":[{"phaseId":"full","steps":["list_objects","devices","aggregation","alerts","mimic","dashboard","operator","validation"]}],
+                          "conformance":{"smokeCases":[{"id":"S1","case":"...","expected":"OK"}]}},
+                  "questions":[
+                    {"id":"Q_PROFILE","text":"Профиль виртуальных устройств?","options":[{"label":"Lab sim","value":"virtual-lab"}]},
+                    {"id":"Q_NAMING","text":"Префикс имён объектов?","options":[{"label":"nps-","value":"nps-"}]},
+                    {"id":"Q_HISTORIAN","text":"Historian для графиков?","options":[{"label":"Включить","value":"history-on"}]}
+                  ],
+                  "suggestions":[{"label":"Утвердить полный план","message":"Утверждаю план, начинай выполнение","primary":true}]
+                }}
+                
+                Domain adapters (execution plugins): industrial_oil_gas, snmp_lab, mes_terminal, scada_hmi, _default.
+                docanima patterns: handoffFrame, GAP registry (blocksDev), conformance smoke, Judge pre-finish verdict.
+                
+                Approval phrases: «Да, начинаем», «Утверждаю», «OK, start», primary suggestion click.
+                """
+                + AgentPlanSections.guide()
+                + objectTypeCoverageGuide()
+                + AgentPreflightService.hookChecklist();
+    }
+
+    /**
+     * Full object-type sweep + autonomous creation + question categories for complex TZ intake.
+     */
+    public static String objectTypeCoverageGuide() {
+        return """
+                
+                ## Object-type coverage (mandatory for complex TZ)
+                
+                Before approval: walk EVERY platform ObjectType relevant to the TZ. Do not skip layers silently.
+                Discovery: get_automation_schema topic=objectTypes + list_objects on each catalog root + \
+                list_instance_types + list_relative_models + list_absolute_models + list_virtual_profiles.
+                
+                | ObjectType | Catalog / parent | Create autonomously when TZ needs it |
+                |------------|------------------|--------------------------------------|
+                | DEVICE | root.platform.devices | create_virtual_device / create_object + apply_relative_model + configure_driver |
+                | CUSTOM | root.platform.devices.* or instances | create_object type=CUSTOM — hub, aggregation, refAt bindings |
+                | DASHBOARD | root.platform.dashboards | create_object + set_dashboard_layout template= |
+                | MIMIC | root.platform.mimics | create_object + save_mimic_diagram |
+                | ALERT | root.platform.alert-rules | configure_alert (or create_object ALERT) |
+                | CORRELATOR | root.platform.correlators | configure_correlator |
+                | WORKFLOW | root.platform.workflows | create_object + save_workflow_bpmn |
+                | REPORT | root.platform.reports | configure_report + run_report preview |
+                | SCHEDULE | under application or platform | create_object type=SCHEDULE when TZ mentions cron/jobs |
+                | DATA_SOURCE | root.platform.data-sources | create_object when SQL/report needs JDBC |
+                | APPLICATION | register_application / import_package | bundle deploy when TZ is app-level |
+                | FUNCTION | on DEVICE/CUSTOM/APPLICATION | create_function / deploy_app_function |
+                | MODEL strategy | relative / instance / absolute catalogs | pick catalog entry OR instantiate_instance_type OR \
+                apply_relative_model OR ensure_absolute_instance — do NOT ask user to create types manually in UI |
+                
+                Plan must include objectTypesCoverage[]: [{type, action, reason, modelName?}] for each type used or N/A with reason.
+                Execution: create missing types yourself via tools — never defer «создайте вручную в UI» if a tool exists.
+                If catalog has no fit: compose CUSTOM + create_variable + create_binding_rule, or stack relative models; \
+                only then ask user (with options) which catalog model is closest.
+                
+                ## Questions — maximize dialogue (complex TZ only)
+                
+                Ask structured questions with options[] — up to 3 per planning turn; user may answer several before sending.
+                Each question: id, text, options[] (2–4 clickable choices). Set interactive=true.
+                Prefer a planning turn that is ONLY questions (no approval suggestion) until coverage is complete.
+                
+                Question categories (use all that apply — do not guess silently):
+                - Q_ENTITIES: equipment list, naming prefix, folder structure
+                - Q_DATA_SOURCE: virtual lab vs SNMP/Modbus vs MQTT vs real PLC
+                - Q_PROFILE: virtual device profile per entity kind (lab/meter/unified/tank-farm-tank)
+                - Q_MODEL: INSTANCE vs RELATIVE vs ABSOLUTE for new object types
+                - Q_HISTORIAN: which variables need configure_variable_history for charts
+                - Q_ALERTS: thresholds, watch variables, event names, severity
+                - Q_CORRELATOR: patterns, chains, workflow triggers
+                - Q_MIMIC: layout style, symbol set, bindings priority
+                - Q_DASHBOARD: template choice, drill-down, selectionKey
+                - Q_OPERATOR: default dashboard, role screens, configure_operator_ui
+                - Q_REPORT: report type, schedule, export format
+                - Q_WORKFLOW: BPMN scope, manual vs automatic steps
+                - Q_SCHEDULE: cron, timezone (see ADR 0020)
+                - Q_APP: bundle import vs greenfield register_application
+                - Q_LANGUAGE: RU/EN labels in mimic and dashboards
+                
+                Fast path (SNMP localhost, list/show): skip sweep — execute immediately.
                 """;
     }
 
@@ -466,7 +592,12 @@ public final class AgentPlaybooks {
                 + "| CORRELATOR | " + AutomationTreeService.CORRELATORS_ROOT + " | correlator-v1 | configure_correlator |\n"
                 + "| WORKFLOW | root.platform.workflows | workflow-v1 | "
                 + "create_object, save_workflow_bpmn, run_workflow |\n"
-                + "| REPORT | root.platform.reports | report-v1 / tree-variables-report-v1 | configure_report, run_report |\n";
+                + "| REPORT | root.platform.reports | report-v1 / tree-variables-report-v1 | configure_report, run_report |\n"
+                + "| SCHEDULE | root.platform.schedules or app tree | schedule-v1 | create_object, configure_schedule |\n"
+                + "| DATA_SOURCE | root.platform.data-sources | data-source-v1 | create_object, test connection |\n"
+                + "| APPLICATION | root.platform.applications | bundle manifest | register_application, import_package |\n"
+                + "| CUSTOM | root.platform.devices.* / instances | — | create_object, create_variable, create_binding_rule |\n"
+                + "| FUNCTION | on parent object | script/java | create_function, deploy_app_function |\n";
     }
 
     public static String platformObjectTypesGuide() {

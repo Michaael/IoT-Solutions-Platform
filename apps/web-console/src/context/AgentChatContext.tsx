@@ -18,8 +18,13 @@ import {
   fetchAgentSession,
   fetchAiAgentTools,
   fetchAiProviderStatus,
+  fetchNewAgentTurnWithRetry,
   sendAgentMessage,
   subscribeAgentRunProgress,
+  waitForAgentTurnCompletion,
+  isAgentAcceptedResponse,
+  isAgentTurnResultDeliveryError,
+  waitUntilAgentRunIdle,
   type AiAgentChatResponse,
   type AiAgentSession,
   type AiAgentSessionSummary,
@@ -54,6 +59,7 @@ export interface ChatMessage {
   role: "user" | "agent";
   text: string;
   attachments?: AgentMessageAttachmentMeta[];
+  interactionMode?: AgentInteractionMode;
   steps?: AiAgentStep[];
   result?: Record<string, unknown>;
   status?: string;
@@ -99,7 +105,7 @@ function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function turnsToMessages(turns: AiAgentTurn[]): ChatMessage[] {
+function turnsToMessages(turns: AiAgentTurn[], sessionPlanState?: AgentPlanState): ChatMessage[] {
   const messages: ChatMessage[] = [];
   for (const turn of turns) {
     messages.push({
@@ -107,17 +113,142 @@ function turnsToMessages(turns: AiAgentTurn[]): ChatMessage[] {
       role: "user",
       text: turn.userMessage,
       attachments: turn.attachments,
+      interactionMode: turn.interactionMode,
     });
     messages.push({
       id: turn.turnId + "-a",
       role: "agent",
       text: turn.assistantSummary,
       steps: turn.steps,
-      result: turn.result,
+      result: mergeTurnResult(turn, sessionPlanState),
       status: turn.status,
     });
   }
   return messages;
+}
+
+const PLAN_APPROVAL_MESSAGE = "Утверждаю план, начинай выполнение";
+
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function isPlanApprovalSuggestion(item: unknown): boolean {
+  if (!item || typeof item !== "object") {
+    return false;
+  }
+  const suggestion = item as { primary?: boolean; label?: string; message?: string };
+  if (!suggestion.primary) {
+    return false;
+  }
+  const label = (suggestion.label ?? "").toLowerCase();
+  const message = (suggestion.message ?? "").toLowerCase();
+  return (
+    label.includes("утверд") ||
+    label.includes("approve") ||
+    message.includes("утверждаю план") ||
+    message.includes("approve the plan") ||
+    message === PLAN_APPROVAL_MESSAGE.toLowerCase()
+  );
+}
+
+function isTurnResultDeliveryError(error: unknown): boolean {
+  return isAgentTurnResultDeliveryError(error);
+}
+
+function isTurnResultErrorMessage(text: string): boolean {
+  return text.includes("without a turn result");
+}
+
+function isAgentRunInProgressError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("already in progress") || message.includes("409");
+}
+
+function mergeAgentResult(data: AiAgentChatResponse): Record<string, unknown> {
+  const result = { ...(data.result ?? {}) };
+  const resultPlan = result.plan as Record<string, unknown> | undefined;
+  const sessionPlan = data.planState?.plan;
+  const resultSteps = Array.isArray(resultPlan?.steps) ? resultPlan.steps : [];
+  const sessionSteps = Array.isArray(sessionPlan?.steps) ? sessionPlan.steps : [];
+  if ((!resultPlan || resultSteps.length === 0) && sessionPlan && sessionSteps.length > 0) {
+    result.plan = sessionPlan;
+    if (!result.phase) {
+      result.phase = "plan";
+    }
+  }
+  const awaitingApproval =
+    data.planState?.planPhase === "awaiting_approval" || result.phase === "plan";
+  const suggestions = Array.isArray(result.suggestions) ? result.suggestions : [];
+  const planCompletenessGaps = normalizeStringList(result.planCompletenessGaps);
+  const hasCompletenessGaps = planCompletenessGaps.length > 0;
+  const filteredSuggestions = suggestions.filter((item) => !isPlanApprovalSuggestion(item));
+  const hasPrimarySuggestion = filteredSuggestions.some(
+    (item) => item && typeof item === "object" && (item as { primary?: boolean }).primary
+  );
+  if (awaitingApproval && (result.plan || sessionPlan)) {
+    if (hasCompletenessGaps) {
+      const hasRefinePrimary = filteredSuggestions.some(
+        (item) =>
+          item &&
+          typeof item === "object" &&
+          (item as { primary?: boolean }).primary &&
+          !isPlanApprovalSuggestion(item)
+      );
+      result.suggestions = hasRefinePrimary
+        ? filteredSuggestions
+        : [
+            {
+              label: i18n.t("agent.plan.refinePlan", { ns: "ai" }),
+              message: i18n.t("agent.plan.refinePlanMessage", { ns: "ai" }),
+              primary: true,
+            },
+            ...filteredSuggestions.filter(
+              (item) => !(item && typeof item === "object" && (item as { primary?: boolean }).primary)
+            ),
+          ];
+    } else if (!hasPrimarySuggestion) {
+      result.suggestions = [
+        {
+          label: i18n.t("agent.plan.approveFullPlan", { ns: "ai" }),
+          message: i18n.t("agent.plan.approveMessage", { ns: "ai" }),
+          primary: true,
+        },
+        ...filteredSuggestions,
+      ];
+    } else {
+      result.suggestions = filteredSuggestions;
+    }
+    if (!result.phase) {
+      result.phase = "plan";
+    }
+    if (result.interactive === undefined) {
+      result.interactive = true;
+    }
+  }
+  return result;
+}
+
+function mergeTurnResult(
+  turn: AiAgentTurn,
+  planState?: AgentPlanState
+): Record<string, unknown> {
+  return mergeAgentResult({
+    status: turn.status,
+    sessionId: "",
+    title: "",
+    message: turn.userMessage,
+    rootPath: "root",
+    steps: turn.steps,
+    summary: turn.assistantSummary,
+    result: turn.result,
+    provider: { enabled: false, providerId: "", available: false },
+    contextPackVersion: "",
+    planState,
+  });
 }
 
 function responseToAgentMessage(data: AiAgentChatResponse): ChatMessage {
@@ -126,7 +257,7 @@ function responseToAgentMessage(data: AiAgentChatResponse): ChatMessage {
     role: "agent",
     text: data.summary,
     steps: data.steps,
-    result: data.result,
+    result: mergeAgentResult(data),
     status: data.status,
   };
 }
@@ -159,6 +290,8 @@ export function AgentChatProvider({
     () => loadAiStudioPrefs().interactionMode
   );
   const turnCountRef = useRef(0);
+  const baselineTurnsAtSendRef = useRef(0);
+  const turnDeliveredRef = useRef(false);
   const pendingMessageRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
 
@@ -222,7 +355,7 @@ export function AgentChatProvider({
     (session: AiAgentSession, index: AgentChatIndex) => {
       registerSession(session, index, session.sessionId);
       turnCountRef.current = session.turns.length;
-      const turnMessages = turnsToMessages(session.turns);
+      const turnMessages = turnsToMessages(session.turns, session.planState);
       setLiveSteps([]);
       setMessages(turnMessages);
     },
@@ -251,6 +384,37 @@ export function AgentChatProvider({
       activeSessionIdRef.current = data.sessionId;
     },
     [persistIndex, queryClient]
+  );
+
+  const deliverAgentTurn = useCallback(
+    (data: AiAgentChatResponse) => {
+      if (turnDeliveredRef.current) {
+        return;
+      }
+      turnDeliveredRef.current = true;
+      setMessages((prev) =>
+        prev.filter(
+          (message) => !(message.role === "agent" && isTurnResultErrorMessage(message.text))
+        )
+      );
+      handleAgentResponse(data);
+    },
+    [handleAgentResponse]
+  );
+
+  const tryRecoverCompletedTurn = useCallback(
+    async (sessionId: string, baselineTurnCount: number) => {
+      if (turnDeliveredRef.current) {
+        return true;
+      }
+      const recovered = await fetchNewAgentTurnWithRetry(sessionId, baselineTurnCount, 80, 500);
+      if (recovered) {
+        deliverAgentTurn(recovered);
+        return true;
+      }
+      return false;
+    },
+    [deliverAgentTurn]
   );
 
   const handleAgentError = useCallback((error: unknown, prefix: string) => {
@@ -308,6 +472,94 @@ export function AgentChatProvider({
       cancelled = true;
     };
   }, [applySession, enabled, initialPrefs.restoreLastChat, persistIndex]);
+
+  useEffect(() => {
+    if (!enabled || !activeSessionId || isPending) {
+      return;
+    }
+    let cancelled = false;
+    void fetchAgentRunProgress(activeSessionId).then(async (progress) => {
+      if (cancelled || !progress.running) {
+        return;
+      }
+      setIsPending(true);
+      if (progress.steps) {
+        setLiveSteps(progress.steps);
+      }
+      if (progress.planState?.planPhase) {
+        setLivePlanPhase(progress.planState.planPhase);
+      }
+      try {
+        const data = await waitForAgentTurnCompletion(
+          activeSessionId,
+          (live) => {
+            if (cancelled) {
+              return;
+            }
+            setLiveSteps(live.steps ?? []);
+            if (live.planState?.planPhase) {
+              setLivePlanPhase(live.planState.planPhase);
+            }
+          },
+          { baselineTurnCount: turnCountRef.current }
+        );
+        if (!cancelled) {
+          deliverAgentTurn(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const recovered = await tryRecoverCompletedTurn(activeSessionId, turnCountRef.current);
+          if (!recovered) {
+            handleAgentError(error, i18n.t("agent.sendFailed", { ns: "ai" }));
+          }
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPending(false);
+          setLivePlanPhase(undefined);
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSessionId, deliverAgentTurn, enabled, handleAgentError, isPending, tryRecoverCompletedTurn]);
+
+  useEffect(() => {
+    if (!isPending || !activeSessionId) {
+      return;
+    }
+    let cancelled = false;
+
+    const pollSessionTurn = async () => {
+      if (cancelled || turnDeliveredRef.current) {
+        return;
+      }
+      try {
+        const recovered = await fetchNewAgentTurnWithRetry(
+          activeSessionId,
+          baselineTurnsAtSendRef.current,
+          8,
+          400
+        );
+        if (recovered && !cancelled && !turnDeliveredRef.current) {
+          deliverAgentTurn(recovered);
+          setIsPending(false);
+          setLivePlanPhase(undefined);
+        }
+      } catch {
+        // ignore transient fetch errors
+      }
+    };
+
+    const sessionPollTimer = window.setInterval(() => void pollSessionTurn(), 2000);
+    void pollSessionTurn();
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(sessionPollTimer);
+    };
+  }, [activeSessionId, deliverAgentTurn, isPending]);
 
   useEffect(() => {
     if (!isPending || !activeSessionId) {
@@ -420,9 +672,7 @@ export function AgentChatProvider({
       pendingMessageRef.current = trimmed;
       setInput("");
       setLiveSteps([]);
-      setLivePlanPhase(
-        interactionMode === "plan" || interactionMode === "ask" ? "planning" : undefined
-      );
+      setLivePlanPhase(interactionMode === "plan" ? "planning" : undefined);
       const attachmentMeta = attachmentsToSend.map((item) => ({
         name: item.name,
         mimeType: item.mimeType,
@@ -431,7 +681,13 @@ export function AgentChatProvider({
       }));
       setMessages((prev) => [
         ...prev,
-        { id: newId(), role: "user", text: trimmed, attachments: attachmentMeta },
+        {
+          id: newId(),
+          role: "user",
+          text: trimmed,
+          attachments: attachmentMeta,
+          interactionMode,
+        },
       ]);
       setPendingAttachments([]);
       revokeAttachmentPreviews(attachmentsToSend);
@@ -449,31 +705,82 @@ export function AgentChatProvider({
           turnCountRef.current = 0;
         }
 
+        const liveSession = await fetchAgentSession(sessionId);
+        baselineTurnsAtSendRef.current = liveSession.turns.length;
+        turnCountRef.current = liveSession.turns.length;
+        turnDeliveredRef.current = false;
         setIsPending(true);
-        const data = await sendAgentMessage(
-          sessionId,
-          trimmed,
-          rootPath,
-          interactionMode,
-          apiAttachments
-        );
+        const onProgress = (progress: { steps?: AiAgentStep[]; planState?: AgentPlanState }) => {
+          setLiveSteps(progress.steps ?? []);
+          if (progress.planState?.planPhase) {
+            setLivePlanPhase(progress.planState.planPhase);
+          }
+        };
+
+        const runTurnAsync = async () => {
+          const ack = await sendAgentMessage(
+            sessionId!,
+            trimmed,
+            rootPath,
+            interactionMode,
+            apiAttachments,
+            true
+          );
+          if (isAgentAcceptedResponse(ack)) {
+            return waitForAgentTurnCompletion(sessionId!, onProgress, {
+              baselineTurnCount: baselineTurnsAtSendRef.current,
+            });
+          }
+          return ack;
+        };
+
+        let data: AiAgentChatResponse;
+        try {
+          data = await runTurnAsync();
+        } catch (error) {
+          if (isAgentRunInProgressError(error) && sessionId) {
+            await cancelAgentRun(sessionId);
+            await waitUntilAgentRunIdle(sessionId);
+            data = await runTurnAsync();
+          } else {
+            throw error;
+          }
+        }
         pendingMessageRef.current = null;
-        handleAgentResponse(data);
+        if (!turnDeliveredRef.current) {
+          deliverAgentTurn(data);
+        }
       } catch (error) {
         pendingMessageRef.current = null;
-        handleAgentError(error, i18n.t("agent.sendFailed", { ns: "ai" }));
+        const sid = activeSessionIdRef.current;
+        const recovered = sid
+          ? await tryRecoverCompletedTurn(sid, baselineTurnsAtSendRef.current)
+          : false;
+        if (!recovered && !turnDeliveredRef.current && !isTurnResultDeliveryError(error)) {
+          handleAgentError(error, i18n.t("agent.sendFailed", { ns: "ai" }));
+        } else if (!recovered && !turnDeliveredRef.current && isTurnResultDeliveryError(error)) {
+          const late = sid
+            ? await fetchNewAgentTurnWithRetry(sid, baselineTurnsAtSendRef.current, 80, 500)
+            : null;
+          if (late) {
+            deliverAgentTurn(late);
+          } else {
+            handleAgentError(error, i18n.t("agent.sendFailed", { ns: "ai" }));
+          }
+        }
       } finally {
         setIsPending(false);
         setLivePlanPhase(undefined);
       }
     },
     [
+      deliverAgentTurn,
       handleAgentError,
-      handleAgentResponse,
       interactionMode,
       isPending,
       pendingAttachments,
       registerSession,
+      tryRecoverCompletedTurn,
     ]
   );
 

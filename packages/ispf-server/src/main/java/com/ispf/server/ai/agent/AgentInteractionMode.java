@@ -11,7 +11,7 @@ public enum AgentInteractionMode {
     AUTO("auto"),
     /** Always clarify and produce a plan before mutations. */
     PLAN("plan"),
-    /** Skip planning gate; execute with tools (legacy behaviour). */
+    /** Skip planning gate; execute with tools immediately — no clarifying questions. */
     EXECUTE("execute"),
     /** Read-only discovery — no tree mutations. */
     ASK("ask");

@@ -48,7 +48,7 @@ public class AgentAttachmentValidator {
         }
 
         String providerId = llmProviderRegistry.activeProvider().providerId();
-        boolean vision = AgentInputCapabilities.visionEnabled(properties, providerId);
+        boolean vision = llmProviderRegistry.visionEnabled();
         boolean textAllowed = AgentInputCapabilities.textAttachmentsEnabled(properties, providerId);
 
         StringBuilder llmTextBuilder = new StringBuilder(trimmedMessage);

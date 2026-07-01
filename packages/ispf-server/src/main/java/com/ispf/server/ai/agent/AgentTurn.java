@@ -15,6 +15,7 @@ public final class AgentTurn {
     private final List<Map<String, Object>> steps;
     private final Map<String, Object> result;
     private final List<Map<String, Object>> attachments;
+    private final String interactionMode;
     private final Instant createdAt;
 
     public AgentTurn(
@@ -25,6 +26,7 @@ public final class AgentTurn {
             List<Map<String, Object>> steps,
             Map<String, Object> result,
             List<Map<String, Object>> attachments,
+            String interactionMode,
             Instant createdAt
     ) {
         this.turnId = turnId;
@@ -34,6 +36,7 @@ public final class AgentTurn {
         this.steps = steps != null ? List.copyOf(steps) : List.of();
         this.result = result != null ? Map.copyOf(result) : Map.of();
         this.attachments = attachments != null ? List.copyOf(attachments) : List.of();
+        this.interactionMode = interactionMode;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
@@ -53,7 +56,8 @@ public final class AgentTurn {
             String status,
             List<Map<String, Object>> steps,
             Map<String, Object> result,
-            List<Map<String, Object>> attachments
+            List<Map<String, Object>> attachments,
+            String interactionMode
     ) {
         return new AgentTurn(
                 UUID.randomUUID().toString(),
@@ -63,8 +67,20 @@ public final class AgentTurn {
                 steps,
                 result,
                 attachments,
+                interactionMode,
                 Instant.now()
         );
+    }
+
+    public static AgentTurn create(
+            String userMessage,
+            String assistantSummary,
+            String status,
+            List<Map<String, Object>> steps,
+            Map<String, Object> result,
+            List<Map<String, Object>> attachments
+    ) {
+        return create(userMessage, assistantSummary, status, steps, result, attachments, null);
     }
 
     public String turnId() {
@@ -95,6 +111,10 @@ public final class AgentTurn {
         return attachments;
     }
 
+    public String interactionMode() {
+        return interactionMode;
+    }
+
     public Instant createdAt() {
         return createdAt;
     }
@@ -110,6 +130,9 @@ public final class AgentTurn {
         map.put("createdAt", createdAt.toString());
         if (!attachments.isEmpty()) {
             map.put("attachments", attachments);
+        }
+        if (interactionMode != null && !interactionMode.isBlank()) {
+            map.put("interactionMode", interactionMode);
         }
         return map;
     }

@@ -5,6 +5,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -19,6 +20,61 @@ public final class AgentRunState {
     private volatile String interactionMode = AgentInteractionMode.AUTO.storageValue();
     private volatile String planPhase = AgentPlanPhase.NONE.storageValue();
     private volatile Map<String, Object> storedPlan = Map.of();
+    private volatile String handoffId;
+    private volatile String assignmentType;
+    private final Set<String> completedPlanSteps = ConcurrentHashMap.newKeySet();
+    private volatile int reworkRoundCount;
+    private volatile String lastUserMessage = "";
+
+    public String lastUserMessage() {
+        return lastUserMessage == null ? "" : lastUserMessage;
+    }
+
+    public void setLastUserMessage(String message) {
+        this.lastUserMessage = message != null ? message : "";
+    }
+
+    public String handoffId() {
+        return handoffId;
+    }
+
+    public void setHandoffId(String id) {
+        this.handoffId = id != null && !id.isBlank() ? id.trim() : null;
+    }
+
+    public String assignmentType() {
+        return assignmentType;
+    }
+
+    public void setAssignmentType(String type) {
+        this.assignmentType = type != null && !type.isBlank() ? type.trim() : null;
+    }
+
+    public Set<String> completedPlanSteps() {
+        return Set.copyOf(completedPlanSteps);
+    }
+
+    public void markCompletedPlanStep(String stepKey) {
+        if (stepKey != null && !stepKey.isBlank()) {
+            completedPlanSteps.add(stepKey.trim());
+        }
+    }
+
+    public void clearCompletedPlanSteps() {
+        completedPlanSteps.clear();
+    }
+
+    public int reworkRoundCount() {
+        return reworkRoundCount;
+    }
+
+    public void incrementReworkRound() {
+        this.reworkRoundCount++;
+    }
+
+    public void resetReworkRounds() {
+        this.reworkRoundCount = 0;
+    }
 
     public AgentInteractionMode interactionMode() {
         return AgentInteractionMode.fromString(interactionMode);
@@ -60,6 +116,10 @@ public final class AgentRunState {
     public void resetPlan() {
         this.planPhase = AgentPlanPhase.NONE.storageValue();
         this.storedPlan = Map.of();
+        this.handoffId = null;
+        this.assignmentType = null;
+        this.completedPlanSteps.clear();
+        this.reworkRoundCount = 0;
     }
 
     public Map<String, Object> planStateSummary() {
@@ -69,6 +129,15 @@ public final class AgentRunState {
         summary.put("planApproved", isPlanApproved());
         if (storedPlan != null && !storedPlan.isEmpty()) {
             summary.put("plan", Map.copyOf(storedPlan));
+        }
+        if (handoffId != null) {
+            summary.put("handoffId", handoffId);
+        }
+        if (assignmentType != null) {
+            summary.put("assignmentType", assignmentType);
+        }
+        if (!completedPlanSteps.isEmpty()) {
+            summary.put("completedPlanSteps", Set.copyOf(completedPlanSteps));
         }
         return summary;
     }
@@ -127,6 +196,16 @@ public final class AgentRunState {
         if (storedPlan != null && !storedPlan.isEmpty()) {
             map.put("storedPlan", Map.copyOf(storedPlan));
         }
+        if (handoffId != null) {
+            map.put("handoffId", handoffId);
+        }
+        if (assignmentType != null) {
+            map.put("assignmentType", assignmentType);
+        }
+        if (!completedPlanSteps.isEmpty()) {
+            map.put("completedPlanSteps", Set.copyOf(completedPlanSteps));
+        }
+        map.put("reworkRoundCount", reworkRoundCount);
         if (pending != null) {
             map.put("pending", pending.toMap(objectMapper));
         }
@@ -176,6 +255,27 @@ public final class AgentRunState {
             @SuppressWarnings("unchecked")
             Map<String, Object> plan = new LinkedHashMap<>((Map<String, Object>) planMap);
             storedPlan = plan;
+        }
+        Object handoffRaw = raw.get("handoffId");
+        if (handoffRaw != null && !String.valueOf(handoffRaw).isBlank()) {
+            handoffId = String.valueOf(handoffRaw).trim();
+        }
+        Object assignmentRaw = raw.get("assignmentType");
+        if (assignmentRaw != null && !String.valueOf(assignmentRaw).isBlank()) {
+            assignmentType = String.valueOf(assignmentRaw).trim();
+        }
+        completedPlanSteps.clear();
+        Object completedRaw = raw.get("completedPlanSteps");
+        if (completedRaw instanceof Iterable<?> iterable) {
+            for (Object item : iterable) {
+                if (item != null) {
+                    completedPlanSteps.add(String.valueOf(item));
+                }
+            }
+        }
+        Object reworkRaw = raw.get("reworkRoundCount");
+        if (reworkRaw instanceof Number number) {
+            reworkRoundCount = number.intValue();
         }
     }
 

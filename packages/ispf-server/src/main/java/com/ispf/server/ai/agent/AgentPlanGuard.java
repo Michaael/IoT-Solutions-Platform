@@ -38,10 +38,27 @@ final class AgentPlanGuard {
             "где ", "какой отч", "доступн"
     };
 
+    private static final String[] MUTATION_INTENT_KEYWORDS = {
+            "создай", "создать", "добавь", "добавить", "настрой", "настроить", "сделай", "сделать",
+            "построй", "импорт", "import", "deploy", "configure", "create ", "add ", "setup",
+            "build ", "install", "удали", "delete ", "remove ", "save_", "save ", "set_",
+            "set ", "apply_", "apply ", "запусти workflow", "run workflow", "обнови", "update "
+    };
+
     private static final String[] APPROVAL_KEYWORDS = {
             "утверждаю", "утвердить", "подтверждаю", "начинай", "начинай выполнение",
             "approve", "go ahead", "start execution", "execute plan", "proceed", "да, начинай",
-            "ок, начинай", "ok, start", "yes, start", "выполняй план", "приступай"
+            "ок, начинай", "ok, start", "yes, start", "выполняй план", "приступай",
+            "начинаем", "да, начинаем", "yes, begin", "go", "lfg", "вперёд", "вперед"
+    };
+
+    private static final String[] APPROVAL_VERBS = {
+            "начин", "утверж", "approve", "go", "start", "execute", "proceed", "выполн", "приступ", "давай", "делай"
+    };
+
+    private static final String[] SCOPE_CHANGE_KEYWORDS = {
+            "измени план", "change plan", "другой scope", "переплан", "replan", "новый план",
+            "отмени", "cancel plan", "другая фаза", "change scope", "переделай план"
     };
 
     private AgentPlanGuard() {
@@ -61,6 +78,9 @@ final class AgentPlanGuard {
     }
 
     static void beginTurn(AgentRunState runState, String userMessage, AgentProfile profile) {
+        if (runState != null) {
+            runState.setLastUserMessage(userMessage);
+        }
         if (profile == AgentProfile.OPERATOR || runState == null) {
             return;
         }
@@ -79,14 +99,20 @@ final class AgentPlanGuard {
         }
         AgentInteractionMode mode = runState.interactionMode();
         if (mode == AgentInteractionMode.ASK) {
-            runState.setPlanPhase(AgentPlanPhase.PLANNING);
+            runState.setPlanPhase(AgentPlanPhase.NONE);
             return;
         }
         if (mode == AgentInteractionMode.EXECUTE) {
             runState.setPlanPhase(AgentPlanPhase.NONE);
             return;
         }
-        if (mode == AgentInteractionMode.PLAN || requiresPlanning(userMessage)) {
+        if (mode == AgentInteractionMode.PLAN) {
+            if (impliesPlatformMutation(userMessage) || requiresPlanning(userMessage)) {
+                runState.setPlanPhase(AgentPlanPhase.PLANNING);
+            }
+            return;
+        }
+        if (requiresPlanning(userMessage)) {
             runState.setPlanPhase(AgentPlanPhase.PLANNING);
         }
     }
@@ -110,7 +136,7 @@ final class AgentPlanGuard {
                 ? "Ask mode is read-only. Use list_*/get_*/search_* tools, then finish with an answer."
                 : "Planning phase (" + phase + "): use read-only discovery tools, then finish with "
                         + "{\"type\":\"finish\",\"result\":{\"phase\":\"plan\",\"interactive\":true,"
-                        + "\"plan\":{...},\"questions\":[...],\"suggestions\":[{\"label\":\"Утвердить и начать\","
+                        + "\"plan\":{...},\"questions\":[...],\"suggestions\":[{\"label\":\"Утвердить полный план\","
                         + "\"message\":\"Утверждаю план, начинай выполнение\",\"primary\":true}]}}.";
         return Optional.of(new BlockDecision(
                 "Tool '" + toolName + "' is blocked during planning. Mutations require an approved plan.",
@@ -128,28 +154,66 @@ final class AgentPlanGuard {
         if (profile == AgentProfile.OPERATOR || runState == null) {
             return FinishOutcome.ALLOW_EXECUTION;
         }
-        if (isPlanFinish(finishResult)) {
-            return FinishOutcome.ALLOW_PLAN;
-        }
         if (runState.interactionMode() == AgentInteractionMode.ASK) {
+            if (looksLikePlanPayload(finishResult, runState)) {
+                return FinishOutcome.BLOCK_NEEDS_PLAN;
+            }
+            return FinishOutcome.ALLOW_EXECUTION;
+        }
+        if (runState.interactionMode() == AgentInteractionMode.EXECUTE) {
+            if (runState.planPhase() == AgentPlanPhase.APPROVED) {
+                return FinishOutcome.ALLOW_EXECUTION;
+            }
+            if (looksLikePlanPayload(finishResult, runState)) {
+                return FinishOutcome.BLOCK_NEEDS_PLAN;
+            }
+            return FinishOutcome.ALLOW_EXECUTION;
+        }
+        if (isPlanFinish(finishResult)) {
+            if (runState.planPhase() == AgentPlanPhase.APPROVED && !isScopeChangeMessage(userMessage)) {
+                return FinishOutcome.BLOCK_NEEDS_PLAN;
+            }
+            if (runState.isPlanningActive() && !hasStructuredPlanContent(finishResult, runState)) {
+                return FinishOutcome.BLOCK_NEEDS_PLAN;
+            }
             return FinishOutcome.ALLOW_PLAN;
         }
         if (runState.planPhase() == AgentPlanPhase.APPROVED) {
             return FinishOutcome.ALLOW_EXECUTION;
+        }
+        if (runState.planPhase() == AgentPlanPhase.AWAITING_APPROVAL) {
+            if (looksLikeExecutionResult(finishResult) && !isApprovalMessage(userMessage, runState.planPhase())) {
+                return FinishOutcome.BLOCK_NEEDS_APPROVAL;
+            }
+            if (isPlanFinish(finishResult)) {
+                return FinishOutcome.ALLOW_PLAN;
+            }
+            if (isInteractiveClarification(finishResult)) {
+                return hasStructuredPlanContent(finishResult, runState)
+                        ? FinishOutcome.ALLOW_PLAN
+                        : FinishOutcome.BLOCK_NEEDS_PLAN;
+            }
         }
         if (restrictsMutations(runState)) {
             if (looksLikeExecutionResult(finishResult) && !isApprovalMessage(userMessage)) {
                 return FinishOutcome.BLOCK_NEEDS_PLAN;
             }
             if (isInteractiveClarification(finishResult)) {
-                return FinishOutcome.ALLOW_PLAN;
+                return hasStructuredPlanContent(finishResult, runState)
+                        ? FinishOutcome.ALLOW_PLAN
+                        : FinishOutcome.BLOCK_NEEDS_PLAN;
             }
             if (requiresPlanning(userMessage) && steps.stream().noneMatch(AgentPlanGuard::isDiscoveryStep)) {
                 return FinishOutcome.BLOCK_NEEDS_PLAN;
             }
+            if (runState.isPlanningActive() && !hasStructuredPlanContent(finishResult, runState)) {
+                return FinishOutcome.BLOCK_NEEDS_PLAN;
+            }
             return FinishOutcome.ALLOW_PLAN;
         }
-        if (requiresPlanning(userMessage) && runState.planPhase() == AgentPlanPhase.NONE) {
+        if (requiresPlanning(userMessage)
+                && runState.interactionMode() != AgentInteractionMode.EXECUTE
+                && runState.planPhase() == AgentPlanPhase.NONE) {
             return FinishOutcome.BLOCK_NEEDS_PLAN;
         }
         return FinishOutcome.ALLOW_EXECUTION;
@@ -159,17 +223,100 @@ final class AgentPlanGuard {
         if (runState == null || finishResult == null) {
             return;
         }
-        Object planRaw = finishResult.get("plan");
-        if (planRaw instanceof Map<?, ?> planMap) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> incoming = new LinkedHashMap<>((Map<String, Object>) planMap);
-            Map<String, Object> merged = mergePlans(runState.storedPlan(), incoming);
-            runState.setStoredPlan(merged);
-            finishResult.put("plan", merged);
+        Map<String, Object> incoming = extractPlanMap(finishResult.get("plan"));
+        Map<String, Object> merged = mergePlans(runState.storedPlan(), incoming);
+        merged = preserveNonEmptyFields(merged, runState.storedPlan());
+        AgentAnalyticalIntake.mergeFinishIntakeIntoPlan(merged, finishResult);
+        runState.setStoredPlan(merged);
+        finishResult.put("plan", merged);
+        AgentAnalyticalIntake.enrichFinishFromPlan(finishResult, merged);
+        if (!AgentAnalyticalIntake.readyForApproval(merged, finishResult)) {
+            finishResult.put("planCompletenessGaps",
+                    AgentAnalyticalIntake.completenessGaps(merged, finishResult, runState.lastUserMessage()));
+        } else {
+            finishResult.remove("planCompletenessGaps");
         }
         finishResult.put("phase", "plan");
         finishResult.put("interactive", true);
         runState.setPlanPhase(AgentPlanPhase.AWAITING_APPROVAL);
+    }
+
+    static boolean shouldCapturePlan(AgentRunState runState, Map<String, Object> finishResult) {
+        if (runState == null || finishResult == null) {
+            return false;
+        }
+        if (runState.interactionMode() == AgentInteractionMode.ASK) {
+            return false;
+        }
+        if (isPlanFinish(finishResult) && hasStructuredPlanContent(finishResult, runState)) {
+            return true;
+        }
+        if (!runState.isPlanningActive()) {
+            return false;
+        }
+        if (finishResult.containsKey("plan")
+                && finishResult.get("plan") instanceof Map<?, ?>
+                && planHasContent(extractPlanMap(finishResult.get("plan")))) {
+            return true;
+        }
+        return !runState.storedPlan().isEmpty() && isInteractiveClarification(finishResult);
+    }
+
+    /**
+     * True when result.plan (or stored draft) has goal or steps for the plan panel UI.
+     */
+    static boolean looksLikePlanPayload(Map<String, Object> finishResult, AgentRunState runState) {
+        if (finishResult == null) {
+            return false;
+        }
+        if (isPlanFinish(finishResult) || hasStructuredPlanContent(finishResult, runState)) {
+            return true;
+        }
+        Object questions = finishResult.get("questions");
+        if (questions instanceof List<?> list && !list.isEmpty()) {
+            return true;
+        }
+        return hasPrimaryApprovalSuggestion(finishResult);
+    }
+
+    private static boolean hasPrimaryApprovalSuggestion(Map<String, Object> finishResult) {
+        Object raw = finishResult.get("suggestions");
+        if (!(raw instanceof List<?> suggestions)) {
+            return false;
+        }
+        for (Object item : suggestions) {
+            if (!(item instanceof Map<?, ?> map)) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(map.get("primary"))) {
+                return true;
+            }
+            Object label = map.get("label");
+            if (label != null && isApprovalMessage(String.valueOf(label), AgentPlanPhase.AWAITING_APPROVAL)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean hasStructuredPlanContent(Map<String, Object> finishResult, AgentRunState runState) {
+        if (finishResult != null && planHasContent(extractPlanMap(finishResult.get("plan")))) {
+            return true;
+        }
+        return runState != null && planHasContent(runState.storedPlan());
+    }
+
+    private static boolean planHasContent(Map<String, Object> plan) {
+        if (plan == null || plan.isEmpty()) {
+            return false;
+        }
+        if (!stringValue(plan.get("goal")).isBlank()) {
+            return true;
+        }
+        if (AgentPlanSections.hasSections(plan)) {
+            return true;
+        }
+        return !toStringList(plan.get("steps")).isEmpty();
     }
 
     /**
@@ -181,7 +328,13 @@ final class AgentPlanGuard {
             return existing == null || existing.isEmpty() ? Map.of() : new LinkedHashMap<>(existing);
         }
         if (existing == null || existing.isEmpty()) {
-            return new LinkedHashMap<>(incoming);
+            Map<String, Object> fresh = new LinkedHashMap<>(incoming);
+            fresh.put("steps", mergePlanSteps(List.of(), incoming.get("steps")));
+            fresh.put("layers", mergeStringLists(List.of(), incoming.get("layers")));
+            fresh.put("assumptions", mergeStringLists(List.of(), incoming.get("assumptions")));
+            fresh.put("sections", AgentPlanSections.mergeSections(List.of(), incoming.get("sections")));
+            syncFlattenedSteps(fresh);
+            return fresh;
         }
         Map<String, Object> merged = new LinkedHashMap<>(existing);
 
@@ -200,8 +353,74 @@ final class AgentPlanGuard {
         merged.put("layers", mergeStringLists(existing.get("layers"), incoming.get("layers")));
         merged.put("steps", mergePlanSteps(existing.get("steps"), incoming.get("steps")));
         merged.put("assumptions", mergeStringLists(existing.get("assumptions"), incoming.get("assumptions")));
+        merged.put("sections", AgentPlanSections.mergeSections(existing.get("sections"), incoming.get("sections")));
+        syncFlattenedSteps(merged);
 
         return merged;
+    }
+
+    /** Keep plan.steps in sync with sectional detail for progress tracking and legacy UI. */
+    private static void syncFlattenedSteps(Map<String, Object> plan) {
+        if (plan == null || !AgentPlanSections.hasSections(plan)) {
+            return;
+        }
+        List<String> flat = AgentPlanSections.flattenSteps(plan);
+        if (!flat.isEmpty()) {
+            plan.put("steps", flat);
+        }
+    }
+
+    /** Never let a merge wipe goal/steps/layers that were already in the draft. */
+    private static Map<String, Object> preserveNonEmptyFields(
+            Map<String, Object> merged,
+            Map<String, Object> existing
+    ) {
+        if (existing == null || existing.isEmpty()) {
+            return merged;
+        }
+        Map<String, Object> safe = new LinkedHashMap<>(merged);
+        if (toStringList(safe.get("steps")).isEmpty() && !toStringList(existing.get("steps")).isEmpty()) {
+            safe.put("steps", toStringList(existing.get("steps")));
+        }
+        if (stringValue(safe.get("goal")).isBlank() && !stringValue(existing.get("goal")).isBlank()) {
+            safe.put("goal", existing.get("goal"));
+        }
+        if (toStringList(safe.get("layers")).isEmpty() && !toStringList(existing.get("layers")).isEmpty()) {
+            safe.put("layers", toStringList(existing.get("layers")));
+        }
+        if (AgentPlanSections.readSections(safe).isEmpty() && AgentPlanSections.hasSections(existing)) {
+            safe.put("sections", existing.get("sections"));
+            syncFlattenedSteps(safe);
+        }
+        for (String key : List.of("specBrief", "gapMatrix", "objectTypesCoverage", "executiveSummary", "assumptions")) {
+            if (!safe.containsKey(key) || isEmptyValue(safe.get(key))) {
+                if (existing.containsKey(key) && !isEmptyValue(existing.get(key))) {
+                    safe.put(key, existing.get(key));
+                }
+            }
+        }
+        return safe;
+    }
+
+    private static boolean isEmptyValue(Object value) {
+        if (value == null) {
+            return true;
+        }
+        if (value instanceof Map<?, ?> map) {
+            return map.isEmpty();
+        }
+        if (value instanceof List<?> list) {
+            return list.isEmpty();
+        }
+        return String.valueOf(value).isBlank();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> extractPlanMap(Object planRaw) {
+        if (planRaw instanceof Map<?, ?> planMap) {
+            return new LinkedHashMap<>((Map<String, Object>) planMap);
+        }
+        return new LinkedHashMap<>();
     }
 
     static void completeExecution(AgentRunState runState) {
@@ -246,6 +465,34 @@ final class AgentPlanGuard {
         return containsComplexKeyword(text);
     }
 
+    static boolean impliesPlatformMutation(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return false;
+        }
+        String text = userMessage.toLowerCase(Locale.ROOT);
+        if (isApprovalMessage(text)) {
+            return false;
+        }
+        if (!containsMutationKeyword(text)) {
+            return false;
+        }
+        for (String keyword : SIMPLE_KEYWORDS) {
+            if (text.contains(keyword) && !containsComplexKeyword(text)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean containsMutationKeyword(String text) {
+        for (String keyword : MUTATION_INTENT_KEYWORDS) {
+            if (text.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static boolean isApprovalMessage(String userMessage) {
         return isApprovalMessage(userMessage, null);
     }
@@ -263,8 +510,8 @@ final class AgentPlanGuard {
         if (text.startsWith("утверждаю") || text.startsWith("approve")) {
             return true;
         }
-        if (phase == AgentPlanPhase.AWAITING_APPROVAL && text.length() <= 24) {
-            return text.equals("да")
+        if (phase == AgentPlanPhase.AWAITING_APPROVAL && text.length() <= 40) {
+            if (text.equals("да")
                     || text.equals("ok")
                     || text.equals("yes")
                     || text.equals("давай")
@@ -272,7 +519,44 @@ final class AgentPlanGuard {
                     || text.equals("согласна")
                     || text.equals("продолжай")
                     || text.equals("выполняй")
-                    || text.equals("делай");
+                    || text.equals("делай")
+                    || text.equals("go")
+                    || text.equals("lfg")) {
+                return true;
+            }
+            if ((text.startsWith("да,") || text.startsWith("да ") || text.startsWith("ok,") || text.startsWith("ok "))
+                    && containsApprovalVerb(text)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean isScopeChangeMessage(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return false;
+        }
+        String text = userMessage.toLowerCase(Locale.ROOT);
+        for (String keyword : SCOPE_CHANGE_KEYWORDS) {
+            if (text.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static void markPlanStepCompleted(AgentRunState runState, String toolName) {
+        if (runState == null || toolName == null || toolName.isBlank()) {
+            return;
+        }
+        runState.markCompletedPlanStep(toolName.trim().toLowerCase(Locale.ROOT));
+    }
+
+    private static boolean containsApprovalVerb(String text) {
+        for (String verb : APPROVAL_VERBS) {
+            if (text.contains(verb)) {
+                return true;
+            }
         }
         return false;
     }
@@ -289,9 +573,11 @@ final class AgentPlanGuard {
         if (!isReadOnlyTool(lastTool) || lastStepPlanBlocked(steps)) {
             return """
                     PLANNING PHASE: mutating tools are blocked until the user approves a plan. \
-                    Finish NOW with {"type":"finish","result":{"phase":"plan","interactive":true,"plan":{...},\
-                    "questions":[...],"suggestions":[{"label":"Утвердить и начать",\
+                    Finish NOW with {"type":"finish","summary":"1–2 sentences only","result":{"phase":"plan",\
+                    "interactive":true,"plan":{"goal":"...","layers":[...],"steps":["1. ...","2. ..."]},\
+                    "questions":[...],"suggestions":[{"label":"Утвердить полный план",\
                     "message":"Утверждаю план, начинай выполнение","primary":true}]}}. \
+                    Put ALL numbered steps in result.plan.steps — NOT in summary (UI plan panel). \
                     EXTEND the existing draft plan — add new steps from discovery; do NOT rewrite from scratch. \
                     Use exact snake_case tool names from the catalog only — never invent display names as tools. \
                     For workflows after approval: create_object (WORKFLOW), save_workflow_bpmn, run_workflow.""";
@@ -404,9 +690,31 @@ final class AgentPlanGuard {
             return List.of();
         }
         return list.stream()
-                .map(item -> item == null ? "" : String.valueOf(item).trim())
+                .map(AgentPlanGuard::stepToString)
                 .filter(item -> !item.isBlank())
                 .toList();
+    }
+
+    private static String stepToString(Object item) {
+        if (item == null) {
+            return "";
+        }
+        if (item instanceof String string) {
+            return string.trim();
+        }
+        if (item instanceof Map<?, ?> map) {
+            for (String key : List.of("text", "step", "description", "label", "action", "title")) {
+                Object value = map.get(key);
+                if (value != null && !String.valueOf(value).isBlank()) {
+                    return String.valueOf(value).trim();
+                }
+            }
+        }
+        String fallback = String.valueOf(item).trim();
+        if (fallback.startsWith("{") && fallback.contains("=")) {
+            return "";
+        }
+        return fallback;
     }
 
     private static List<String> mergeStringLists(Object existingRaw, Object incomingRaw) {
@@ -428,7 +736,7 @@ final class AgentPlanGuard {
         return List.copyOf(seen.values());
     }
 
-    private static List<String> mergePlanSteps(Object existingRaw, Object incomingRaw) {
+    static List<String> mergePlanSteps(Object existingRaw, Object incomingRaw) {
         List<String> existing = toStringList(existingRaw);
         List<String> incoming = toStringList(incomingRaw);
         if (incoming.isEmpty()) {

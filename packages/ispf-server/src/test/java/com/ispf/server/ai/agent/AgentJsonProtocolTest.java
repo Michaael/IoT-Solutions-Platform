@@ -3,9 +3,12 @@ package com.ispf.server.ai.agent;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -151,5 +154,41 @@ class AgentJsonProtocolTest {
         assertTrue(action.isPresent());
         assertEquals("finish", action.get().type());
         assertTrue(action.get().summary().contains("72.4"));
+    }
+
+    @Test
+    void salvagesTruncatedPlanFinish() {
+        String truncated = """
+                {"type":"finish","summary":"План НС","result":{"phase":"plan","interactive":true,"plan":{"goal":"Насосная станция","sections":[{"id":"ground_truth","title":"1. Discovery","summary":"Обнаружение","steps":["list_objects parent=root.platform.devices","get_automation_schema topic=projectBlueprint"]},{"id":"intent_scope","title":"2. Scope","summary":"Цель","steps":["FR mapping"
+                """;
+        var salvaged = AgentJsonProtocol.trySalvageTruncatedFinish(objectMapper, truncated);
+        assertTrue(salvaged.isPresent());
+        assertEquals("finish", salvaged.get().type());
+        assertEquals("План НС", salvaged.get().summary());
+        assertTrue(salvaged.get().result().containsKey("plan"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> plan = (Map<String, Object>) salvaged.get().result().get("plan");
+        assertEquals("Насосная станция", plan.get("goal"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> sections = (List<Map<String, Object>>) plan.get("sections");
+        assertThat(sections).hasSize(1);
+        assertEquals("ground_truth", sections.getFirst().get("id"));
+    }
+
+    @Test
+    void detectsTruncatedJsonContent() {
+        String truncated = """
+                {"type":"finish","summary":"Plan","result":{"phase":"plan","plan":{"goal":"MVP","steps":["1. a","2. b
+                """;
+        assertTrue(AgentJsonProtocol.looksLikeTruncatedContent(truncated));
+    }
+
+    @Test
+    void completeJsonIsNotMarkedTruncated() throws Exception {
+        String content = """
+                {"type":"finish","summary":"OK","result":{"phase":"plan","plan":{"goal":"MVP","steps":["1. list_objects"]}}}
+                """;
+        assertFalse(AgentJsonProtocol.looksLikeTruncatedContent(content));
+        AgentJsonProtocol.parse(objectMapper, content);
     }
 }

@@ -387,6 +387,54 @@ class AgentGroundTruthGuardTest {
                 .isEmpty();
     }
 
+    @Test
+    void allowsSaveMimicAfterObjectExistsError() {
+        String mimicPath = "root.platform.mimics.pump-station-mimic";
+        List<Map<String, Object>> steps = List.of(
+                listObjectsStep("root.platform.mimics", List.of()),
+                Map.of(
+                        "type", "tool",
+                        "tool", "create_object",
+                        "arguments", Map.of(
+                                "parentPath", "root.platform.mimics",
+                                "name", "pump-station-mimic",
+                                "type", "MIMIC"
+                        ),
+                        "result", Map.of(
+                                "status", "ERROR",
+                                "error", "Object exists: " + mimicPath,
+                                "existingPath", mimicPath,
+                                "hint", "Reuse this object"
+                        )
+                )
+        );
+        assertThat(AgentGroundTruthGuard.isObjectPathGrounded(steps, mimicPath)).isTrue();
+        var block = AgentGroundTruthGuard.checkBeforeTool(
+                "save_mimic_diagram",
+                Map.of("path", mimicPath, "elements", List.of()),
+                steps
+        );
+        assertThat(block).isEmpty();
+    }
+
+    @Test
+    void groundsParentFromObjectExistsError() {
+        String mimicPath = "root.platform.mimics.pump-station-mimic";
+        List<Map<String, Object>> steps = List.of(
+                Map.of(
+                        "type", "tool",
+                        "tool", "create_object",
+                        "arguments", Map.of("parentPath", "root.platform.mimics", "name", "pump-station-mimic"),
+                        "result", Map.of(
+                                "status", "ERROR",
+                                "error", "Object exists: " + mimicPath,
+                                "existingPath", mimicPath
+                        )
+                )
+        );
+        assertThat(AgentGroundTruthGuard.isParentGrounded(steps, "root.platform.mimics")).isTrue();
+    }
+
     private static ObjectDto mimicsFolderDto() {
         return new ObjectDto(
                 "id-mimics",
@@ -442,5 +490,17 @@ class AgentGroundTruthGuardTest {
                 "arguments", Map.of(),
                 "result", Map.of("status", "OK", "models", models)
         );
+    }
+
+    @Test
+    void groundsParentWithCaseInsensitiveSegmentMatch() {
+        List<Map<String, Object>> steps = List.of(
+                listObjectsStep("root.platform.devices", List.of(
+                        Map.of("path", "root.platform.devices.NM-1", "name", "NM-1")
+                ))
+        );
+        assertThat(AgentGroundTruthGuard.isObjectPathGrounded(steps, "root.platform.devices.nm-1")).isTrue();
+        assertThat(AgentGroundTruthGuard.resolveCanonicalPath(steps, "root.platform.devices.nm-1"))
+                .isEqualTo("root.platform.devices.NM-1");
     }
 }

@@ -285,7 +285,7 @@ public class PlatformAgentToolRegistry {
                         platformRoleService,
                         automationTreeService
                 ),
-                getDashboardLayoutTool(dashboardService, objectAccessService, tenantScopeService),
+                getDashboardLayoutTool(dashboardService, objectAccessService, tenantScopeService, objectMapper),
                 setDashboardLayoutTool(dashboardService, objectAccessService, tenantScopeService, objectMapper),
                 addDashboardWidgetTool(dashboardService, objectAccessService, tenantScopeService, objectMapper),
                 validateBundleTool(objectMapper, aiToolRegistry),
@@ -620,7 +620,8 @@ public class PlatformAgentToolRegistry {
     private static PlatformAgentTool getDashboardLayoutTool(
             DashboardService dashboardService,
             ObjectAccessService objectAccessService,
-            TenantScopeService tenantScopeService
+            TenantScopeService tenantScopeService,
+            ObjectMapper objectMapper
     ) {
         return new PlatformAgentTool() {
             @Override
@@ -662,6 +663,7 @@ public class PlatformAgentToolRegistry {
                             "status", "OK",
                             "source", source,
                             "layoutJson", layoutJson,
+                            "widgetCount", widgetCount(objectMapper, layoutJson),
                             "templates", DashboardService.layoutTemplateNames(),
                             "hint", "Widgets are inside layout JSON only. Use get_widget_catalog for all types, "
                                     + "set_dashboard_layout or add_dashboard_widget to edit."
@@ -800,12 +802,7 @@ public class PlatformAgentToolRegistry {
     }
 
     private static int widgetCount(ObjectMapper objectMapper, String layoutJson) {
-        try {
-            tools.jackson.databind.JsonNode root = objectMapper.readTree(layoutJson);
-            return root.path("widgets").isArray() ? root.path("widgets").size() : 0;
-        } catch (Exception ex) {
-            return -1;
-        }
+        return AgentToolResultMetrics.widgetCountFromLayoutJson(objectMapper, layoutJson);
     }
 
     private static PlatformAgentTool listVariablesTool(

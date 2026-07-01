@@ -11,17 +11,23 @@ import com.ispf.server.ai.agent.AgentInputCapabilities;
 import com.ispf.server.config.AiProperties;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class LlmProviderRegistry {
 
+    private static final long VISION_CACHE_TTL_MS = 3_600_000L;
+
+    private record VisionCacheEntry(boolean supported, long expiresAtMs) {
+    }
+
     private final AiProperties properties;
     private final NoopLlmProvider noopProvider;
     private volatile LlmProvider activeProvider;
+    private final ConcurrentHashMap<String, VisionCacheEntry> visionCache = new ConcurrentHashMap<>();
 
     public LlmProviderRegistry(AiProperties properties, NoopLlmProvider noopProvider) {
         this.properties = properties;
@@ -69,12 +75,59 @@ public class LlmProviderRegistry {
         if (!available && requiresApiKey(provider) && resolveApiKey().isBlank()) {
             status.put("reason", "missing-api-key");
         }
-        status.put("capabilities", AgentInputCapabilities.capabilitiesMap(properties, provider.providerId()));
+        boolean vision = visionEnabled();
+        status.put("capabilities", AgentInputCapabilities.capabilitiesMap(
+                properties,
+                provider.providerId(),
+                vision
+        ));
         status.put(
                 "supportedAttachmentTypes",
-                AgentInputCapabilities.supportedAttachmentTypes(properties, provider.providerId())
+                AgentInputCapabilities.supportedAttachmentTypes(
+                        properties,
+                        provider.providerId(),
+                        vision
+                )
         );
         return status;
+    }
+
+    /**
+     * Resolves vision support via explicit config override, live provider probe (cached), or name heuristic fallback.
+     */
+    public boolean visionEnabled() {
+        if (!properties.isEnabled()) {
+            return false;
+        }
+        LlmProvider provider = activeProvider();
+        String providerId = provider.providerId();
+        if (NoopLlmProvider.PROVIDER_ID.equals(providerId)) {
+            return false;
+        }
+        Boolean override = properties.getAgentVisionEnabled();
+        if (override != null) {
+            return override;
+        }
+        if (!isGenerationAvailable()) {
+            return false;
+        }
+        String model = properties.getModel();
+        if (model == null || model.isBlank()) {
+            return false;
+        }
+        String cacheKey = providerId + "|" + properties.getBaseUrl() + "|" + model.trim();
+        long now = System.currentTimeMillis();
+        VisionCacheEntry cached = visionCache.get(cacheKey);
+        if (cached != null && cached.expiresAtMs() > now) {
+            return cached.supported();
+        }
+        try {
+            boolean supported = provider.supportsVision(model);
+            visionCache.put(cacheKey, new VisionCacheEntry(supported, now + VISION_CACHE_TTL_MS));
+            return supported;
+        } catch (LlmException ex) {
+            return AgentInputCapabilities.modelSupportsVision(model);
+        }
     }
 
     public List<LlmModelInfo> listModels() throws LlmException {

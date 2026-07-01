@@ -64,13 +64,16 @@ export interface AiAgentTool {
 
 export interface AiAgentStep {
   step: number;
-  type: "tool" | "finish" | "error";
+  type: "tool" | "finish" | "error" | "guard";
   tool?: string;
   label?: string;
   arguments?: Record<string, unknown>;
   result?: Record<string, unknown>;
   summary?: string;
   error?: string;
+  hint?: string;
+  rawPreview?: string;
+  truncated?: boolean;
 }
 
 export interface AiAgentTurn {
@@ -81,6 +84,7 @@ export interface AiAgentTurn {
   steps: AiAgentStep[];
   result: Record<string, unknown>;
   attachments?: AgentMessageAttachmentMeta[];
+  interactionMode?: AgentInteractionMode;
   createdAt: string;
 }
 
@@ -327,6 +331,7 @@ export function createAgentSession(
 export function fetchAgentSession(sessionId: string): Promise<AiAgentSession> {
   return fetch(`/api/v1/ai/agent/sessions/${encodeURIComponent(sessionId)}`, {
     headers: getAuthHeaders(),
+    cache: "no-store",
   }).then(async (response) => {
     if (!response.ok) {
       return throwAiHttpError(response, `Fetch session failed: ${response.status}`);
@@ -335,14 +340,76 @@ export function fetchAgentSession(sessionId: string): Promise<AiAgentSession> {
   });
 }
 
+export interface AiAgentAcceptedResponse {
+  status: "ACCEPTED";
+  sessionId: string;
+  running: true;
+}
+
+export function isAgentAcceptedResponse(
+  value: AiAgentChatResponse | AiAgentAcceptedResponse
+): value is AiAgentAcceptedResponse {
+  return value.status === "ACCEPTED" && value.running === true;
+}
+
+export function sessionTurnToChatResponse(
+  session: AiAgentSession,
+  turn: AiAgentTurn,
+  provider: AiProviderStatus,
+  contextPackVersion = ""
+): AiAgentChatResponse {
+  return {
+    status: turn.status,
+    sessionId: session.sessionId,
+    turnId: turn.turnId,
+    title: session.title,
+    message: turn.userMessage,
+    rootPath: session.rootPath,
+    steps: turn.steps,
+    summary: turn.assistantSummary,
+    result: turn.result,
+    provider,
+    contextPackVersion,
+    planState: session.planState,
+    attachments: turn.attachments,
+  };
+}
+
+export function waitUntilAgentRunIdle(sessionId: string, timeoutMs = 25_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  return new Promise((resolve, reject) => {
+    const tick = async () => {
+      try {
+        const progress = await fetchAgentRunProgress(sessionId);
+        if (!progress.running) {
+          resolve();
+          return;
+        }
+        if (Date.now() >= deadline) {
+          reject(new Error("Agent run still in progress — try Cancel or wait a moment"));
+          return;
+        }
+        setTimeout(() => void tick(), 500);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    void tick();
+  });
+}
+
 export function sendAgentMessage(
   sessionId: string,
   message: string,
   rootPath?: string,
   interactionMode?: AgentInteractionMode,
-  attachments?: AgentMessageAttachment[]
-): Promise<AiAgentChatResponse> {
-  return fetch(`/api/v1/ai/agent/sessions/${encodeURIComponent(sessionId)}/messages`, {
+  attachments?: AgentMessageAttachment[],
+  async = true
+): Promise<AiAgentChatResponse | AiAgentAcceptedResponse> {
+  const url = `/api/v1/ai/agent/sessions/${encodeURIComponent(sessionId)}/messages${
+    async ? "?async=true" : ""
+  }`;
+  return fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -354,6 +421,210 @@ export function sendAgentMessage(
       return throwAiHttpError(response, `Send message failed: ${response.status}`);
     }
     return response.json();
+  });
+}
+
+export interface WaitForAgentTurnOptions {
+  /** Turns already in session before this message — ignore stale last turn. */
+  baselineTurnCount?: number;
+}
+
+/** Ignore early running=false before the server registers the async run. */
+const POST_SEND_GRACE_MS = 8_000;
+/** Require running=false to stay stable before treating the run as finished. */
+const RUN_IDLE_CONFIRM_MS = 2_000;
+/** Poll session for a new turn after running=false (LLM + DB commit can take minutes). */
+const TURN_FETCH_ATTEMPTS = 120;
+const TURN_FETCH_DELAY_MS = 500;
+const TURN_FETCH_LATE_PAUSE_MS = 10_000;
+const TURN_FETCH_LATE_ATTEMPTS = 80;
+
+export function isAgentTurnResultDeliveryError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("without a turn result");
+}
+
+export async function fetchNewAgentTurnResponse(
+  sessionId: string,
+  baselineTurnCount: number
+): Promise<AiAgentChatResponse | null> {
+  const [session, provider, contextPack] = await Promise.all([
+    fetchAgentSession(sessionId),
+    fetchAiProviderStatus(),
+    fetchAiContextPack().catch(() => ({ contextPackVersion: "" } as AiContextPackInfo)),
+  ]);
+  if (session.turns.length <= baselineTurnCount) {
+    return null;
+  }
+  const turn = session.turns.at(-1);
+  if (!turn) {
+    return null;
+  }
+  return sessionTurnToChatResponse(session, turn, provider, contextPack.contextPackVersion ?? "");
+}
+
+export async function fetchNewAgentTurnWithRetry(
+  sessionId: string,
+  baselineTurnCount: number,
+  attempts = 40,
+  delayMs = 500
+): Promise<AiAgentChatResponse | null> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const response = await fetchNewAgentTurnResponse(sessionId, baselineTurnCount);
+    if (response) {
+      return response;
+    }
+    if (attempt + 1 < attempts) {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  return null;
+}
+
+export function waitForAgentTurnCompletion(
+  sessionId: string,
+  onProgress?: (progress: AiAgentRunProgress) => void,
+  options?: WaitForAgentTurnOptions
+): Promise<AiAgentChatResponse> {
+  const baselineTurnCount = options?.baselineTurnCount ?? 0;
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let finishInFlight = false;
+    let pollTimer: ReturnType<typeof setInterval> | undefined;
+    let sessionPollTimer: ReturnType<typeof setInterval> | undefined;
+    let unsubscribe: (() => void) | undefined;
+    const waitStartedAt = Date.now();
+    let sawRunning = false;
+    let idleSince: number | null = null;
+
+    const cleanup = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = undefined;
+      }
+      if (sessionPollTimer) {
+        clearInterval(sessionPollTimer);
+        sessionPollTimer = undefined;
+      }
+      unsubscribe?.();
+      unsubscribe = undefined;
+    };
+
+    const loadCompletedTurn = async (): Promise<AiAgentChatResponse | null> =>
+      fetchNewAgentTurnResponse(sessionId, baselineTurnCount);
+
+    const settle = (response: AiAgentChatResponse) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve(response);
+    };
+
+    const rejectTurnMissing = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(new Error("Agent run completed without a turn result"));
+    };
+
+    const finish = async () => {
+      if (settled || finishInFlight) {
+        return;
+      }
+      finishInFlight = true;
+      try {
+        const response = await fetchNewAgentTurnWithRetry(
+          sessionId,
+          baselineTurnCount,
+          TURN_FETCH_ATTEMPTS,
+          TURN_FETCH_DELAY_MS
+        );
+        if (response) {
+          settle(response);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, TURN_FETCH_LATE_PAUSE_MS));
+        if (settled) {
+          return;
+        }
+        const late = await fetchNewAgentTurnWithRetry(
+          sessionId,
+          baselineTurnCount,
+          TURN_FETCH_LATE_ATTEMPTS,
+          TURN_FETCH_DELAY_MS
+        );
+        if (late) {
+          settle(late);
+          return;
+        }
+        rejectTurnMissing();
+      } catch (error) {
+        if (!settled) {
+          settled = true;
+          cleanup();
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      } finally {
+        finishInFlight = false;
+      }
+    };
+
+    const considerFinish = (running: boolean) => {
+      if (settled) {
+        return;
+      }
+      if (running) {
+        sawRunning = true;
+        idleSince = null;
+        return;
+      }
+      const now = Date.now();
+      if (!sawRunning && now - waitStartedAt < POST_SEND_GRACE_MS) {
+        return;
+      }
+      if (idleSince == null) {
+        idleSince = now;
+        return;
+      }
+      if (now - idleSince < RUN_IDLE_CONFIRM_MS) {
+        return;
+      }
+      void finish();
+    };
+
+    sessionPollTimer = setInterval(() => {
+      void loadCompletedTurn().then((response) => {
+        if (response) {
+          settle(response);
+        }
+      });
+    }, 1000);
+
+    unsubscribe = subscribeAgentRunProgress(
+      sessionId,
+      (progress) => {
+        onProgress?.(progress);
+        considerFinish(progress.running === true);
+      },
+      () => {
+        // SSE errors — polling fallback continues
+      }
+    );
+
+    pollTimer = setInterval(() => {
+      void fetchAgentRunProgress(sessionId)
+        .then((progress) => {
+          onProgress?.(progress);
+          considerFinish(progress.running === true);
+        })
+        .catch(() => {
+          // ignore transient poll errors while run is active
+        });
+    }, 2000);
   });
 }
 

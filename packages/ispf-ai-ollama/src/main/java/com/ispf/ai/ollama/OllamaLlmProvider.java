@@ -73,6 +73,26 @@ public class OllamaLlmProvider implements LlmProvider {
         return LlmHttpSupport.parseOllamaChat(json, model);
     }
 
+    @Override
+    public boolean supportsVision(String model) throws LlmException {
+        if (!isAvailable()) {
+            throw new LlmException("Ollama provider is not configured");
+        }
+        String effectiveModel = model != null && !model.isBlank() ? model : defaultModel;
+        if (effectiveModel == null || effectiveModel.isBlank()) {
+            return false;
+        }
+        var body = LlmHttpSupport.ollamaShowBody(effectiveModel);
+        String json = LlmHttpSupport.postJson(
+                httpClient,
+                timeout,
+                baseUrl + "/api/show",
+                null,
+                body
+        );
+        return LlmHttpSupport.parseOllamaShowVision(json);
+    }
+
     private static String trimTrailingSlash(String url) {
         if (url == null) {
             return "";

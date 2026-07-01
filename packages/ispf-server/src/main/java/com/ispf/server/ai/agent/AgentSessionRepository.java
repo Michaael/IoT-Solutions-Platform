@@ -159,7 +159,8 @@ public class AgentSessionRepository {
     private AgentTurn mapTurn(ResultSet rs) throws SQLException {
         Map<String, Object> resultPayload = readStringMap(rs.getString("result_json"));
         List<Map<String, Object>> attachments = readAttachments(resultPayload);
-        Map<String, Object> result = stripAttachments(resultPayload);
+        String interactionMode = readInteractionMode(resultPayload);
+        Map<String, Object> result = stripTurnMetadata(resultPayload);
         return new AgentTurn(
                 rs.getString("turn_id"),
                 rs.getString("user_message"),
@@ -168,14 +169,26 @@ public class AgentSessionRepository {
                 readListMap(rs.getString("steps_json")),
                 result,
                 attachments,
+                interactionMode,
                 rs.getTimestamp("created_at").toInstant()
         );
+    }
+
+    private static String readInteractionMode(Map<String, Object> resultPayload) {
+        Object raw = resultPayload.get("_interactionMode");
+        if (raw == null || String.valueOf(raw).isBlank()) {
+            return null;
+        }
+        return String.valueOf(raw);
     }
 
     private static Map<String, Object> turnResultPayload(AgentTurn turn) {
         Map<String, Object> payload = new LinkedHashMap<>(turn.result());
         if (!turn.attachments().isEmpty()) {
             payload.put("_attachments", turn.attachments());
+        }
+        if (turn.interactionMode() != null && !turn.interactionMode().isBlank()) {
+            payload.put("_interactionMode", turn.interactionMode());
         }
         return payload;
     }
@@ -195,12 +208,13 @@ public class AgentSessionRepository {
         return List.copyOf(attachments);
     }
 
-    private static Map<String, Object> stripAttachments(Map<String, Object> resultPayload) {
+    private static Map<String, Object> stripTurnMetadata(Map<String, Object> resultPayload) {
         if (resultPayload == null || resultPayload.isEmpty()) {
             return Map.of();
         }
         Map<String, Object> result = new LinkedHashMap<>(resultPayload);
         result.remove("_attachments");
+        result.remove("_interactionMode");
         return result;
     }
 

@@ -172,10 +172,13 @@ public class DashboardService {
                     DashboardLayouts.VIRTUAL_CLUSTER_OVERVIEW.trim();
             case "virtual-cluster-detail", "virt-cluster-detail" ->
                     DashboardLayouts.VIRTUAL_CLUSTER_DETAIL.trim();
+            case "monitoring-overview" -> DashboardLayouts.MONITORING_OVERVIEW.trim();
+            case "scada-facility-overview" -> DashboardLayouts.SCADA_FACILITY_OVERVIEW.trim();
             case "empty" -> DashboardLayouts.EMPTY_DASHBOARD.trim();
             default -> throw new IllegalArgumentException(
                     "Unknown template: " + template + ". Use snmp-host-monitoring, demo-sensor, "
-                            + "virtual-cluster-overview, virtual-cluster-detail, or empty."
+                            + "virtual-cluster-overview, virtual-cluster-detail, monitoring-overview, "
+                            + "scada-facility-overview, or empty."
             );
         };
     }

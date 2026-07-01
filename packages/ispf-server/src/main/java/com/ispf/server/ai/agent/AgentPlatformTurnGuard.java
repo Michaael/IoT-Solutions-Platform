@@ -30,6 +30,10 @@ final class AgentPlatformTurnGuard {
         if (steps == null || steps.isEmpty()) {
             return Optional.empty();
         }
+        Optional<BlockDecision> errorBlock = checkErrorSteps(steps);
+        if (errorBlock.isPresent()) {
+            return errorBlock;
+        }
         Optional<BlockDecision> deviceBlock = checkDeviceVerification(steps);
         if (deviceBlock.isPresent()) {
             return deviceBlock;
@@ -41,13 +45,66 @@ final class AgentPlatformTurnGuard {
                             + "For full chain: configure_alert -> configure_correlator."
             ));
         }
-        if (requiresScadaMimicValidation(steps, userMessage) && hasEmptyMimicDiagram(steps)) {
+        if (requiresScadaMimicValidation(steps, userMessage)) {
+            int mimicElements = AgentToolResultMetrics.lastMimicElementCount(steps);
+            if (mimicElements < 0) {
+                return Optional.of(new BlockDecision(
+                        "Cannot finish: SCADA/MIMIC created but diagram not verified.",
+                        "Call save_mimic_diagram with non-empty elements[] or get_mimic_diagram path=<mimicPath> "
+                                + "and verify elementCount>0 before finish."
+                ));
+            }
+            if (mimicElements == 0) {
+                return Optional.of(new BlockDecision(
+                        "Cannot finish: SCADA/MIMIC intent detected and mimic diagram has elementCount=0.",
+                        "Use save_mimic_diagram with non-empty elements[], then get_mimic_diagram and verify elementCount>0."
+                ));
+            }
+        }
+        if (requiresDashboardValidation(steps) && !AgentToolResultMetrics.hasVerifiedDashboardLayout(steps)) {
             return Optional.of(new BlockDecision(
-                    "Cannot finish: SCADA/MIMIC intent detected and get_mimic_diagram returned elementCount=0.",
-                    "Use save_mimic_diagram with non-empty elements[], then get_mimic_diagram and verify elementCount>0."
+                    "Cannot finish: DASHBOARD created but layout not verified (widgetCount=0).",
+                    "Call get_dashboard_layout path=<dashboardPath> or set_dashboard_layout/add_dashboard_widget "
+                            + "and verify widgetCount>0 before finish."
             ));
         }
         return Optional.empty();
+    }
+
+    /** Same guard error repeated this many times → turn is stuck (safety net). */
+    static int countRepeatedGuardError(List<Map<String, Object>> steps, String error) {
+        if (error == null || error.isBlank() || steps == null) {
+            return 0;
+        }
+        int count = 0;
+        for (Map<String, Object> step : steps) {
+            if ("guard".equals(String.valueOf(step.get("type")))
+                    && error.equals(String.valueOf(step.get("error")))) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    static boolean isStuckGuardLoop(List<Map<String, Object>> steps, String error) {
+        return countRepeatedGuardError(steps, error) >= 3;
+    }
+
+    private static Optional<BlockDecision> checkErrorSteps(List<Map<String, Object>> steps) {
+        List<String> errors = AgentTurnToolErrors.unresolvedErrorSummaries(steps);
+        if (errors.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new BlockDecision(
+                "Cannot finish: turn contains ERROR tool steps: " + String.join("; ", errors),
+                "Fix failed tools before finish. Never claim success for steps that returned ERROR."
+        ));
+    }
+
+    private static boolean requiresDashboardValidation(List<Map<String, Object>> steps) {
+        return hasSuccessfulTool(steps, "set_dashboard_layout")
+                || hasSuccessfulTool(steps, "add_dashboard_widget")
+                || hasCreateObjectType(steps, "DASHBOARD");
     }
 
     private static Optional<BlockDecision> checkDeviceVerification(List<Map<String, Object>> steps) {
@@ -139,16 +196,17 @@ final class AgentPlatformTurnGuard {
         String text = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
         boolean monitoringByText = containsAny(
                 text,
-                "monitor", "monitoring", "монитор", "дашборд", "dashboard",
-                "alert", "алерт", "alarm", "alarming", "correlator", "коррелятор"
+                "monitor", "monitoring", "монитор", "alert", "алерт", "alarm", "alarming",
+                "correlator", "коррелятор"
         );
-        boolean dashboardPattern = hasSuccessfulTool(steps, "set_dashboard_layout")
-                || hasSuccessfulTool(steps, "add_dashboard_widget")
-                || hasCreateObjectType(steps, "DASHBOARD");
+        boolean dashboardOnly = containsAny(text, "дашборд", "dashboard") && !monitoringByText;
+        if (dashboardOnly) {
+            return false;
+        }
         boolean alertPattern = hasSuccessfulTool(steps, "configure_alert") || hasCreateObjectType(steps, "ALERT");
         boolean correlatorPattern = hasSuccessfulTool(steps, "configure_correlator")
                 || hasCreateObjectType(steps, "CORRELATOR");
-        return monitoringByText || dashboardPattern || alertPattern || correlatorPattern;
+        return monitoringByText || alertPattern || correlatorPattern;
     }
 
     private static boolean requiresScadaMimicValidation(List<Map<String, Object>> steps, String userMessage) {
@@ -158,23 +216,6 @@ final class AgentPlatformTurnGuard {
                 || hasSuccessfulTool(steps, "get_mimic_diagram")
                 || hasCreateObjectType(steps, "MIMIC");
         return scadaByText || scadaPattern;
-    }
-
-    private static boolean hasEmptyMimicDiagram(List<Map<String, Object>> steps) {
-        for (Map<String, Object> step : steps) {
-            if (!isToolStep(step) || !"get_mimic_diagram".equals(toolName(step))) {
-                continue;
-            }
-            Map<String, Object> result = stepMap(step, "result");
-            if (!"OK".equals(String.valueOf(result.get("status")))) {
-                continue;
-            }
-            Integer elementCount = toInt(result.get("elementCount"));
-            if (elementCount != null && elementCount == 0) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static boolean hasCreateObjectType(List<Map<String, Object>> steps, String objectType) {
@@ -230,20 +271,6 @@ final class AgentPlatformTurnGuard {
     @SuppressWarnings("unchecked")
     private static Map<String, Object> stepMap(Map<String, Object> step, String key) {
         return step.get(key) instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();
-    }
-
-    private static Integer toInt(Object value) {
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value == null) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (NumberFormatException ex) {
-            return null;
-        }
     }
 
     private static boolean relativeModelVerified(Map<String, Object> result) {
