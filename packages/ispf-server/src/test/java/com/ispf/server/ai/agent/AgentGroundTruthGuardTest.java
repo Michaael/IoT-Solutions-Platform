@@ -74,7 +74,9 @@ class AgentGroundTruthGuardTest {
         var block = AgentGroundTruthGuard.checkBeforeTool(
                 "apply_relative_model",
                 Map.of("objectPath", "root.platform.devices.d1", "modelName", "virtual-lab-v1"),
-                List.of()
+                List.of(
+                        listObjectsStep("root.platform.devices", List.of(Map.of("path", "root.platform.devices.d1")))
+                )
         );
         assertThat(block).isPresent();
         assertThat(block.get().hint()).contains("list_relative_models");
@@ -83,6 +85,7 @@ class AgentGroundTruthGuardTest {
     @Test
     void allowsApplyRelativeModelAfterListRelativeModels() {
         List<Map<String, Object>> steps = List.of(
+                listObjectsStep("root.platform.devices", List.of(Map.of("path", "root.platform.devices.d1"))),
                 relativeModelsStep(List.of(Map.of("modelName", "virtual-lab-v1")))
         );
         var block = AgentGroundTruthGuard.checkBeforeTool(
@@ -273,10 +276,114 @@ class AgentGroundTruthGuardTest {
     }
 
     @Test
+    void allowsCreateUnderWorkflowsAfterListPlatform() {
+        List<Map<String, Object>> steps = List.of(
+                listObjectsStep("root.platform", List.of(
+                        Map.of("path", "root.platform.workflows", "name", "workflows")
+                ))
+        );
+        var block = AgentGroundTruthGuard.checkBeforeTool(
+                "create_object",
+                Map.of("parentPath", "root.platform.workflows", "name", "hydraulic-shock", "type", "WORKFLOW"),
+                steps
+        );
+        assertThat(block).isEmpty();
+    }
+
+    @Test
+    void blocksSaveWorkflowBpmnWithoutCreate() {
+        var block = AgentGroundTruthGuard.checkBeforeTool(
+                "save_workflow_bpmn",
+                Map.of("path", "root.platform.workflows.hydraulic-shock", "bpmnXml", "<bpmn/>"),
+                List.of(listObjectsStep("root", List.of(Map.of("path", "root.platform", "name", "platform"))))
+        );
+        assertThat(block).isPresent();
+        assertThat(block.get().hint()).contains("create_object");
+    }
+
+    @Test
+    void allowsSaveWorkflowBpmnAfterCreateObject() {
+        List<Map<String, Object>> steps = List.of(
+                listObjectsStep("root.platform.workflows", List.of()),
+                Map.of(
+                        "type", "tool",
+                        "tool", "create_object",
+                        "arguments", Map.of(
+                                "parentPath", "root.platform.workflows",
+                                "name", "hydraulic-shock",
+                                "type", "WORKFLOW"
+                        ),
+                        "result", Map.of(
+                                "status", "OK",
+                                "path", "root.platform.workflows.hydraulic-shock"
+                        )
+                )
+        );
+        var block = AgentGroundTruthGuard.checkBeforeTool(
+                "save_workflow_bpmn",
+                Map.of("path", "root.platform.workflows.hydraulic-shock", "bpmnXml", "<bpmn/>"),
+                steps
+        );
+        assertThat(block).isEmpty();
+    }
+
+    @Test
+    void blocksSaveMimicDiagramWithoutCreate() {
+        var block = AgentGroundTruthGuard.checkBeforeTool(
+                "save_mimic_diagram",
+                Map.of("path", "root.platform.mimics.pump-hmi", "elements", List.of()),
+                List.of(listObjectsStep("root.platform.mimics", List.of()))
+        );
+        assertThat(block).isPresent();
+        assertThat(block.get().hint()).contains("create_object");
+    }
+
+    @Test
+    void allowsSetDashboardLayoutAfterCreate() {
+        List<Map<String, Object>> steps = List.of(
+                listObjectsStep("root.platform.dashboards", List.of()),
+                Map.of(
+                        "type", "tool",
+                        "tool", "create_object",
+                        "arguments", Map.of(
+                                "parentPath", "root.platform.dashboards",
+                                "name", "pump-dash",
+                                "type", "DASHBOARD"
+                        ),
+                        "result", Map.of("status", "OK", "path", "root.platform.dashboards.pump-dash")
+                )
+        );
+        var block = AgentGroundTruthGuard.checkBeforeTool(
+                "set_dashboard_layout",
+                Map.of("path", "root.platform.dashboards.pump-dash", "template", "empty"),
+                steps
+        );
+        assertThat(block).isEmpty();
+    }
+
+    @Test
+    void allowsConfigureOnExistingObjectAfterGetObject() {
+        List<Map<String, Object>> steps = List.of(
+                Map.of(
+                        "type", "tool",
+                        "tool", "get_object",
+                        "arguments", Map.of("path", "root.platform.devices.pump-01"),
+                        "result", Map.of("status", "OK", "path", "root.platform.devices.pump-01")
+                )
+        );
+        var block = AgentGroundTruthGuard.checkBeforeTool(
+                "configure_driver",
+                Map.of("path", "root.platform.devices.pump-01"),
+                steps
+        );
+        assertThat(block).isEmpty();
+    }
+
+    @Test
     void doesNotGuardUnrelatedTools() {
         assertThat(AgentGroundTruthGuard.checkBeforeTool("list_variables", Map.of("path", "root"), List.of()))
                 .isEmpty();
-        assertThat(AgentGroundTruthGuard.checkBeforeTool("save_mimic_diagram", Map.of("path", "root.platform.mimics.x"), List.of()))
+        assertThat(AgentGroundTruthGuard.checkBeforeTool("get_workflow", Map.of("path", "root.platform.workflows.x"), List.of()))
                 .isEmpty();
     }
 

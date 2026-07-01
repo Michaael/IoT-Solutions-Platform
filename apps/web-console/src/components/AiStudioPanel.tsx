@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import AiAgentChat from "./AiAgentChat";
 import AiStudioBundleTab, { defaultBundleManifest } from "./AiStudioBundleTab";
-import AiStudioSettingsTab from "./AiStudioSettingsTab";
+import AiStudioPrefsTab from "./AiStudioPrefsTab";
+import AiStudioStatusTab from "./AiStudioStatusTab";
 import { useAgentChat } from "../context/AgentChatContext";
 import { loadAiStudioPrefs, saveAiStudioPrefs } from "../utils/agentChatStorage";
 
-type StudioMode = "agent" | "bundle" | "settings";
+export type StudioMode = "agent" | "bundle" | "status" | "prefs";
 
 export default function AiStudioPanel() {
   const { t } = useTranslation("ai");
@@ -27,7 +28,7 @@ export default function AiStudioPanel() {
     saveAiStudioPrefs({ ...prefs, lastTab: mode });
   }, [mode]);
 
-  const tabs: StudioMode[] = ["agent", "bundle", "settings"];
+  const tabs: StudioMode[] = ["agent", "bundle", "status", "prefs"];
 
   return (
     <div className="ai-studio-panel">
@@ -41,7 +42,7 @@ export default function AiStudioPanel() {
         )}
       </header>
 
-      <nav className="tabs" aria-label={t("studio.sectionsAria")}>
+      <nav className="tabs ai-studio-tabs" aria-label={t("studio.sectionsAria")}>
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -77,8 +78,12 @@ export default function AiStudioPanel() {
           />
         </div>
 
-        <div className={`ai-studio-tab-layer ${mode === "settings" ? "active" : "dormant"}`}>
-          <AiStudioSettingsTab />
+        <div className={`ai-studio-tab-layer ${mode === "status" ? "active" : "dormant"}`}>
+          <AiStudioStatusTab />
+        </div>
+
+        <div className={`ai-studio-tab-layer ${mode === "prefs" ? "active" : "dormant"}`}>
+          <AiStudioPrefsTab />
         </div>
       </div>
     </div>

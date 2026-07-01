@@ -7,6 +7,7 @@ import com.ispf.ai.LlmRequest;
 import com.ispf.ai.LlmResponse;
 import com.ispf.ai.ollama.OllamaLlmProvider;
 import com.ispf.ai.openai.OpenAiCompatibleLlmProvider;
+import com.ispf.server.ai.agent.AgentInputCapabilities;
 import com.ispf.server.config.AiProperties;
 import org.springframework.stereotype.Service;
 
@@ -68,6 +69,11 @@ public class LlmProviderRegistry {
         if (!available && requiresApiKey(provider) && resolveApiKey().isBlank()) {
             status.put("reason", "missing-api-key");
         }
+        status.put("capabilities", AgentInputCapabilities.capabilitiesMap(properties, provider.providerId()));
+        status.put(
+                "supportedAttachmentTypes",
+                AgentInputCapabilities.supportedAttachmentTypes(properties, provider.providerId())
+        );
         return status;
     }
 

@@ -16,7 +16,7 @@ describe("resolveDashboardLayout", () => {
       layoutJson: JSON.stringify({
         columns: DASHBOARD_COLUMNS,
         rowHeight: DASHBOARD_ROW_HEIGHT,
-        widgets: [{ id: "a", type: "value", title: "A", x: 2, y: 1, w: 3, h: 2 }],
+        widgets: [{ id: "a", type: "value", title: "A", x: 14, y: 7, w: 21, h: 14 }],
       }),
       layout: {
         columns: DASHBOARD_COLUMNS,
@@ -25,7 +25,7 @@ describe("resolveDashboardLayout", () => {
       },
     });
     expect(layout.widgets[0]?.id).toBe("a");
-    expect(layout.widgets[0]?.x).toBe(2);
+    expect(layout.widgets[0]?.x).toBe(14);
     expect(layout.rowHeight).toBe(DASHBOARD_ROW_HEIGHT);
   });
 
@@ -38,11 +38,11 @@ describe("resolveDashboardLayout", () => {
       layout: {
         columns: DASHBOARD_COLUMNS,
         rowHeight: DASHBOARD_ROW_HEIGHT,
-        widgets: [{ id: "b", type: "value", title: "B", x: 4, y: 3, w: 2, h: 2 }],
+        widgets: [{ id: "b", type: "value", title: "B", x: 28, y: 21, w: 14, h: 14 }],
       },
     });
     expect(layout.widgets[0]?.id).toBe("b");
-    expect(layout.widgets[0]?.x).toBe(4);
+    expect(layout.widgets[0]?.x).toBe(28);
     expect(layout.rowHeight).toBe(DASHBOARD_ROW_HEIGHT);
   });
 
@@ -54,5 +54,19 @@ describe("resolveDashboardLayout", () => {
 describe("normalizeDashboardLayout", () => {
   it("uses fine grid defaults for new layouts", () => {
     expect(normalizeDashboardLayout({})).toEqual(emptyLayout());
+  });
+
+  it("scales legacy 12-column widgets on fine grid", () => {
+    const layout = normalizeDashboardLayout({
+      columns: 84,
+      rowHeight: 8,
+      widgets: [
+        { id: "a", type: "value", title: "A", x: 0, y: 0, w: 4, h: 2 },
+        { id: "b", type: "value", title: "B", x: 0, y: 0, w: 4, h: 2 },
+      ],
+    });
+    expect(layout.widgets[0]?.w).toBe(28);
+    expect(layout.widgets[0]?.h).toBe(14);
+    expect(layout.widgets[1]?.y).toBeGreaterThanOrEqual(14);
   });
 });

@@ -834,15 +834,98 @@ function normalizeLayoutWidget(widget: DashboardWidget): DashboardWidget {
   return widget;
 }
 
+function isFineGridUnit(value: number): boolean {
+  return value >= DASHBOARD_FINE_GRID_SCALE && value % DASHBOARD_FINE_GRID_SCALE === 0;
+}
+
+function looksLegacySized(widget: DashboardWidget): boolean {
+  const w = widget.w ?? 0;
+  const h = widget.h ?? 0;
+  if (w <= 0 || h <= 0) {
+    return true;
+  }
+  return w <= 12 && h <= 12 && !isFineGridUnit(w) && !isFineGridUnit(h);
+}
+
+function migrateLegacyGridWidget(widget: DashboardWidget): DashboardWidget {
+  if (!looksLegacySized(widget)) {
+    return widget;
+  }
+  const w = widget.w ?? 0;
+  const h = widget.h ?? 0;
+  const scale = DASHBOARD_FINE_GRID_SCALE;
+  return {
+    ...widget,
+    x: (widget.x ?? 0) * scale,
+    y: (widget.y ?? 0) * scale,
+    w: w > 0 ? w * scale : w,
+    h: h > 0 ? h * scale : h,
+  };
+}
+
+function reflowOverlappingWidgets(widgets: DashboardWidget[]): DashboardWidget[] {
+  if (widgets.length < 2) {
+    return widgets;
+  }
+  const placed: DashboardWidget[] = [];
+  for (const widget of widgets) {
+    const rect = {
+      x: widget.x ?? 0,
+      y: widget.y ?? 0,
+      w: widget.w ?? 1,
+      h: widget.h ?? 1,
+    };
+    const overlaps = placed.some((other) => {
+      const o = { x: other.x ?? 0, y: other.y ?? 0, w: other.w ?? 1, h: other.h ?? 1 };
+      return rect.x < o.x + o.w && rect.x + rect.w > o.x && rect.y < o.y + o.h && rect.y + rect.h > o.y;
+    });
+    if (overlaps) {
+      const maxBottom = placed.reduce(
+        (max, item) => Math.max(max, (item.y ?? 0) + (item.h ?? 1)),
+        0
+      );
+      placed.push({ ...widget, x: 0, y: maxBottom });
+    } else {
+      placed.push(widget);
+    }
+  }
+  return placed;
+}
+
+function migrateLegacyGridLayout(layout: DashboardLayout): DashboardLayout {
+  let columns = layout.columns ?? DASHBOARD_COLUMNS;
+  let rowHeight = layout.rowHeight ?? DASHBOARD_ROW_HEIGHT;
+  let widgets = layout.widgets.map(normalizeLayoutWidget);
+
+  if (columns === 12 && rowHeight === 72) {
+    columns = DASHBOARD_COLUMNS;
+    rowHeight = DASHBOARD_ROW_HEIGHT;
+    widgets = widgets.map((widget) => migrateLegacyGridWidget(widget));
+  } else if (columns >= DASHBOARD_COLUMNS) {
+    const allLegacySized = widgets.length > 0 && widgets.every(looksLegacySized);
+    if (allLegacySized) {
+      widgets = widgets.map((widget) => migrateLegacyGridWidget(widget));
+    }
+  }
+
+  return {
+    ...layout,
+    columns,
+    rowHeight,
+    theme: layout.theme,
+    widgets: reflowOverlappingWidgets(widgets),
+  };
+}
+
 export function normalizeDashboardLayout(
   layout: Partial<DashboardLayout> | DashboardLayout
 ): DashboardLayout {
-  return {
+  return migrateLegacyGridLayout({
     columns: layout.columns ?? DASHBOARD_COLUMNS,
     rowHeight: layout.rowHeight ?? DASHBOARD_ROW_HEIGHT,
     theme: typeof layout.theme === "string" ? layout.theme : undefined,
     widgets: Array.isArray(layout.widgets) ? layout.widgets.map(normalizeLayoutWidget) : [],
-  };
+  });
 }
 
 export function parseLayoutJson(

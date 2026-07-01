@@ -321,6 +321,20 @@ public class PlatformAgentToolRegistry {
                 .toList();
     }
 
+    public boolean isKnownTool(String toolName) {
+        return toolName != null && toolsByName.containsKey(toolName);
+    }
+
+    public Map<String, Object> unknownToolResult(String toolName) {
+        return Map.of(
+                "status", "ERROR",
+                "error", "Unknown tool: " + toolName,
+                "hint", "Use exact snake_case tool names from the catalog. "
+                        + "For workflows: create_object (type=WORKFLOW), save_workflow_bpmn, run_workflow. "
+                        + "Never invent display names or Russian labels as tool names."
+        );
+    }
+
     public Map<String, Object> execute(String toolName, Map<String, Object> arguments, AgentContext context)
             throws Exception {
         if (context.isOperator() && !OPERATOR_TOOLS.contains(toolName)) {
@@ -747,6 +761,7 @@ public class PlatformAgentToolRegistry {
             public String description() {
                 return "Append or replace one widget in layout.widgets[] (by id). Args: path (required), "
                         + "widget (id, type, title, x, y, w, h, variableName, valueField, objectPath OR selectionKey). "
+                        + "Grid is fine: columns=84, rowHeight=8 — use w=28 h=14 for card-sized widgets, w=84 h=63 for scada-mimic. "
                         + "For 3+ widgets use set_dashboard_layout template= instead of many calls. "
                         + "list_variables on device first; columnsJson must be a JSON string.";
             }

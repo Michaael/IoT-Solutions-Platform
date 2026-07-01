@@ -23,6 +23,29 @@ export interface AiProviderStatus {
   available: boolean;
   model?: string;
   reason?: string;
+  capabilities?: {
+    vision?: boolean;
+    textAttachments?: boolean;
+  };
+  supportedAttachmentTypes?: Array<{
+    kind: string;
+    mimeTypes?: string[];
+    extensions?: string[];
+  }>;
+}
+
+export interface AgentMessageAttachment {
+  name: string;
+  mimeType: string;
+  contentBase64: string;
+}
+
+export interface AgentMessageAttachmentMeta {
+  name?: string;
+  mimeType?: string;
+  byteSize?: number;
+  kind?: "text" | "image";
+  truncated?: boolean;
 }
 
 export interface AiGenerateResult {
@@ -57,6 +80,7 @@ export interface AiAgentTurn {
   status: string;
   steps: AiAgentStep[];
   result: Record<string, unknown>;
+  attachments?: AgentMessageAttachmentMeta[];
   createdAt: string;
 }
 
@@ -70,6 +94,7 @@ export interface AiAgentSessionSummary {
 
 export interface AiAgentSession extends AiAgentSessionSummary {
   turns: AiAgentTurn[];
+  planState?: AgentPlanState;
 }
 
 export interface AiAgentRunProgress {
@@ -78,6 +103,22 @@ export interface AiAgentRunProgress {
   userMessage?: string;
   steps?: AiAgentStep[];
   stepsCompleted?: number;
+  planState?: AgentPlanState;
+}
+
+export type AgentInteractionMode = "auto" | "plan" | "execute" | "ask";
+
+export interface AgentPlanState {
+  interactionMode?: AgentInteractionMode;
+  planPhase?: "none" | "planning" | "awaiting_approval" | "approved";
+  planApproved?: boolean;
+  plan?: Record<string, unknown>;
+}
+
+export interface AgentPlanQuestion {
+  id?: string;
+  text?: string;
+  options?: Array<{ label?: string; value?: string }>;
 }
 
 export interface AiAgentChatResponse {
@@ -95,6 +136,8 @@ export interface AiAgentChatResponse {
   stepsCompleted?: number;
   maxSteps?: number;
   running?: boolean;
+  planState?: AgentPlanState;
+  attachments?: AgentMessageAttachmentMeta[];
 }
 
 export interface AiAgentRunResult {
@@ -259,14 +302,20 @@ export function runAiAgent(goal: string, rootPath?: string): Promise<AiAgentRunR
   });
 }
 
-export function createAgentSession(rootPath?: string): Promise<AiAgentSessionSummary> {
+export function createAgentSession(
+  rootPath?: string,
+  interactionMode?: AgentInteractionMode
+): Promise<AiAgentSessionSummary> {
   return fetch("/api/v1/ai/agent/sessions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
-    body: JSON.stringify({ rootPath: rootPath || "root" }),
+    body: JSON.stringify({
+      rootPath: rootPath || "root",
+      interactionMode: interactionMode ?? "auto",
+    }),
   }).then(async (response) => {
     if (!response.ok) {
       return throwAiHttpError(response, `Create session failed: ${response.status}`);
@@ -289,7 +338,9 @@ export function fetchAgentSession(sessionId: string): Promise<AiAgentSession> {
 export function sendAgentMessage(
   sessionId: string,
   message: string,
-  rootPath?: string
+  rootPath?: string,
+  interactionMode?: AgentInteractionMode,
+  attachments?: AgentMessageAttachment[]
 ): Promise<AiAgentChatResponse> {
   return fetch(`/api/v1/ai/agent/sessions/${encodeURIComponent(sessionId)}/messages`, {
     method: "POST",
@@ -297,7 +348,7 @@ export function sendAgentMessage(
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
-    body: JSON.stringify({ message, rootPath }),
+    body: JSON.stringify({ message, rootPath, interactionMode, attachments }),
   }).then(async (response) => {
     if (!response.ok) {
       return throwAiHttpError(response, `Send message failed: ${response.status}`);

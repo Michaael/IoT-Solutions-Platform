@@ -25,7 +25,24 @@ final class AgentLoopGuard {
             String blockedParent = blockedParentPath(steps);
             return "Parent path not discovered for create_object. "
                     + "Call list_objects parent=" + blockedParent
-                    + " first (exact folder), verify objects[].path in the result, then retry create_object.";
+                    + " (exact folder — listing parent=root does NOT ground root.platform.* paths). "
+                    + "Verify objects[].path in the result, then retry create_object.";
+        }
+        if ("save_workflow_bpmn".equals(lastTool) && lastStepErrorContains(steps, "not discovered in this turn")) {
+            return """
+                    save_workflow_bpmn blocked: WORKFLOW object must exist first. \
+                    Order: list_objects parent=root.platform.workflows → create_object type=WORKFLOW → \
+                    save_workflow_bpmn path=<path from create_object result>.""";
+        }
+        if ("save_workflow_bpmn".equals(lastTool) && lastStepErrorContains(steps, "not found")) {
+            return """
+                    WORKFLOW object not found. create_object type=WORKFLOW must succeed before save_workflow_bpmn. \
+                    Use the exact path returned by create_object (e.g. root.platform.workflows.hydraulic-shock).""";
+        }
+        if ("list_objects".equals(lastTool) && lastListedParentIsRoot(steps)) {
+            return """
+                    Listed root — for objects under root.platform.* call list_objects on the exact parent folder \
+                    (e.g. parent=root.platform.workflows), not parent=root.""";
         }
         if ("run_report".equals(lastTool)) {
             return """
@@ -33,10 +50,40 @@ final class AgentLoopGuard {
                     otherwise continue with one more targeted read tool.""";
         }
         if ("create_object".equals(lastTool)) {
+            String typeHint = createObjectTypeHint(steps);
+            if (typeHint != null) {
+                return typeHint;
+            }
             return """
                     Object created. For virtual simulators use create_virtual_device next time. \
                     If driverId=virtual: set templateId from list_relative_models OR recreate with create_virtual_device; \
                     set driverConfigJson profile from list_virtual_profiles, configure_driver autoStart=true, list_variables before finish.""";
+        }
+        if ("save_workflow_bpmn".equals(lastTool) && lastStepGroundTruthBlocked(steps)) {
+            return AgentGroundTruthGuard.treeFirstOrderHint(
+                    "root.platform.workflows",
+                    blockedObjectPath(steps),
+                    "save_workflow_bpmn"
+            );
+        }
+        if ("save_mimic_diagram".equals(lastTool) && lastStepGroundTruthBlocked(steps)) {
+            return AgentGroundTruthGuard.treeFirstOrderHint(
+                    "root.platform.mimics",
+                    blockedObjectPath(steps),
+                    "save_mimic_diagram"
+            );
+        }
+        if ("set_dashboard_layout".equals(lastTool) && lastStepGroundTruthBlocked(steps)) {
+            return AgentGroundTruthGuard.treeFirstOrderHint(
+                    "root.platform.dashboards",
+                    blockedObjectPath(steps),
+                    "set_dashboard_layout"
+            );
+        }
+        if (lastStepGroundTruthBlocked(steps)) {
+            String objectPath = blockedObjectPath(steps);
+            String parent = objectPath.contains(".") ? objectPath.substring(0, objectPath.lastIndexOf('.')) : objectPath;
+            return AgentGroundTruthGuard.treeFirstOrderHint(parent, objectPath, lastTool);
         }
         if ("search_platform_recipes".equals(lastTool) || "get_automation_schema".equals(lastTool)) {
             return """
@@ -116,6 +163,47 @@ final class AgentLoopGuard {
         return error.contains("not discovered in this turn");
     }
 
+    private static String blockedObjectPath(List<Map<String, Object>> steps) {
+        Map<String, Object> last = steps.get(steps.size() - 1);
+        String error = String.valueOf(stepMap(last, "result").get("error"));
+        int marker = error.lastIndexOf(": ");
+        if (marker >= 0 && marker + 2 < error.length()) {
+            return error.substring(marker + 2).trim();
+        }
+        return "";
+    }
+
+    private static String createObjectTypeHint(List<Map<String, Object>> steps) {
+        if (steps.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> last = steps.get(steps.size() - 1);
+        if (!"create_object".equals(String.valueOf(last.get("tool")))) {
+            return null;
+        }
+        if (!"OK".equals(String.valueOf(stepMap(last, "result").get("status")))) {
+            return null;
+        }
+        Map<String, Object> args = stepMap(last, "arguments");
+        String type = stringArg(args, "type").toUpperCase(Locale.ROOT);
+        return switch (type) {
+            case "WORKFLOW" -> """
+                    WORKFLOW created. Next: save_workflow_bpmn path=<path from create_object result>, \
+                    then update_workflow_status status=ACTIVE, then run_workflow.""";
+            case "MIMIC" -> """
+                    MIMIC created. Next: list_mimic_symbols, then save_mimic_diagram path=<path from create_object result> \
+                    with non-empty elements[].""";
+            case "DASHBOARD" -> """
+                    DASHBOARD created. Next: list_variables on source devices, then set_dashboard_layout path=<path from create_object result> \
+                    template= or add_dashboard_widget.""";
+            case "DEVICE" -> """
+                    DEVICE created. Next: configure_driver, list_variables — verify telemetry before dashboard/SCADA bindings.""";
+            case "ALERT" -> "ALERT created. Next: configure_alert path=<path from create_object result>.";
+            case "REPORT" -> "REPORT created. Next: configure_report path=<path from create_object result>.";
+            default -> null;
+        };
+    }
+
     private static String blockedParentPath(List<Map<String, Object>> steps) {
         Map<String, Object> last = steps.get(steps.size() - 1);
         String error = String.valueOf(stepMap(last, "result").get("error"));
@@ -123,7 +211,50 @@ final class AgentLoopGuard {
         if (marker >= 0 && marker + 2 < error.length()) {
             return error.substring(marker + 2).trim();
         }
-        return "root.platform.mimics";
+        return "root.platform.workflows";
+    }
+
+    private static boolean lastStepErrorContains(List<Map<String, Object>> steps, String fragment) {
+        if (steps.isEmpty()) {
+            return false;
+        }
+        Map<String, Object> last = steps.get(steps.size() - 1);
+        if (!"tool".equals(String.valueOf(last.get("type")))) {
+            return false;
+        }
+        String error = String.valueOf(stepMap(last, "result").get("error"));
+        return error.toLowerCase(Locale.ROOT).contains(fragment.toLowerCase(Locale.ROOT));
+    }
+
+    private static boolean lastListedParentIsRoot(List<Map<String, Object>> steps) {
+        if (steps.isEmpty()) {
+            return false;
+        }
+        Map<String, Object> last = steps.get(steps.size() - 1);
+        if (!"tool".equals(String.valueOf(last.get("type")))) {
+            return false;
+        }
+        if (!"list_objects".equals(String.valueOf(last.get("tool")))) {
+            return false;
+        }
+        Map<String, Object> args = stepMap(last, "arguments");
+        String parent = stringArg(args, "parent");
+        if (parent.isBlank()) {
+            parent = stringArg(args, "parentPath");
+        }
+        if (parent.isBlank()) {
+            parent = "root";
+        }
+        return "root".equalsIgnoreCase(parent.trim())
+                && "OK".equals(String.valueOf(stepMap(last, "result").get("status")));
+    }
+
+    private static String stringArg(Map<String, Object> arguments, String key) {
+        if (arguments == null) {
+            return "";
+        }
+        Object value = arguments.get(key);
+        return value == null ? "" : String.valueOf(value).trim();
     }
 
     @SuppressWarnings("unchecked")

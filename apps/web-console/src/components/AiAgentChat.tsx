@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgentChat } from "../context/AgentChatContext";
+import type { AgentInteractionMode } from "../api/ai";
 import type { AiAgentStep } from "../api/ai";
 import AgentChatArtifacts, { AgentStarterSuggestions } from "./agent/AgentChatArtifacts";
+import AgentChatComposeAttachments, {
+  AgentMessageAttachmentPreview,
+} from "./agent/AgentChatComposeAttachments";
 
 const CHAT_INPUT_MAX_HEIGHT_PX = 320;
 
@@ -51,11 +55,19 @@ export default function AiAgentChat() {
     loadingSession,
     isPending,
     liveSteps,
+    livePlanPhase,
     startNewChat,
     switchSession,
     deleteChat,
     sendMessage,
     cancelRun,
+    interactionMode,
+    setInteractionMode,
+    pendingAttachments,
+    setPendingAttachments,
+    attachmentRejectHint,
+    clearAttachmentRejectHint,
+    rejectAttachment,
   } = useAgentChat();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -83,6 +95,8 @@ export default function AiAgentChat() {
   const chatEnabled = providerReady && agentApiReady;
   const toolStepCount = liveSteps.filter((s) => s.type === "tool").length;
   const hasUserTurns = messages.some((message) => message.role === "user");
+
+  const modeOptions: AgentInteractionMode[] = ["auto", "plan", "execute", "ask"];
 
   return (
     <div className="ai-agent-chat">
@@ -190,6 +204,9 @@ export default function AiAgentChat() {
               }
             >
               <div className="ai-agent-bubble-text">{message.text}</div>
+              {message.role === "user" && (
+                <AgentMessageAttachmentPreview attachments={message.attachments} />
+              )}
               {message.role === "agent" && (
                 <AgentChatArtifacts
                   result={message.result}
@@ -210,10 +227,15 @@ export default function AiAgentChat() {
             <div className="ai-agent-bubble agent ai-agent-bubble-pending">
               <div className="ai-agent-bubble-text">
                 {toolStepCount > 0
-                  ? t("agent.executing", {
-                      count: toolStepCount,
-                      steps: t("agent.step", { count: toolStepCount }),
-                    })
+                  ? livePlanPhase === "planning" || livePlanPhase === "awaiting_approval"
+                    ? t("agent.planning", {
+                        count: toolStepCount,
+                        steps: t("agent.step", { count: toolStepCount }),
+                      })
+                    : t("agent.executing", {
+                        count: toolStepCount,
+                        steps: t("agent.step", { count: toolStepCount }),
+                      })
                   : t("agent.thinking")}
               </div>
               {isPending && (
@@ -236,30 +258,62 @@ export default function AiAgentChat() {
             void sendMessage(input);
           }}
         >
-          <textarea
-            ref={inputRef}
-            rows={1}
-            value={input}
-            placeholder={t("agent.placeholder")}
-            onChange={(e) => {
-              setInput(e.target.value);
-              resizeChatInput(e.target);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                e.currentTarget.form?.requestSubmit();
-              }
-            }}
+          <label className="ai-agent-mode-select ai-agent-mode-select--compose">
+            <span className="ai-agent-mode-label">{t("agent.mode.label")}</span>
+            <select
+              value={interactionMode}
+              disabled={sending || !chatEnabled}
+              aria-label={t("agent.mode.label")}
+              onChange={(event) => setInteractionMode(event.target.value as AgentInteractionMode)}
+            >
+              {modeOptions.map((mode) => (
+                <option key={mode} value={mode}>
+                  {t(`agent.mode.${mode}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {attachmentRejectHint && (
+            <div className="op-alert op-alert-warn ai-agent-attach-reject" role="status">
+              {attachmentRejectHint}
+              <button type="button" className="btn link small" onClick={clearAttachmentRejectHint}>
+                {t("agent.attachments.dismiss")}
+              </button>
+            </div>
+          )}
+          <AgentChatComposeAttachments
+            provider={provider}
+            attachments={pendingAttachments}
             disabled={sending || !chatEnabled}
+            onChange={setPendingAttachments}
+            onReject={rejectAttachment}
           />
-          <button
-            type="submit"
-            className="btn primary"
-            disabled={sending || !chatEnabled || !input.trim()}
-          >
-            {t("agent.send")}
-          </button>
+          <div className="ai-agent-chat-compose-row">
+            <textarea
+              ref={inputRef}
+              rows={1}
+              value={input}
+              placeholder={t("agent.placeholder")}
+              onChange={(e) => {
+                setInput(e.target.value);
+                resizeChatInput(e.target);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
+              disabled={sending || !chatEnabled}
+            />
+            <button
+              type="submit"
+              className="btn primary"
+              disabled={sending || !chatEnabled || (!input.trim() && pendingAttachments.length === 0)}
+            >
+              {t("agent.send")}
+            </button>
+          </div>
         </form>
       </div>
     </div>

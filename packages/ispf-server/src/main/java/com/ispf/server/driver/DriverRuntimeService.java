@@ -354,7 +354,7 @@ public class DriverRuntimeService {
         }
     }
 
-    private Optional<DriverBinding> readBinding(String devicePath) {
+    public Optional<DriverBinding> readBinding(String devicePath) {
         PlatformObject device = objectManager.tree().findByPath(devicePath).orElse(null);
         if (device == null) {
             return Optional.empty();

@@ -1,5 +1,7 @@
 package com.ispf.server.ai.api;
 
+import com.ispf.server.ai.agent.AgentAttachmentValidator;
+import com.ispf.server.ai.agent.AgentInteractionMode;
 import com.ispf.server.ai.agent.AgentSession;
 import com.ispf.server.ai.agent.AgentSessionStore;
 import com.ispf.server.ai.agent.PlatformAgentToolRegistry;
@@ -25,7 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -54,6 +58,7 @@ public class AiController {
     private final AgentSessionStore agentSessionStore;
     private final PlatformAgentToolRegistry agentToolRegistry;
     private final ObjectMapper objectMapper;
+    private final AgentAttachmentValidator attachmentValidator;
 
     public AiController(
             AiToolRegistry toolRegistry,
@@ -62,7 +67,8 @@ public class AiController {
             TreeFirstAgentService agentService,
             AgentSessionStore agentSessionStore,
             PlatformAgentToolRegistry agentToolRegistry,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            AgentAttachmentValidator attachmentValidator
     ) {
         this.toolRegistry = toolRegistry;
         this.llmProviderRegistry = llmProviderRegistry;
@@ -71,6 +77,7 @@ public class AiController {
         this.agentSessionStore = agentSessionStore;
         this.agentToolRegistry = agentToolRegistry;
         this.objectMapper = objectMapper;
+        this.attachmentValidator = attachmentValidator;
     }
 
     @GetMapping("/models")
@@ -124,7 +131,13 @@ public class AiController {
     ) {
         String rootPath = request != null ? request.rootPath() : null;
         AgentSession session = agentSessionStore.create(actor(authentication), rootPath);
-        return session.toSummaryMap();
+        if (request != null && request.interactionMode() != null && !request.interactionMode().isBlank()) {
+            session.runState().setInteractionMode(AgentInteractionMode.fromString(request.interactionMode()));
+            agentSessionStore.persistState(session);
+        }
+        Map<String, Object> summary = new LinkedHashMap<>(session.toSummaryMap());
+        summary.put("planState", session.runState().planStateSummary());
+        return summary;
     }
 
     @GetMapping("/agent/sessions/{sessionId}")
@@ -213,16 +226,28 @@ public class AiController {
         if (request != null && request.rootPath() != null && !request.rootPath().isBlank()) {
             session.setRootPath(request.rootPath());
         }
-        if (request == null || request.message() == null || request.message().isBlank()) {
+        if (request != null && request.interactionMode() != null && !request.interactionMode().isBlank()) {
+            session.runState().setInteractionMode(AgentInteractionMode.fromString(request.interactionMode()));
+        }
+        if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message is required");
         }
+        boolean hasAttachments = request.attachments() != null && !request.attachments().isEmpty();
+        if ((request.message() == null || request.message().isBlank()) && !hasAttachments) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message is required");
+        }
+        List<AgentAttachmentValidator.AttachmentInput> attachmentInputs = mapAttachments(request.attachments());
         try {
             return agentService.runTurn(
                     session,
-                    request.message(),
+                    request.message() != null ? request.message() : "",
+                    attachmentInputs,
                     authentication,
-                    actor(authentication)
+                    actor(authentication),
+                    request.interactionMode()
             );
+        } catch (ResponseStatusException ex) {
+            throw ex;
         } catch (IllegalStateException ex) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), ex);
         } catch (IllegalArgumentException ex) {
@@ -312,6 +337,26 @@ public class AiController {
     ) {
     }
 
+    private static List<AgentAttachmentValidator.AttachmentInput> mapAttachments(
+            List<AgentAttachmentRequest> attachments
+    ) {
+        if (attachments == null || attachments.isEmpty()) {
+            return List.of();
+        }
+        List<AgentAttachmentValidator.AttachmentInput> mapped = new ArrayList<>();
+        for (AgentAttachmentRequest attachment : attachments) {
+            if (attachment == null) {
+                continue;
+            }
+            mapped.add(new AgentAttachmentValidator.AttachmentInput(
+                    attachment.name(),
+                    attachment.mimeType(),
+                    attachment.contentBase64()
+            ));
+        }
+        return mapped;
+    }
+
     public record GenerateBundleRequest(
             @NotBlank String appId,
             @NotBlank String prompt,
@@ -326,13 +371,23 @@ public class AiController {
     }
 
     public record CreateAgentSessionRequest(
-            String rootPath
+            String rootPath,
+            String interactionMode
+    ) {
+    }
+
+    public record AgentAttachmentRequest(
+            String name,
+            String mimeType,
+            String contentBase64
     ) {
     }
 
     public record AgentMessageRequest(
             String message,
-            String rootPath
+            String rootPath,
+            String interactionMode,
+            List<AgentAttachmentRequest> attachments
     ) {
     }
 }

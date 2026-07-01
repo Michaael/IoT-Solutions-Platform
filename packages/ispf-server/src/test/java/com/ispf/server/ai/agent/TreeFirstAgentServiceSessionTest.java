@@ -21,6 +21,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import tools.jackson.databind.ObjectMapper;
 
@@ -34,10 +36,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class TreeFirstAgentServiceSessionTest {
 
     @Mock
@@ -65,6 +69,8 @@ class TreeFirstAgentServiceSessionTest {
     private OperatorAppUiService operatorAppUiService;
     @Mock
     private OperatorAgentResultEnricher operatorResultEnricher;
+    @Mock
+    private AgentAttachmentValidator attachmentValidator;
 
     private TreeFirstAgentService agentService;
     private AiProperties aiProperties;
@@ -96,8 +102,20 @@ class TreeFirstAgentServiceSessionTest {
                 operatorMemoryLearner,
                 operatorDocumentService,
                 operatorAppUiService,
-                operatorResultEnricher
+                operatorResultEnricher,
+                attachmentValidator
         );
+
+        lenient().when(attachmentValidator.prepare(anyString(), any())).thenAnswer(invocation -> {
+            String message = invocation.getArgument(0);
+            return new AgentAttachmentValidator.PreparedUserMessage(
+                    message,
+                    message,
+                    List.of(),
+                    List.of(),
+                    false
+            );
+        });
 
         when(llmProviderRegistry.isGenerationAvailable()).thenReturn(true);
         when(toolRegistry.toolCatalog(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
@@ -105,8 +123,8 @@ class TreeFirstAgentServiceSessionTest {
         when(platformBriefingService.buildBriefing(any(), any(Boolean.class))).thenReturn("drivers: snmp, virtual");
         when(llmProviderRegistry.status()).thenReturn(Map.of("providerId", "test"));
         LlmProvider provider = org.mockito.Mockito.mock(LlmProvider.class);
-        when(provider.providerId()).thenReturn("test");
-        when(llmProviderRegistry.activeProvider()).thenReturn(provider);
+        lenient().when(provider.providerId()).thenReturn("test");
+        lenient().when(llmProviderRegistry.activeProvider()).thenReturn(provider);
     }
 
     @Test

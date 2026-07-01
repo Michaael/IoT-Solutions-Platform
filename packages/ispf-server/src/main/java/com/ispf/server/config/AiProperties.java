@@ -24,6 +24,10 @@ public class AiProperties {
     private int agentParseRetries = 3;
     private int briefingMaxChars = 12_000;
     private boolean briefingEveryTurn = false;
+    /** When set, overrides vision capability detection from model name. */
+    private Boolean agentVisionEnabled;
+    private int agentMaxAttachmentBytes = 4 * 1024 * 1024;
+    private int agentMaxTextInjectChars = 32_768;
 
     public boolean isEnabled() {
         return enabled;
@@ -159,6 +163,30 @@ public class AiProperties {
 
     public void setBriefingEveryTurn(boolean briefingEveryTurn) {
         this.briefingEveryTurn = briefingEveryTurn;
+    }
+
+    public Boolean getAgentVisionEnabled() {
+        return agentVisionEnabled;
+    }
+
+    public void setAgentVisionEnabled(Boolean agentVisionEnabled) {
+        this.agentVisionEnabled = agentVisionEnabled;
+    }
+
+    public int getAgentMaxAttachmentBytes() {
+        return agentMaxAttachmentBytes;
+    }
+
+    public void setAgentMaxAttachmentBytes(int agentMaxAttachmentBytes) {
+        this.agentMaxAttachmentBytes = agentMaxAttachmentBytes;
+    }
+
+    public int getAgentMaxTextInjectChars() {
+        return agentMaxTextInjectChars;
+    }
+
+    public void setAgentMaxTextInjectChars(int agentMaxTextInjectChars) {
+        this.agentMaxTextInjectChars = agentMaxTextInjectChars;
     }
 
     public Duration timeout() {

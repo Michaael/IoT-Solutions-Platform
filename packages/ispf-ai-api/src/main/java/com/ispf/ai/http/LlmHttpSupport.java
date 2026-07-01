@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ispf.ai.LlmContentPart;
 import com.ispf.ai.LlmException;
 import com.ispf.ai.LlmMessage;
 import com.ispf.ai.LlmModelInfo;
@@ -95,7 +96,23 @@ public final class LlmHttpSupport {
         for (LlmMessage message : request.messages()) {
             ObjectNode item = messages.addObject();
             item.put("role", message.role());
-            item.put("content", message.content());
+            if (message.hasMultimodalParts()) {
+                ArrayNode contentParts = item.putArray("content");
+                for (LlmContentPart part : message.parts()) {
+                    if (part.isText() && part.text() != null && !part.text().isBlank()) {
+                        ObjectNode textPart = contentParts.addObject();
+                        textPart.put("type", "text");
+                        textPart.put("text", part.text());
+                    } else if (part.isImageUrl() && part.imageUrl() != null && !part.imageUrl().isBlank()) {
+                        ObjectNode imagePart = contentParts.addObject();
+                        imagePart.put("type", "image_url");
+                        ObjectNode imageUrl = imagePart.putObject("image_url");
+                        imageUrl.put("url", part.imageUrl());
+                    }
+                }
+            } else {
+                item.put("content", message.content() != null ? message.content() : "");
+            }
         }
         if (request.maxTokens() != null) {
             root.put("max_tokens", request.maxTokens());

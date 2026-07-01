@@ -203,7 +203,8 @@ public final class AgentPlaybooks {
                    **вариант B:** create_virtual_device parentPath=<существующий> profile=<из list_virtual_profiles>
                 4. list_variables на КАЖДОМ устройстве — variableName для SCADA/dashboard только из этого списка
                 5. SCADA: save_mimic_diagram bindings с objectPath/variableName из list_variables
-                6. Dashboard: add_dashboard_widget — те же paths и variableName
+                6. Dashboard: set_dashboard_layout layoutJson= с columns=84, rowHeight=8;
+                   scada-mimic: w=84 h=63; value/chart: w=28 h=14; НЕ w=4 h=2 (устаревшая сетка 12×72)
                 """;
     }
 
@@ -381,12 +382,21 @@ public final class AgentPlaybooks {
                 Документация (playbooks, recipes, briefing) ≠ состояние платформы. Каждый шаг создания/изменения
                 должен ссылаться на объекты, уже возвращённые инструментами в этом ходе.
                 
-                **Порядок (не «проверил и забыл», а план из фактов):**
-                1. list_objects parentPath=<родитель> — увидеть существующие папки и устройства
-                2. search_objects / get_object — если пользователь назвал объект или путь неочевиден
-                3. list_relative_models + list_virtual_profiles — выбрать modelName/profile из ответа
-                4. list_variables path=<существующий DEVICE> — имена переменных для виджетов и SCADA bindings
-                5. Только после этого — create_object, create_virtual_device, apply_relative_model, add_dashboard_widget
+                **Порядок (обязателен для ВСЕХ типов объектов):**
+                1. list_objects parent=<точная папка> — root.platform.workflows, root.platform.mimics, … (НЕ parent=root)
+                2. create_object parentPath=<та же папка> name=… type=WORKFLOW|MIMIC|DASHBOARD|DEVICE|…
+                3. configure/save на path из результата create_object — save_workflow_bpmn, save_mimic_diagram, set_dashboard_layout, configure_driver, …
+                
+                Примеры:
+                - WORKFLOW: list_objects workflows → create_object WORKFLOW → save_workflow_bpmn → update_workflow_status → run_workflow
+                - MIMIC: list_objects mimics → create_object MIMIC → save_mimic_diagram
+                - DASHBOARD: list_objects dashboards → create_object DASHBOARD → set_dashboard_layout
+                - DEVICE: list_objects devices → create_object / create_virtual_device → configure_driver → list_variables
+                
+                Дополнительно перед create:
+                - search_objects / get_object — если пользователь назвал объект
+                - list_relative_models + list_virtual_profiles — modelName/profile из ответа
+                - list_variables path=<существующий DEVICE> — имена переменных для виджетов
                 
                 **Переиспользование:** если list_objects показал папку/устройство — работай с этим path.
                 Если create_object вернул «Object exists» — get_object + list_variables, не дублируй.

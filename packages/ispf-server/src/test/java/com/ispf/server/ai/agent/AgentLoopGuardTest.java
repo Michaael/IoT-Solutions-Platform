@@ -73,6 +73,30 @@ class AgentLoopGuardTest {
         assertTrue(hint.contains("list_relative_models"));
     }
 
+    @Test
+    void hintsDrillDownAfterListRoot() {
+        List<Map<String, Object>> steps = List.of(Map.of(
+                "type", "tool",
+                "tool", "list_objects",
+                "arguments", Map.of("parent", "root"),
+                "result", Map.of("status", "OK", "parent", "root", "objects", List.of())
+        ));
+        String hint = AgentLoopGuard.continuationHint("list_objects", steps, 96);
+        assertTrue(hint.contains("root.platform"));
+    }
+
+    @Test
+    void hintsWorkflowOrderAfterSaveBpmnNotFound() {
+        List<Map<String, Object>> steps = List.of(Map.of(
+                "type", "tool",
+                "tool", "save_workflow_bpmn",
+                "arguments", Map.of("path", "root.platform.workflows.hydraulic-shock"),
+                "result", Map.of("status", "ERROR", "error", "Object not found: root.platform.workflows.hydraulic-shock")
+        ));
+        String hint = AgentLoopGuard.continuationHint("save_workflow_bpmn", steps, 96);
+        assertTrue(hint.contains("create_object"));
+    }
+
     private static Map<String, Object> step(String tool) {
         return Map.of("type", "tool", "tool", tool);
     }
