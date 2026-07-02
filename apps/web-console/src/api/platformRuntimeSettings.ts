@@ -7,7 +7,9 @@ export interface PlatformRuntimeSetting {
   type: "boolean" | "integer" | "string" | "duration";
   value: string;
   defaultValue: string;
-  source: "environment" | "file" | "default";
+  source: "environment" | "file" | "default" | "override";
+  environmentValue?: string | null;
+  overridesEnvironment?: boolean;
   sensitive: boolean;
   editable: boolean;
   hotReloadable: boolean;

@@ -71,10 +71,6 @@ public class PlatformRuntimeSettingsService {
                 errors.add("Sensitive setting cannot be updated via API: " + entry.getKey());
                 continue;
             }
-            if (isSetInEnvironment(definition)) {
-                skippedEnvLocked.add(entry.getKey());
-                continue;
-            }
             String normalized;
             try {
                 normalized = normalizeValue(definition, entry.getValue());
@@ -101,22 +97,27 @@ public class PlatformRuntimeSettingsService {
     ) {
         String envValue = environmentValue(definition);
         String fileValue = fileOverrides.get(definition.propertyKey());
+        boolean overridesEnvironment = envValue != null && fileValue != null;
         String source;
         String rawValue;
-        if (envValue != null) {
+        if (fileValue != null) {
+            source = overridesEnvironment ? "override" : "file";
+            rawValue = fileValue;
+        } else if (envValue != null) {
             source = "environment";
             rawValue = envValue;
-        } else if (fileValue != null) {
-            source = "file";
-            rawValue = fileValue;
         } else {
             source = "default";
             rawValue = environment.getProperty(definition.propertyKey(), definition.defaultValue());
         }
-        boolean editable = envValue == null && !definition.sensitive();
+        boolean editable = !definition.sensitive();
         String displayValue = definition.sensitive() && rawValue != null && !rawValue.isBlank()
                 ? "********"
                 : rawValue;
+        String displayEnvValue = null;
+        if (envValue != null) {
+            displayEnvValue = definition.sensitive() && !envValue.isBlank() ? "********" : envValue;
+        }
         return new PlatformRuntimeSettingView(
                 definition.id(),
                 definition.envVar(),
@@ -125,6 +126,8 @@ public class PlatformRuntimeSettingsService {
                 displayValue,
                 definition.defaultValue(),
                 source,
+                displayEnvValue,
+                overridesEnvironment,
                 definition.sensitive(),
                 editable,
                 definition.hotReloadable(),
@@ -132,16 +135,15 @@ public class PlatformRuntimeSettingsService {
         );
     }
 
-    private static boolean isSetInEnvironment(PlatformRuntimeSettingDefinition definition) {
-        return environmentValue(definition) != null;
-    }
-
-    private static String environmentValue(PlatformRuntimeSettingDefinition definition) {
+    private String environmentValue(PlatformRuntimeSettingDefinition definition) {
         String value = System.getenv(definition.envVar());
-        if (value != null && !value.isBlank()) {
-            return value;
+        if (value == null || value.isBlank()) {
+            value = environment.getProperty(definition.envVar());
         }
-        return null;
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value;
     }
 
     private static String normalizeValue(PlatformRuntimeSettingDefinition definition, String value) {

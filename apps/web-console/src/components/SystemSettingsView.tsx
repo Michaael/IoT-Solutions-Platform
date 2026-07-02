@@ -98,8 +98,8 @@ function IntegrationQuickToggles({
               )}
               <span className="hint system-settings-quick-meta">
                 <code>{setting.envVar}</code>
-                {!setting.editable && setting.source === "environment" && (
-                  <> · {t("settings.envLocked")}</>
+                {setting.overridesEnvironment && setting.environmentValue != null && (
+                  <> · {t("settings.envOverrideHint", { value: setting.environmentValue })}</>
                 )}
                 {setting.restartRequired && <> · {t("settings.quickToggles.restartRequired")}</>}
               </span>
@@ -156,8 +156,8 @@ function SettingRow({
         {setting.hotReloadable && (
           <span className="hint system-settings-badge">{t("settings.hotReload")}</span>
         )}
-        {!setting.editable && setting.source === "environment" && (
-          <span className="hint">{t("settings.envLocked")}</span>
+        {setting.overridesEnvironment && setting.environmentValue != null && (
+          <span className="hint">{t("settings.envOverrideHint", { value: setting.environmentValue })}</span>
         )}
       </td>
       <td className="mono">{setting.defaultValue || t("common:empty.dash")}</td>
