@@ -1,4 +1,7 @@
 {
+  "error.invalidCodeIdentifier": "Beginnen Sie mit einem lateinischen Buchstaben oder Unterstrich; danach sind lateinische Buchstaben, Ziffern und Unterstriche erlaubt.",
+  "error.invalidPathSegment": "Nur lateinische Buchstaben, Ziffern, Unterstriche und Bindestriche sind erlaubt.",
+  "error.invalidNamedIdentifier": "Nur lateinische Buchstaben, Ziffern, Punkte, Unterstriche und Bindestriche sind erlaubt.",
   "action.add": "Hinzufügen",
   "action.cancel": "Abbrechen",
   "action.close": "Schließen",

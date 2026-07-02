@@ -9,8 +9,9 @@ import {
 } from "../../utils/objectAuditSummary";
 import { mapObjectAuditExportRow } from "../../utils/journalExport";
 import { sortByNewestFirst } from "../../utils/journalSort";
-import JournalViewShell, { type JournalViewMode } from "./JournalViewShell";
+import JournalViewShell, { JOURNAL_VIEW_MODES, type JournalViewMode } from "./JournalViewShell";
 import { useUserTimeZone } from "../../context/UserTimeZoneContext";
+import { usePersistentTab } from "../../hooks/usePersistentTab";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -28,7 +29,11 @@ export default function ObjectChangeHistoryPanel({
   scrollMaxHeight,
 }: ObjectChangeHistoryPanelProps) {
   const { t } = useTranslation(["journal", "common"]);
-  const [mode, setMode] = useState<JournalViewMode>("live");
+  const [mode, setMode] = usePersistentTab<JournalViewMode>(
+    `object-history:${objectPath}`,
+    "live",
+    JOURNAL_VIEW_MODES
+  );
   const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
   const [changeType, setChangeType] = useState("");
   const [fieldFilter, setFieldFilter] = useState("");

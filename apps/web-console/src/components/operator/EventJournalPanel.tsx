@@ -10,10 +10,11 @@ import type { ObjectEvent } from "../../types/event";
 import type { OperatorUi } from "../../types/operatorUi";
 import { filterOperatorSidebarEvents } from "../../utils/operatorSidebarScope";
 import { mapEventJournalExportRow } from "../../utils/journalExport";
-import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
+import JournalViewShell, { JOURNAL_VIEW_MODES, type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
 import JournalExpandableItem from "../journal/JournalExpandableItem";
 import { useUserTimeZone } from "../../context/UserTimeZoneContext";
+import { usePersistentTab } from "../../hooks/usePersistentTab";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -51,7 +52,11 @@ export default function EventJournalPanel({
 }: EventJournalPanelProps) {
   const { t } = useTranslation(["operator", "journal", "common"]);
   const operatorScoped = Boolean(appId && ui);
-  const [mode, setMode] = useState<JournalViewMode>(defaultMode);
+  const [mode, setMode] = usePersistentTab<JournalViewMode>(
+    `event-journal:${appId ?? fixedObjectPath ?? "all"}`,
+    defaultMode,
+    JOURNAL_VIEW_MODES
+  );
   const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
   const [filterPath, setFilterPath] = useState(initialFilter);
   const [eventNameFilter, setEventNameFilter] = useState("");

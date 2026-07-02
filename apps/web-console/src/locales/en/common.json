@@ -1,4 +1,7 @@
 {
+  "error.invalidCodeIdentifier": "Use a Latin letter or underscore first, followed by Latin letters, digits, or underscores.",
+  "error.invalidPathSegment": "Use only Latin letters, digits, underscores, or hyphens.",
+  "error.invalidNamedIdentifier": "Use only Latin letters, digits, dots, underscores, or hyphens.",
   "brand.ispf": "ISPF",
   "action.save": "Save",
   "action.saving": "Saving…",

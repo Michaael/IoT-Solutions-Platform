@@ -25,6 +25,7 @@ import {
 } from "../utils/createObjectMode";
 import type { ModelDto } from "../types/models";
 import type { ObjectType } from "../types";
+import { isTechnicalIdentifier } from "../utils/technicalIdentifier";
 
 const INSTANCE_TYPE_PREFIX = "instance:";
 
@@ -88,6 +89,7 @@ export default function CreateObjectDialog({
   const [scheduleIntervalMs, setScheduleIntervalMs] = useState(60_000);
   const [scheduleObjectPath, setScheduleObjectPath] = useState("root.platform.devices.demo-sensor-01");
   const [scheduleFunctionName, setScheduleFunctionName] = useState("");
+  const nameValid = isTechnicalIdentifier(name, "pathSegment");
 
   const dataSourcesQuery = useDataSourceOptions();
 
@@ -356,6 +358,7 @@ export default function CreateObjectDialog({
             className="form-grid"
             onSubmit={(e) => {
               e.preventDefault();
+              if (!nameValid) return;
               mutation.mutate();
             }}
           >
@@ -366,7 +369,11 @@ export default function CreateObjectDialog({
                 onChange={(e) => setName(e.target.value)}
                 required
                 pattern="[a-zA-Z0-9_-]+"
+                aria-invalid={Boolean(name) && !nameValid}
               />
+              {name && !nameValid && (
+                <span className="hint error">{t("common:error.invalidPathSegment")}</span>
+              )}
             </label>
             <label>
               {t("common:field.displayName")}
@@ -601,7 +608,7 @@ export default function CreateObjectDialog({
               <button
                 type="submit"
                 className="btn primary"
-                disabled={mutation.isPending || !name || (mode === "data-source" && !schemaName.trim())}
+                disabled={mutation.isPending || !nameValid || (mode === "data-source" && !schemaName.trim())}
               >
                 {t("common:action.create")}
               </button>

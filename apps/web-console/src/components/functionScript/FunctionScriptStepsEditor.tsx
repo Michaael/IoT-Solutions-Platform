@@ -698,7 +698,9 @@ export default function FunctionScriptStepsEditor({ value, onChange }: FunctionS
 
   useEffect(() => {
     const next = parseScriptBody(value);
-    setSteps(next.steps);
+    if (!next.error) {
+      setSteps(next.steps);
+    }
     setJsonText(value.trim() ? value : serializeScriptBody(next.steps));
     setParseError(next.error ?? null);
   }, [value]);
@@ -720,19 +722,31 @@ export default function FunctionScriptStepsEditor({ value, onChange }: FunctionS
     onChange(body);
   }
 
-  function applyJson() {
+  function applyJson(): boolean {
     try {
       JSON.parse(jsonText);
       const next = parseScriptBody(jsonText);
       if (next.error) {
         setParseError(next.error);
-        return;
+        return false;
       }
       setSteps(next.steps);
       setParseError(null);
       onChange(jsonText.trim() ? jsonText : serializeScriptBody(next.steps));
+      return true;
     } catch (ex) {
       setParseError((ex as Error).message);
+      return false;
+    }
+  }
+
+  function setJsonMode(next: boolean) {
+    if (next) {
+      setShowJson(true);
+      return;
+    }
+    if (applyJson()) {
+      setShowJson(false);
     }
   }
 
@@ -762,7 +776,7 @@ export default function FunctionScriptStepsEditor({ value, onChange }: FunctionS
             <input
               type="checkbox"
               checked={showJson}
-              onChange={(e) => setShowJson(e.target.checked)}
+              onChange={(e) => setJsonMode(e.target.checked)}
             />
             {t("scriptSteps.showJson")}
           </label>
@@ -781,7 +795,10 @@ export default function FunctionScriptStepsEditor({ value, onChange }: FunctionS
             className="json-editor"
             rows={14}
             value={jsonText}
-            onChange={(e) => setJsonText(e.target.value)}
+            onChange={(e) => {
+              setJsonText(e.target.value);
+              onChange(e.target.value);
+            }}
             spellCheck={false}
           />
           <div className="script-step-list-actions">

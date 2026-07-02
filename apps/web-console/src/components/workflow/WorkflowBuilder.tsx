@@ -14,6 +14,7 @@ import { fetchAuthMe } from "../../api";
 import { fetchOperatorApps } from "../../api/operatorApps";
 import type { WorkflowLifecycleStatus } from "../../types/workflow";
 import { parseInstanceState } from "../../types/workflow";
+import { usePersistentTab } from "../../hooks/usePersistentTab";
 
 const BpmnDiagramEditor = lazy(() => import("./BpmnDiagramEditor"));
 const BpmnDiagramViewer = lazy(() => import("./BpmnDiagramViewer"));
@@ -32,6 +33,7 @@ const STATUS_KEYS: Record<WorkflowLifecycleStatus, string> = {
 };
 
 type BpmnTab = "diagram" | "xml";
+const BPMN_TABS: readonly BpmnTab[] = ["diagram", "xml"];
 
 export default function WorkflowBuilder({
   path,
@@ -41,7 +43,11 @@ export default function WorkflowBuilder({
   const { t } = useTranslation(["workflow", "common"]);
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"view" | "edit">("view");
-  const [bpmnTab, setBpmnTab] = useState<BpmnTab>("diagram");
+  const [bpmnTab, setBpmnTab] = usePersistentTab<BpmnTab>(
+    `workflow:${path}`,
+    "diagram",
+    BPMN_TABS
+  );
   const [draftBpmn, setDraftBpmn] = useState<string | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");

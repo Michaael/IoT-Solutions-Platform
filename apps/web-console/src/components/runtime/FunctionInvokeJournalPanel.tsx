@@ -6,9 +6,10 @@ import type { FunctionInvokeAuditEntry } from "../../types/runtime";
 import { mapFunctionInvokeExportRow } from "../../utils/journalExport";
 import { parseOptionalJson } from "../../utils/journalDetails";
 import JournalExpandableItem from "../journal/JournalExpandableItem";
-import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
+import JournalViewShell, { JOURNAL_VIEW_MODES, type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
 import { ObjectPathField } from "../../ui";
+import { usePersistentTab } from "../../hooks/usePersistentTab";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -35,7 +36,11 @@ export default function FunctionInvokeJournalPanel({
   defaultMode = "live",
 }: FunctionInvokeJournalPanelProps) {
   const { t } = useTranslation(["runtime", "journal", "common"]);
-  const [mode, setMode] = useState<JournalViewMode>(defaultMode);
+  const [mode, setMode] = usePersistentTab<JournalViewMode>(
+    `function-journal:${initialObjectPath ?? "all"}:${initialFunctionName ?? "all"}`,
+    defaultMode,
+    JOURNAL_VIEW_MODES
+  );
   const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
   const [objectPath, setObjectPath] = useState(initialObjectPath ?? "");
   const [functionName, setFunctionName] = useState(initialFunctionName ?? "");

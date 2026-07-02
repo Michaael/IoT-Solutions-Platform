@@ -59,6 +59,7 @@ import VariableHistoryPanel from "./VariableHistoryPanel";
 import { historizableFieldsFromVariable } from "../utils/variableHistoryFields";
 import { resolveApplicationAppId } from "../utils/applicationPath";
 import EditLeaseBanner from "./EditLeaseBanner";
+import { usePersistentTab } from "../hooks/usePersistentTab";
 
 interface ObjectPropertiesEditorProps {
   path: string;
@@ -82,6 +83,21 @@ type Tab =
   | "events"
   | "functions"
   | "history";
+
+const OBJECT_PROPERTY_TABS: readonly Tab[] = [
+  "general",
+  "federation",
+  "driver",
+  "haystack",
+  "deploy",
+  "export",
+  "access",
+  "variables",
+  "bindings",
+  "events",
+  "functions",
+  "history",
+];
 
 interface EditorState {
   displayName: string;
@@ -235,7 +251,11 @@ export default function ObjectPropertiesEditor({
 }: ObjectPropertiesEditorProps) {
   const { t } = useTranslation(["inspector", "common", "objectTree"]);
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>("general");
+  const [tab, setTab] = usePersistentTab<Tab>(
+    `object-properties:${path}`,
+    "general",
+    OBJECT_PROPERTY_TABS
+  );
   const [revision, setRevision] = useState<number>(0);
   const [remoteRevision, setRemoteRevision] = useState<number | null>(null);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
@@ -268,7 +288,6 @@ export default function ObjectPropertiesEditor({
   useEffect(() => {
     syncedEditorPathRef.current = null;
     setHistoryVariable(null);
-    setTab("general");
   }, [path]);
 
   useEffect(() => {
@@ -470,10 +489,10 @@ export default function ObjectPropertiesEditor({
   }, [canManage, ctxPreview, hasHaystackMetadata, isApplicationPreview, isDevicePreview, path, showAccessTab, showFederationTab]);
 
   useEffect(() => {
-    if (!tabs.includes(tab)) {
+    if (editorData && !tabs.includes(tab)) {
       setTab("general");
     }
-  }, [tab, tabs]);
+  }, [editorData, setTab, tab, tabs]);
 
   if (editorQuery.error && !editorData) {
     return <div className="editor-loading error">{t("objectEditor.loadError")}</div>;

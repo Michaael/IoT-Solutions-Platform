@@ -79,4 +79,15 @@ describe("CreateVariableDialog", () => {
     expect(onClose).toHaveBeenCalled();
     expect(api.createVariable).not.toHaveBeenCalled();
   });
+
+  it("does not submit a Cyrillic technical name", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByPlaceholderText("myVariable"), "температура");
+
+    expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
+    expect(screen.getByText(/Latin letter or underscore first/i)).toBeInTheDocument();
+    expect(api.createVariable).not.toHaveBeenCalled();
+  });
 });

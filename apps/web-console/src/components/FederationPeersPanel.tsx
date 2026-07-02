@@ -27,6 +27,7 @@ import FederationCatalogSyncDialog from "./federation/FederationCatalogSyncDialo
 import FederationProbeTab from "./federation/FederationProbeTab";
 import FederationTokensTab from "./federation/FederationTokensTab";
 import FederationTunnelTab from "./federation/FederationTunnelTab";
+import { usePersistentTab } from "../hooks/usePersistentTab";
 import {
   defaultFederationBaseUrl,
   FEDERATION_TAB_KEYS,
@@ -37,10 +38,16 @@ interface FederationPeersPanelProps {
   canManage: boolean;
 }
 
+const FEDERATION_TABS = Object.keys(FEDERATION_TAB_KEYS) as FederationTab[];
+
 export default function FederationPeersPanel({ canManage }: FederationPeersPanelProps) {
   const { t } = useTranslation("federation");
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<FederationTab>("peers");
+  const [activeTab, setActiveTab] = usePersistentTab<FederationTab>(
+    "federation",
+    "peers",
+    FEDERATION_TABS
+  );
   const [form, setForm] = useState<FederationPeerPayload>({
     name: "",
     baseUrl: defaultFederationBaseUrl(),

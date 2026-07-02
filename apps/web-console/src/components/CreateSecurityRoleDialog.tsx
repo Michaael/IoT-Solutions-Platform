@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { createSecurityRole } from "../api/securityRoles";
+import { isTechnicalIdentifier } from "../utils/technicalIdentifier";
 
 interface CreateSecurityRoleDialogProps {
   onClose: () => void;
@@ -16,6 +17,7 @@ export default function CreateSecurityRoleDialog({
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [description, setDescription] = useState("");
+  const nameValid = isTechnicalIdentifier(name, "securityName");
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -41,6 +43,7 @@ export default function CreateSecurityRoleDialog({
           className="modal-body form-grid"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!nameValid) return;
             mutation.mutate();
           }}
         >
@@ -53,7 +56,11 @@ export default function CreateSecurityRoleDialog({
               required
               pattern="[a-zA-Z0-9._-]{2,64}"
               autoFocus
+              aria-invalid={Boolean(name) && !nameValid}
             />
+            {name && !nameValid && (
+              <span className="hint error">{t("common:error.invalidNamedIdentifier")}</span>
+            )}
           </label>
           <label className="full">
             {t("common:field.displayName")}
@@ -77,7 +84,7 @@ export default function CreateSecurityRoleDialog({
           )}
           <footer className="full form-actions">
             <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
-            <button type="submit" className="btn primary" disabled={mutation.isPending}>
+            <button type="submit" className="btn primary" disabled={mutation.isPending || !nameValid}>
               {t("common:action.create")}
             </button>
           </footer>

@@ -1,4 +1,5 @@
 import type { BindingRule, BindingTarget } from "../types";
+import { isTechnicalIdentifier } from "../utils/technicalIdentifier";
 import { defaultBindingActivators } from "./bindingActivatorsUtils";
 
 export function emptyBindingRule(): BindingRule {
@@ -56,7 +57,7 @@ export function mergeBindingRules(rules: BindingRule[], rule: BindingRule): Bind
 }
 
 export function isBindingRuleSaveable(rule: BindingRule): boolean {
-  if (!rule.id.trim() || !rule.expression.trim()) {
+  if (!isTechnicalIdentifier(rule.id, "pathSegment") || !rule.expression.trim()) {
     return false;
   }
   const kind = targetKind(rule);

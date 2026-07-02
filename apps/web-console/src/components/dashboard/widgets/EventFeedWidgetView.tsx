@@ -7,9 +7,10 @@ import { matchesPayloadFilter } from "../../../utils/payloadFilter";
 import DashWidgetShell from "../DashWidgetShell";
 import { useWidgetStyles } from "../widgetStyles";
 import { parseDemoPreview } from "../widgetDemoPreview";
-import JournalViewShell, { type JournalViewMode } from "../../journal/JournalViewShell";
+import JournalViewShell, { JOURNAL_VIEW_MODES, type JournalViewMode } from "../../journal/JournalViewShell";
 import JournalVirtualList from "../../journal/JournalVirtualList";
 import JournalExpandableItem from "../../journal/JournalExpandableItem";
+import { usePersistentTab } from "../../../hooks/usePersistentTab";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -38,7 +39,11 @@ export default function EventFeedWidgetView({
 }: EventFeedWidgetViewProps) {
   const { t } = useTranslation(["widgets", "journal", "common"]);
   const styles = useWidgetStyles(widget.stylesJson);
-  const [mode, setMode] = useState<JournalViewMode>("live");
+  const [mode, setMode] = usePersistentTab<JournalViewMode>(
+    `event-feed-widget:${widget.id}`,
+    "live",
+    JOURNAL_VIEW_MODES
+  );
   const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
   const [levelFilter, setLevelFilter] = useState("");
   const [searchFilter, setSearchFilter] = useState("");

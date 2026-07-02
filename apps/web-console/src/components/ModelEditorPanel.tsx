@@ -34,6 +34,7 @@ import {
   type ModelVariableDefinition,
 } from "../types/models";
 import { recordDisplayValue } from "../utils/tree";
+import { isTechnicalIdentifier } from "../utils/technicalIdentifier";
 import { formatHistoryRetention } from "./VariableHistoryFields";
 
 interface ModelEditorPanelProps {
@@ -419,6 +420,7 @@ function ModelDetail({
                     {canManage && !isBuiltin ? (
                       <label className="checkbox-label inline">
                         <input
+                          className="table-checkbox"
                           type="checkbox"
                           checked={v.historyEnabled ?? false}
                           onChange={(e) =>
@@ -872,6 +874,8 @@ function ModelsCatalog({
 }) {
   const { t } = useTranslation(["inspector", "common"]);
   const queryClient = useQueryClient();
+  const [invalidEmptyModelName, setInvalidEmptyModelName] = useState(false);
+  const [invalidExportModelName, setInvalidExportModelName] = useState(false);
   const modelsQuery = useQuery({
     queryKey: ["models", catalogRoot],
     queryFn: () => {
@@ -972,8 +976,13 @@ function ModelsCatalog({
               e.preventDefault();
               const form = e.currentTarget;
               const data = new FormData(form);
+              const name = String(data.get("name") ?? "");
+              if (!isTechnicalIdentifier(name, "dottedName")) {
+                setInvalidEmptyModelName(true);
+                return;
+              }
               createMutation.mutate({
-                name: String(data.get("name") ?? ""),
+                name,
                 description: String(data.get("description") ?? ""),
                 type: String(data.get("type") ?? "RELATIVE") as "RELATIVE" | "INSTANCE",
                 targetObjectType: String(data.get("targetObjectType") ?? "CUSTOM") as ObjectType,
@@ -983,7 +992,14 @@ function ModelsCatalog({
           >
             <h4>{t("inspector:model.newEmptyTitle")}</h4>
             <div className="model-form-grid">
-              <input name="name" placeholder={t("inspector:model.namePlaceholder")} required pattern="[a-zA-Z0-9._-]+" />
+              <input
+                name="name"
+                placeholder={t("inspector:model.namePlaceholder")}
+                required
+                pattern="[a-zA-Z0-9._-]+"
+                aria-invalid={invalidEmptyModelName}
+                onChange={(e) => setInvalidEmptyModelName(Boolean(e.target.value) && !isTechnicalIdentifier(e.target.value, "dottedName"))}
+              />
               <input name="description" placeholder={t("inspector:model.descriptionPlaceholder")} />
               <select name="type" defaultValue={defaultCreateType}>
                 <option value="RELATIVE">RELATIVE</option>
@@ -1001,6 +1017,9 @@ function ModelsCatalog({
                 {t("common:action.create")}
               </button>
             </div>
+            {invalidEmptyModelName && (
+              <p className="hint error">{t("common:error.invalidNamedIdentifier")}</p>
+            )}
             {createMutation.error && (
               <p className="hint error">{String(createMutation.error)}</p>
             )}
@@ -1012,9 +1031,14 @@ function ModelsCatalog({
               e.preventDefault();
               const form = e.currentTarget;
               const data = new FormData(form);
+              const modelName = String(data.get("modelName") ?? "");
+              if (!isTechnicalIdentifier(modelName, "dottedName")) {
+                setInvalidExportModelName(true);
+                return;
+              }
               fromObjectMutation.mutate({
                 sourcePath: String(data.get("sourcePath") ?? ""),
-                modelName: String(data.get("modelName") ?? ""),
+                modelName,
                 description: String(data.get("description") ?? ""),
                 type: String(data.get("type") ?? "RELATIVE") as "RELATIVE" | "INSTANCE",
               });
@@ -1037,7 +1061,14 @@ function ModelsCatalog({
                 defaultValue={selectedPath !== catalogRoot ? selectedPath : ""}
                 required
               />
-              <input name="modelName" placeholder={t("inspector:model.newModelNamePlaceholder")} required />
+              <input
+                name="modelName"
+                placeholder={t("inspector:model.newModelNamePlaceholder")}
+                required
+                pattern="[a-zA-Z0-9._-]+"
+                aria-invalid={invalidExportModelName}
+                onChange={(e) => setInvalidExportModelName(Boolean(e.target.value) && !isTechnicalIdentifier(e.target.value, "dottedName"))}
+              />
               <input name="description" placeholder={t("inspector:model.descriptionPlaceholder")} />
               <select
                 name="type"
@@ -1050,6 +1081,9 @@ function ModelsCatalog({
                 {t("inspector:model.export")}
               </button>
             </div>
+            {invalidExportModelName && (
+              <p className="hint error">{t("common:error.invalidNamedIdentifier")}</p>
+            )}
             {fromObjectMutation.error && (
               <p className="hint error">{String(fromObjectMutation.error)}</p>
             )}

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import SystemMetricsView from "./SystemMetricsView";
 import SystemSettingsView from "./SystemSettingsView";
@@ -9,6 +8,7 @@ import PlatformBackupPanel from "./platform/PlatformBackupPanel";
 import PlatformChangeSetsPanel from "./platform/PlatformChangeSetsPanel";
 import PlatformSchedulesPanel from "./platform/PlatformSchedulesPanel";
 import SemanticExportPanel from "./platform/SemanticExportPanel";
+import { usePersistentTab } from "../hooks/usePersistentTab";
 
 type SystemTab =
   | "metrics"
@@ -21,9 +21,13 @@ type SystemTab =
   | "semanticExport"
   | "backup";
 
+const SYSTEM_TABS: readonly SystemTab[] = [
+  "metrics", "settings", "events", "functions", "bindings", "changeSets", "schedules", "semanticExport", "backup",
+];
+
 export default function SystemView() {
   const { t } = useTranslation("system");
-  const [tab, setTab] = useState<SystemTab>("metrics");
+  const [tab, setTab] = usePersistentTab<SystemTab>("system", "metrics", SYSTEM_TABS);
 
   const tabs: { id: SystemTab; labelKey: string }[] = [
     { id: "metrics", labelKey: "tab.metrics" },

@@ -7,6 +7,7 @@ import DataSchemaEditor from "./schema/DataSchemaEditor";
 import DataRecordValueEditor from "./schema/DataRecordValueEditor";
 import VariableHistoryFields, { type VariableHistoryState } from "./VariableHistoryFields";
 import { emptySchema, syncRecordSchema } from "../utils/dataSchema";
+import { isTechnicalIdentifier } from "../utils/technicalIdentifier";
 
 interface CreateVariableDialogProps {
   objectPath: string;
@@ -33,6 +34,7 @@ export default function CreateVariableDialog({
     historyRetentionDays: null,
   });
   const [setInitialValue, setSetInitialValue] = useState(false);
+  const nameValid = isTechnicalIdentifier(name, "code");
 
   const schemaName = useMemo(() => name.trim() || "value", [name]);
 
@@ -79,7 +81,11 @@ export default function CreateVariableDialog({
               pattern="[A-Za-z_][A-Za-z0-9_]*"
               placeholder="myVariable"
               required
+              aria-invalid={Boolean(name) && !nameValid}
             />
+            {name && !nameValid && (
+              <span className="hint error">{t("common:error.invalidCodeIdentifier")}</span>
+            )}
           </label>
           <label className="checkbox-label inline">
             <input
@@ -142,8 +148,8 @@ export default function CreateVariableDialog({
           <button
             type="button"
             className="btn primary"
-            disabled={!name.trim() || schema.fields.length === 0 || mutation.isPending}
-            onClick={() => mutation.mutate()}
+            disabled={!nameValid || schema.fields.length === 0 || mutation.isPending}
+            onClick={() => { if (nameValid) mutation.mutate(); }}
           >
             {t("common:action.create")}
           </button>

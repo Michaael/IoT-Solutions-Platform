@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { createSecurityUser } from "../api/securityUsers";
 import { fetchSecurityRoles } from "../api/securityRoles";
+import { isTechnicalIdentifier } from "../utils/technicalIdentifier";
 
 interface CreateSecurityUserDialogProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ export default function CreateSecurityUserDialog({
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("operator");
+  const usernameValid = isTechnicalIdentifier(username, "securityName");
 
   const rolesQuery = useQuery({
     queryKey: ["security-roles"],
@@ -51,6 +53,7 @@ export default function CreateSecurityUserDialog({
           className="modal-body form-grid"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!usernameValid) return;
             mutation.mutate();
           }}
         >
@@ -63,7 +66,11 @@ export default function CreateSecurityUserDialog({
               required
               pattern="[a-zA-Z0-9._-]{2,64}"
               autoFocus
+              aria-invalid={Boolean(username) && !usernameValid}
             />
+            {username && !usernameValid && (
+              <span className="hint error">{t("common:error.invalidNamedIdentifier")}</span>
+            )}
           </label>
           <label className="full">
             {t("common:field.displayName")}
@@ -102,7 +109,7 @@ export default function CreateSecurityUserDialog({
           )}
           <footer className="full form-actions">
             <button type="button" className="btn" onClick={onClose}>{t("common:action.cancel")}</button>
-            <button type="submit" className="btn primary" disabled={mutation.isPending}>
+            <button type="submit" className="btn primary" disabled={mutation.isPending || !usernameValid}>
               {t("common:action.create")}
             </button>
           </footer>

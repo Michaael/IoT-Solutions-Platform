@@ -8,7 +8,9 @@
   --surface-0: #0d1117;
   --surface-1: #161b22;
   --surface-2: #21262d;
+  --dash-surface: var(--surface-1);
   --bg-muted: var(--surface-2);
+  --bg-subtle: rgba(0, 0, 0, 0.03);
   --surface-elevated: #1b212a;
   --panel: #161b22;
   --panel-bg: rgba(0, 0, 0, 0.15);
@@ -33,6 +35,7 @@
   --sidebar-width: 320px;
   --radius-sm: 4px;
   --radius-md: 8px;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, monospace;
   --ui-ease: cubic-bezier(0.2, 0, 0, 1);
   --ui-shadow-surface:
     0 0 0 1px rgba(255, 255, 255, 0.03),
@@ -679,7 +682,7 @@ code,
   gap: 0.4rem;
   width: 100%;
   min-height: 40px;
-  height: var(--tree-row-height, 40px);
+  height: 40px;
   box-sizing: border-box;
   padding: 0 0.5rem;
   border: none;
@@ -2592,7 +2595,7 @@ body.dashboard-grid-dragging .dashboard-grid-host.editable .dashboard-grid-item 
 }
 
 .scada-mimic-context-menu button:hover {
-  background: var(--hover, rgba(255, 255, 255, 0.08));
+  background: var(--bg-hover);
 }
 
 @keyframes ispf-mimic-blink-keyframes {
@@ -3625,7 +3628,7 @@ body.scada-mimic-editor-open {
   width: 100%;
   border-radius: 6px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--dash-surface, #1a1d24) 92%, #000 8%);
+  background: color-mix(in srgb, var(--dash-surface) 92%, #000 8%);
 }
 
 .dash-widget-gantt {
@@ -3687,7 +3690,7 @@ body.scada-mimic-editor-open {
   position: relative;
   height: 1.1rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--dash-surface, #1a1d24) 88%, #fff 12%);
+  background: color-mix(in srgb, var(--dash-surface) 88%, #fff 12%);
   overflow: hidden;
 }
 
@@ -4260,9 +4263,14 @@ body.scada-mimic-editor-open {
   flex-direction: column;
   min-height: 100vh;
   height: 100vh;
-  height: 100dvh;
   overflow: hidden;
   background: var(--bg);
+}
+
+@supports (height: 100dvh) {
+  .operator-shell {
+    height: 100dvh;
+  }
 }
 
 .operator-topbar {
@@ -4298,6 +4306,7 @@ body.scada-mimic-editor-open {
 }
 
 .operator-alarm-bar {
+  --alarm-accent: var(--danger);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -4331,7 +4340,7 @@ body.scada-mimic-editor-open {
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
   }
   50% {
-    box-shadow: 0 0 0 3px var(--alarm-accent, #ef4444), 0 8px 32px rgba(239, 68, 68, 0.45);
+    box-shadow: 0 0 0 3px var(--alarm-accent), 0 8px 32px rgba(239, 68, 68, 0.45);
   }
 }
 
@@ -4359,7 +4368,7 @@ body.scada-mimic-editor-open {
   align-items: center;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  border: 1px solid var(--alarm-accent, currentColor);
+  border: 1px solid var(--alarm-accent);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -4412,7 +4421,7 @@ body.scada-mimic-editor-open {
 }
 
 .operator-alarm-bar-btn.primary {
-  background: var(--alarm-accent, #ef4444);
+  background: var(--alarm-accent);
   border-color: transparent;
   color: #fff;
 }
@@ -4449,7 +4458,7 @@ body.scada-mimic-editor-open {
   padding: 0.75rem;
   margin-bottom: 0.75rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   background: var(--bg-elevated);
 }
 
@@ -5236,13 +5245,13 @@ body.scada-mimic-editor-open {
 
 .dash-sheet-formula-label {
   min-width: 2.5rem;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   color: var(--text-muted, #8b949e);
 }
 
 .dash-sheet-formula-input {
   flex: 1;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--border-subtle, #30363d);
@@ -5407,7 +5416,7 @@ body.scada-mimic-editor-open {
 
 .dash-sheet-import-warning {
   color: var(--text, #e6edf3);
-  border-left: 3px solid var(--warning, #d29922);
+  border-left: 3px solid var(--warn);
   padding: 0.5rem 0.65rem;
 }
 
@@ -5443,12 +5452,12 @@ body.scada-mimic-editor-open {
 }
 
 .dash-sheet-import-fn-list code {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 0.7rem;
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
   background: rgba(210, 153, 34, 0.12);
-  color: var(--warning, #d29922);
+  color: var(--warn);
 }
 
 .dash-sheet-import-more,
@@ -7068,6 +7077,76 @@ body.scada-mimic-editor-open {
   font-size: 0.85rem;
 }
 
+.table-control,
+.model-inline-input,
+.model-retention-input {
+  width: 100%;
+  min-width: 0;
+  height: 2.15rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.table-control:focus-visible,
+.model-inline-input:focus-visible,
+.model-retention-input:focus-visible,
+.table-checkbox:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.table-control:disabled,
+.model-inline-input:disabled,
+.model-retention-input:disabled,
+.table-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.table-checkbox {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 1.125rem;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  color: var(--accent-fg);
+  cursor: pointer;
+}
+
+.table-checkbox::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.3rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-0.05rem) rotate(45deg) scale(0);
+  transition: transform 0.1s ease;
+}
+
+.table-checkbox:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.table-checkbox:checked::before {
+  transform: translateY(-0.05rem) rotate(45deg) scale(1);
+}
+
+.model-retention-input {
+  width: 5rem;
+}
+
 .binding-expression-field {
   display: flex;
   flex-direction: column;
@@ -7731,7 +7810,7 @@ body.scada-mimic-editor-open {
 }
 
 .panel-card {
-  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.25));
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -7747,7 +7826,7 @@ body.scada-mimic-editor-open {
   display: flex;
   gap: 0;
   margin: 1rem 0;
-  border-bottom: 1px solid var(--border-color, rgba(148, 163, 184, 0.25));
+  border-bottom: 1px solid var(--border);
 }
 
 .federation-peers-panel .federation-tabs button {
@@ -7791,7 +7870,7 @@ body.scada-mimic-editor-open {
   margin-top: 0.75rem;
   padding: 0.75rem;
   background: var(--surface-2, #0f172a);
-  border: 1px solid var(--border-color, #30363d);
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.8rem;
   word-break: break-all;
@@ -8111,7 +8190,7 @@ body.scada-mimic-editor-open {
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
   font-size: 0.8rem;
-  border: 1px solid var(--border-color, #30363d);
+  border: 1px solid var(--border);
   background: rgba(110, 118, 129, 0.1);
 }
 
@@ -8647,7 +8726,7 @@ body.scada-mimic-editor-open {
   flex-shrink: 0;
   min-width: 0;
   padding: 0.35rem 0;
-  border-bottom: 1px solid var(--border-color, #30363d);
+  border-bottom: 1px solid var(--border);
 }
 
 .ai-agent-mode-select {
@@ -9155,7 +9234,7 @@ body.scada-mimic-editor-open {
   align-items: stretch;
   flex-shrink: 0;
   max-width: min(220px, 45vw);
-  border: 1px solid var(--border-color, #30363d);
+  border: 1px solid var(--border);
   border-radius: 999px;
   background: rgba(110, 118, 129, 0.08);
   overflow: hidden;
@@ -9188,7 +9267,7 @@ body.scada-mimic-editor-open {
 .ai-agent-chat-pill .ai-agent-chat-delete {
   width: 1.65rem;
   border: none;
-  border-left: 1px solid var(--border-color, #30363d);
+  border-left: 1px solid var(--border);
   border-radius: 0;
   opacity: 0.5;
 }
@@ -9226,7 +9305,7 @@ body.scada-mimic-editor-open {
   min-height: 12rem;
   overflow-y: auto;
   padding: 0.65rem;
-  border: 1px solid var(--border-color, #30363d);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel-bg, rgba(0, 0, 0, 0.15));
 }
@@ -9677,7 +9756,7 @@ body.scada-mimic-editor-open {
   max-height: 88vh;
   display: flex;
   flex-direction: column;
-  background: var(--surface-panel, #1a1f2e);
+  background: var(--surface-elevated);
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
   border-radius: 10px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
@@ -10212,20 +10291,73 @@ body.scada-mimic-editor-open {
   gap: 0.75rem;
 }
 
-.data-schema-fields-table input,
+.data-schema-fields-table input:not(.table-checkbox),
 .data-schema-fields-table select {
   width: 100%;
   min-width: 0;
 }
 
+.data-schema-fields-table .table-checkbox {
+  width: 1.125rem;
+  min-width: 1.125rem;
+}
+
+.data-schema-fields-table {
+  min-width: 46rem;
+}
+
+.data-schema-fields-table .schema-col-name {
+  width: 9rem;
+}
+
+.data-schema-fields-table .schema-col-type {
+  width: 9rem;
+}
+
+.data-schema-fields-table .schema-col-nullable {
+  width: 7.5rem;
+}
+
+.data-schema-fields-table .schema-col-actions {
+  width: 6.5rem;
+}
+
+.data-schema-fields-table th {
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.data-schema-fields-table th:nth-child(4),
+.data-schema-fields-table th:last-child {
+  text-align: center;
+}
+
+.data-schema-fields-table td {
+  vertical-align: middle;
+}
+
 .schema-null-cell {
   text-align: center;
-  width: 4rem;
 }
 
 .schema-actions-cell {
   white-space: nowrap;
+}
+
+.acl-editor-table {
+  min-width: 38rem;
+}
+
+.acl-editor-table th:last-child,
+.acl-editor-table td:last-child {
   width: 7rem;
+  white-space: nowrap;
+}
+
+.federation-conflicts-table {
+  min-width: 36rem;
 }
 
 .schema-field-actions {
@@ -10234,7 +10366,7 @@ body.scada-mimic-editor-open {
 }
 
 .schema-nested-row td {
-  background: var(--bg-subtle, rgba(0, 0, 0, 0.03));
+  background: var(--bg-subtle);
   padding-top: 0;
 }
 

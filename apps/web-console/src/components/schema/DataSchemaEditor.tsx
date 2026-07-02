@@ -68,6 +68,13 @@ export default function DataSchemaEditor({
       {value.fields.length > 0 && (
         <div className="table-scroll">
           <table className="data-table data-schema-fields-table">
+            <colgroup>
+              <col className="schema-col-name" />
+              <col className="schema-col-type" />
+              <col className="schema-col-description" />
+              <col className="schema-col-nullable" />
+              <col className="schema-col-actions" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{t("common:table.name")}</th>
@@ -83,7 +90,7 @@ export default function DataSchemaEditor({
                   <tr>
                     <td>
                       <input
-                        className="model-inline-input mono"
+                        className="table-control mono"
                         value={field.name}
                         disabled={disabled}
                         onChange={(e) => updateField(index, { name: e.target.value })}
@@ -91,6 +98,7 @@ export default function DataSchemaEditor({
                     </td>
                     <td>
                       <select
+                        className="table-control"
                         value={field.type}
                         disabled={disabled}
                         onChange={(e) => {
@@ -114,7 +122,7 @@ export default function DataSchemaEditor({
                     </td>
                     <td>
                       <input
-                        className="model-inline-input"
+                        className="table-control"
                         value={field.description ?? ""}
                         disabled={disabled}
                         placeholder={t("schemaEditor.descriptionPlaceholder")}
@@ -123,6 +131,7 @@ export default function DataSchemaEditor({
                     </td>
                     <td className="schema-null-cell">
                       <input
+                        className="table-checkbox"
                         type="checkbox"
                         checked={field.nullable !== false}
                         disabled={disabled}

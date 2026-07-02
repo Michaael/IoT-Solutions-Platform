@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { exportPlatformBackup, importPlatformBackup } from "../api/platformBackup";
@@ -13,12 +13,23 @@ export default function TreeSubtreeExportPanel({ rootPath, canManage }: TreeSubt
   const queryClient = useQueryClient();
   const [jsonText, setJsonText] = useState("");
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
+  const exportLockRef = useRef(false);
+  const downloadLockRef = useRef(false);
+  const downloadTimerRef = useRef<number | null>(null);
+  const [downloadLocked, setDownloadLocked] = useState(false);
+
+  useEffect(() => () => {
+    if (downloadTimerRef.current != null) window.clearTimeout(downloadTimerRef.current);
+  }, []);
 
   const exportMutation = useMutation({
     mutationFn: () => exportPlatformBackup(rootPath),
     onSuccess: (payload) => {
       setJsonText(JSON.stringify(payload, null, 2));
       setPreviewMessage(null);
+    },
+    onSettled: () => {
+      exportLockRef.current = false;
     },
   });
 
@@ -57,6 +68,9 @@ export default function TreeSubtreeExportPanel({ rootPath, canManage }: TreeSubt
   });
 
   const downloadJson = () => {
+    if (downloadLockRef.current || !jsonText.trim()) return;
+    downloadLockRef.current = true;
+    setDownloadLocked(true);
     const blob = new Blob([jsonText], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -64,6 +78,16 @@ export default function TreeSubtreeExportPanel({ rootPath, canManage }: TreeSubt
     anchor.download = `${rootPath.replace(/\./g, "_")}-export.json`;
     anchor.click();
     URL.revokeObjectURL(url);
+    downloadTimerRef.current = window.setTimeout(() => {
+      downloadLockRef.current = false;
+      setDownloadLocked(false);
+    }, 1000);
+  };
+
+  const startExport = () => {
+    if (exportLockRef.current) return;
+    exportLockRef.current = true;
+    exportMutation.mutate();
   };
 
   return (
@@ -76,11 +100,11 @@ export default function TreeSubtreeExportPanel({ rootPath, canManage }: TreeSubt
           type="button"
           className="btn"
           disabled={exportMutation.isPending}
-          onClick={() => exportMutation.mutate()}
+          onClick={startExport}
         >
           {exportMutation.isPending ? t("treeExport.exporting") : t("treeExport.export")}
         </button>
-        <button type="button" className="btn" disabled={!jsonText.trim()} onClick={downloadJson}>
+        <button type="button" className="btn" disabled={!jsonText.trim() || downloadLocked} onClick={downloadJson}>
           {t("treeExport.download")}
         </button>
         {canManage && (

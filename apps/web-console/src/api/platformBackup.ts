@@ -16,15 +16,29 @@ export interface PlatformBackupImportResult {
   dryRun: boolean;
 }
 
+const exportRequests = new Map<string, Promise<Record<string, unknown>>>();
+
 export async function exportPlatformBackup(rootPath?: string): Promise<Record<string, unknown>> {
-  const params = rootPath ? `?rootPath=${encodeURIComponent(rootPath)}` : "";
-  const response = await fetch(`/api/v1/platform/backup/export${params}`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) {
-    throw new Error(parseApiError(await response.text(), `Export failed: ${response.status}`));
+  const key = rootPath?.trim() ?? "";
+  const pending = exportRequests.get(key);
+  if (pending) return pending;
+
+  const request = (async () => {
+    const params = key ? `?rootPath=${encodeURIComponent(key)}` : "";
+    const response = await fetch(`/api/v1/platform/backup/export${params}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(parseApiError(await response.text(), `Export failed: ${response.status}`));
+    }
+    return response.json() as Promise<Record<string, unknown>>;
+  })();
+  exportRequests.set(key, request);
+  try {
+    return await request;
+  } finally {
+    if (exportRequests.get(key) === request) exportRequests.delete(key);
   }
-  return response.json();
 }
 
 export async function importPlatformBackup(

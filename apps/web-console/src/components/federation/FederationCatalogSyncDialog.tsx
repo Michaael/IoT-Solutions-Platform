@@ -92,40 +92,43 @@ export default function FederationCatalogSyncDialog({
               })}
             </p>
             {conflictRows.length > 0 ? (
-              <table className="op-table">
-                <thead>
-                  <tr>
-                    <th>{t("catalogSync.column.localPath")}</th>
-                    <th>{t("catalogSync.column.type")}</th>
-                    <th>{t("catalogSync.column.action")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {conflictRows.map((conflict: CatalogSyncConflict) => (
-                    <tr key={conflict.localPath}>
-                      <td>
-                        <code>{conflict.localPath}</code>
-                        <div className="op-muted">{conflict.localDisplayName}</div>
-                      </td>
-                      <td>{t(`catalogSync.conflict.${conflict.type}`)}</td>
-                      <td>
-                        <select
-                          value={actions[conflict.localPath] ?? "SKIP"}
-                          onChange={(event) =>
-                            setActions((current) => ({
-                              ...current,
-                              [conflict.localPath]: event.target.value as CatalogSyncResolutionAction,
-                            }))
-                          }
-                        >
-                          <option value="SKIP">{t("catalogSync.action.skip")}</option>
-                          <option value="BIND">{t("catalogSync.action.bind")}</option>
-                        </select>
-                      </td>
+              <div className="op-table-wrap">
+                <table className="op-table federation-conflicts-table">
+                  <thead>
+                    <tr>
+                      <th>{t("catalogSync.column.localPath")}</th>
+                      <th>{t("catalogSync.column.type")}</th>
+                      <th>{t("catalogSync.column.action")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {conflictRows.map((conflict: CatalogSyncConflict) => (
+                      <tr key={conflict.localPath}>
+                        <td>
+                          <code>{conflict.localPath}</code>
+                          <div className="op-muted">{conflict.localDisplayName}</div>
+                        </td>
+                        <td>{t(`catalogSync.conflict.${conflict.type}`)}</td>
+                        <td>
+                          <select
+                            className="table-control"
+                            value={actions[conflict.localPath] ?? "SKIP"}
+                            onChange={(event) =>
+                              setActions((current) => ({
+                                ...current,
+                                [conflict.localPath]: event.target.value as CatalogSyncResolutionAction,
+                              }))
+                            }
+                          >
+                            <option value="SKIP">{t("catalogSync.action.skip")}</option>
+                            <option value="BIND">{t("catalogSync.action.bind")}</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p className="hint">{t("catalogSync.noConflicts")}</p>
             )}

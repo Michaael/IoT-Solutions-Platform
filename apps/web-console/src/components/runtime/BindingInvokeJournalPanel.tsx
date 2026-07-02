@@ -5,9 +5,10 @@ import { fetchBindingAuditStatus, fetchBindingInvocations } from "../../api";
 import type { BindingInvokeAuditEntry } from "../../types/runtime";
 import { mapBindingInvokeExportRow } from "../../utils/journalExport";
 import { parseAuditBeforeAfter } from "../../utils/journalDetails";
-import JournalViewShell, { type JournalViewMode } from "../journal/JournalViewShell";
+import JournalViewShell, { JOURNAL_VIEW_MODES, type JournalViewMode } from "../journal/JournalViewShell";
 import JournalVirtualList from "../journal/JournalVirtualList";
 import JournalExpandableItem from "../journal/JournalExpandableItem";
+import { usePersistentTab } from "../../hooks/usePersistentTab";
 
 const LIVE_LIMIT = 25;
 const HISTORY_PAGE = 50;
@@ -34,7 +35,11 @@ export default function BindingInvokeJournalPanel({
   defaultMode = "live",
 }: BindingInvokeJournalPanelProps) {
   const { t } = useTranslation(["runtime", "journal", "common"]);
-  const [mode, setMode] = useState<JournalViewMode>(defaultMode);
+  const [mode, setMode] = usePersistentTab<JournalViewMode>(
+    `binding-journal:${fixedObjectPath ?? "all"}:${fixedRuleId ?? "all"}`,
+    defaultMode,
+    JOURNAL_VIEW_MODES
+  );
   const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
   const [objectPath, setObjectPath] = useState(fixedObjectPath ?? "");
   const [bindingKind, setBindingKind] = useState("");

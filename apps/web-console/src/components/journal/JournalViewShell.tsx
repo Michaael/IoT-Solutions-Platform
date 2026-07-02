@@ -6,6 +6,7 @@ import type { JournalExportRow } from "../../utils/journalExport";
 export const JournalScrollContext = createContext<RefObject<HTMLDivElement | null> | null>(null);
 
 export type JournalViewMode = "live" | "history";
+export const JOURNAL_VIEW_MODES: readonly JournalViewMode[] = ["live", "history"];
 
 export interface JournalViewShellProps {
   title: string;

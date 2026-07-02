@@ -19,6 +19,7 @@ import ReportExportControls from "./ReportExportControls";
 import PlatformSqlEditorShell from "../platform/PlatformSqlEditorShell";
 import { useDataSourceOptions } from "../platform/useDataSourceOptions";
 import { DATA_SOURCES_ROOT } from "../../utils/systemFolderConfig";
+import { usePersistentTab } from "../../hooks/usePersistentTab";
 import {
   buildDefaultParameters,
   defaultParameterValues,
@@ -76,6 +77,10 @@ interface TreeDraft {
   maxRows?: number;
   refreshIntervalMs?: number;
 }
+
+type ReportTab = "data" | "template";
+const REPORT_TABS: readonly ReportTab[] = ["data", "template"];
+const OPERATOR_REPORT_TABS: readonly ReportTab[] = ["data"];
 
 function ColumnsEditor({
   columns,
@@ -205,7 +210,11 @@ export default function ReportBuilder({
 }: ReportBuilderProps) {
   const { t } = useTranslation(["report", "common", "platform"]);
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"data" | "template">("data");
+  const [activeTab, setActiveTab] = usePersistentTab<ReportTab>(
+    `report:${operatorMode ? "operator" : "admin"}:${path}`,
+    "data",
+    operatorMode ? OPERATOR_REPORT_TABS : REPORT_TABS
+  );
   const [mode, setMode] = useState<"view" | "edit">(operatorMode ? "view" : "view");
   const [sqlDraft, setSqlDraft] = useState<SqlDraft | null>(null);
   const [treeDraft, setTreeDraft] = useState<TreeDraft | null>(null);

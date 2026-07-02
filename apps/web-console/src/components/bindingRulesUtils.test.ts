@@ -60,6 +60,8 @@ describe("isBindingRuleSaveable", () => {
   it("requires id, target variable, and expression", () => {
     expect(isBindingRuleSaveable(sampleRule())).toBe(true);
     expect(isBindingRuleSaveable(sampleRule({ id: "  " }))).toBe(false);
+    expect(isBindingRuleSaveable(sampleRule({ id: "привязка" }))).toBe(false);
+    expect(isBindingRuleSaveable(sampleRule({ id: "rule 1" }))).toBe(false);
     expect(isBindingRuleSaveable(sampleRule({ target: { variableName: " ", field: "value" } }))).toBe(false);
     expect(isBindingRuleSaveable(sampleRule({ expression: "  " }))).toBe(false);
   });

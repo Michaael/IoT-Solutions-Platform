@@ -10,6 +10,7 @@ export default function PlatformBackupPanel() {
   const [error, setError] = useState<string | null>(null);
   const [pendingJson, setPendingJson] = useState<string | null>(null);
   const [previewText, setPreviewText] = useState<string | null>(null);
+  const exportLockRef = useRef(false);
 
   const exportMutation = useMutation({
     mutationFn: exportPlatformBackup,
@@ -25,7 +26,16 @@ export default function PlatformBackupPanel() {
       setError(null);
     },
     onError: (err: Error) => setError(err.message),
+    onSettled: () => {
+      exportLockRef.current = false;
+    },
   });
+
+  const startExport = () => {
+    if (exportLockRef.current) return;
+    exportLockRef.current = true;
+    exportMutation.mutate(undefined);
+  };
 
   const previewMutation = useMutation({
     mutationFn: (json: string) => importPlatformBackup(json, true),
@@ -72,7 +82,7 @@ export default function PlatformBackupPanel() {
           type="button"
           className="btn primary"
           disabled={exportMutation.isPending}
-          onClick={() => exportMutation.mutate(undefined)}
+          onClick={startExport}
         >
           {t("backup.export")}
         </button>
